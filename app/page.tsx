@@ -168,16 +168,12 @@ export default function FarcasterMiniApp() {
 
         if (useMock) {
           console.log("🎭 User chose demo mode")
-          // Force mock auth by temporarily clearing the force flag
-          const originalForce = process.env.NEXT_PUBLIC_FORCE_REAL_AUTH
-          // @ts-ignore
-          process.env.NEXT_PUBLIC_FORCE_REAL_AUTH = "false"
-
+          // Trigger mock auth by calling the hook's fallback
           try {
-            await signIn()
-          } finally {
-            // @ts-ignore
-            process.env.NEXT_PUBLIC_FORCE_REAL_AUTH = originalForce
+            // Force a page reload to reset auth state and use mock mode
+            window.location.reload()
+          } catch (reloadError) {
+            console.error("Failed to reload for demo mode:", reloadError)
           }
         }
       }
