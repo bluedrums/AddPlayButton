@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Share2,
   Settings,
+  RefreshCw,
 } from "lucide-react"
 import { useFarcasterAuth } from "@/hooks/use-farcaster-auth"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
@@ -108,6 +109,7 @@ export default function FarcasterMiniApp() {
 
   // Debug states
   const [showDebugInfo, setShowDebugInfo] = useState(false)
+  const [authAttempts, setAuthAttempts] = useState(0)
 
   // Check if we're using real auth
   const isUsingRealAuth = () => {
@@ -145,6 +147,40 @@ export default function FarcasterMiniApp() {
       console.error("Error loading casts:", error)
     } finally {
       setIsLoadingCasts(false)
+    }
+  }
+
+  // Enhanced sign-in with fallback
+  const handleSignIn = async () => {
+    console.log(`🔐 Sign-in attempt #${authAttempts + 1}`)
+    setAuthAttempts((prev) => prev + 1)
+
+    try {
+      await signIn()
+    } catch (error) {
+      console.error("Sign-in failed:", error)
+
+      // After 2 failed attempts, offer fallback to mock auth
+      if (authAttempts >= 1) {
+        const useMock = confirm(
+          "Farcaster authentication is having issues. Would you like to continue with demo mode to test the app functionality?",
+        )
+
+        if (useMock) {
+          console.log("🎭 User chose demo mode")
+          // Force mock auth by temporarily clearing the force flag
+          const originalForce = process.env.NEXT_PUBLIC_FORCE_REAL_AUTH
+          // @ts-ignore
+          process.env.NEXT_PUBLIC_FORCE_REAL_AUTH = "false"
+
+          try {
+            await signIn()
+          } finally {
+            // @ts-ignore
+            process.env.NEXT_PUBLIC_FORCE_REAL_AUTH = originalForce
+          }
+        }
+      }
     }
   }
 
@@ -558,6 +594,7 @@ export default function FarcasterMiniApp() {
           <CardContent className="flex flex-col items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-4" />
             <p className="text-gray-600">Connecting to Farcaster...</p>
+            {authAttempts > 0 && <p className="text-sm text-gray-500 mt-2">Attempt {authAttempts + 1}</p>}
           </CardContent>
         </Card>
       </div>
@@ -610,6 +647,7 @@ export default function FarcasterMiniApp() {
                       <div>Environment: {process.env.NODE_ENV}</div>
                       <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
                       <div>Has Warpcast Key: {process.env.WARPCAST_API_KEY ? "Yes" : "No"}</div>
+                      <div>Auth Attempts: {authAttempts}</div>
                     </div>
                   </div>
                 )}
@@ -869,10 +907,7 @@ export default function FarcasterMiniApp() {
                   <User className="w-8 h-8 text-purple-600" />
                 </div>
                 <Button
-                  onClick={() => {
-                    console.log("🔘 Connect Farcaster button clicked")
-                    signIn()
-                  }}
+                  onClick={handleSignIn}
                   disabled={authLoading}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
@@ -882,9 +917,24 @@ export default function FarcasterMiniApp() {
                       Connecting...
                     </>
                   ) : (
-                    "Connect Farcaster"
+                    <>
+                      <User className="mr-2 h-4 w-4" />
+                      Connect Farcaster
+                    </>
                   )}
                 </Button>
+
+                {authAttempts > 0 && (
+                  <Button
+                    onClick={handleSignIn}
+                    disabled={authLoading}
+                    variant="outline"
+                    className="w-full bg-transparent"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Try Again (Attempt {authAttempts + 1})
+                  </Button>
+                )}
 
                 {/* Add debug info right after the button */}
                 <div className="text-center">
@@ -897,6 +947,7 @@ export default function FarcasterMiniApp() {
                   <p className="text-xs text-gray-500">
                     Auth Kit: {process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true" ? "Enabled" : "Disabled"}
                   </p>
+                  {authAttempts > 0 && <p className="text-xs text-orange-600 mt-1">Failed attempts: {authAttempts}</p>}
                 </div>
                 <DebugPanel />
               </div>
