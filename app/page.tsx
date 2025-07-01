@@ -21,6 +21,7 @@ import {
   Share2,
   Settings,
   RefreshCw,
+  Clock,
 } from "lucide-react"
 import { useFarcasterAuth } from "@/hooks/use-farcaster-auth"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
@@ -71,7 +72,15 @@ interface WalletState {
 
 export default function FarcasterMiniApp() {
   // Use Farcaster auth hook
-  const { user, isLoading: authLoading, isAuthenticated, error: authError, signIn, signOut } = useFarcasterAuth()
+  const {
+    user,
+    isLoading: authLoading,
+    isAuthenticated,
+    error: authError,
+    signIn,
+    signOut,
+    useDemoMode,
+  } = useFarcasterAuth()
   const { isSubmitting, error: castError, createCast, clearError } = useFarcasterCast()
 
   const [linkToPlay, setLinkToPlay] = useState("")
@@ -159,25 +168,13 @@ export default function FarcasterMiniApp() {
       await signIn()
     } catch (error) {
       console.error("Sign-in failed:", error)
-
-      // After 2 failed attempts, offer fallback to mock auth
-      if (authAttempts >= 1) {
-        const useMock = confirm(
-          "Farcaster authentication is having issues. Would you like to continue with demo mode to test the app functionality?",
-        )
-
-        if (useMock) {
-          console.log("🎭 User chose demo mode")
-          // Trigger mock auth by calling the hook's fallback
-          try {
-            // Force a page reload to reset auth state and use mock mode
-            window.location.reload()
-          } catch (reloadError) {
-            console.error("Failed to reload for demo mode:", reloadError)
-          }
-        }
-      }
     }
+  }
+
+  // Handle demo mode
+  const handleDemoMode = async () => {
+    console.log("🎭 User chose demo mode")
+    useDemoMode()
   }
 
   // Connect Farcaster wallet
@@ -590,7 +587,25 @@ export default function FarcasterMiniApp() {
           <CardContent className="flex flex-col items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-4" />
             <p className="text-gray-600">Connecting to Farcaster...</p>
-            {authAttempts > 0 && <p className="text-sm text-gray-500 mt-2">Attempt {authAttempts + 1}</p>}
+            {authAttempts > 0 && <p className="text-sm text-gray-500 mt-2">Attempt {authAttempts}</p>}
+
+            {/* Show demo mode option after 10 seconds */}
+            {authAttempts > 0 && (
+              <div className="mt-4 text-center space-y-2">
+                <div className="flex items-center gap-2 text-sm text-orange-600">
+                  <Clock className="h-4 w-4" />
+                  <span>Taking longer than expected...</span>
+                </div>
+                <Button
+                  onClick={handleSignIn}
+                  variant="outline"
+                  size="sm"
+                  className="text-purple-600 border-purple-300 hover:bg-purple-50 bg-transparent"
+                >
+                  Continue with Demo Mode
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -630,7 +645,7 @@ export default function FarcasterMiniApp() {
                 {/* Auth Status Badge */}
                 <div className="flex justify-center">
                   <Badge variant={isUsingRealAuth() ? "default" : "secondary"}>
-                    {isUsingRealAuth() ? "🚀 Real Farcaster Auth" : "🎭 Mock Auth"}
+                    {isUsingRealAuth() ? "🚀 Real Farcaster Auth" : "🎭 Demo Mode"}
                   </Badge>
                 </div>
 
@@ -639,7 +654,7 @@ export default function FarcasterMiniApp() {
                   <div className="mt-4 p-3 bg-gray-100 rounded-lg text-left">
                     <h4 className="font-medium text-sm mb-2">Debug Information:</h4>
                     <div className="text-xs space-y-1 text-gray-600">
-                      <div>Auth Type: {isUsingRealAuth() ? "Real" : "Mock"}</div>
+                      <div>Auth Type: {isUsingRealAuth() ? "Real" : "Demo"}</div>
                       <div>Environment: {process.env.NODE_ENV}</div>
                       <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
                       <div>Has Warpcast Key: {process.env.WARPCAST_API_KEY ? "Yes" : "No"}</div>
@@ -783,7 +798,7 @@ export default function FarcasterMiniApp() {
                       )}
                       {embedType === "soundcloud" && (
                         <iframe
-                          src={embedUrl}
+                          src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(embedUrl)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
                           width="100%"
                           height="166"
                           frameBorder="0"
@@ -921,15 +936,21 @@ export default function FarcasterMiniApp() {
                 </Button>
 
                 {authAttempts > 0 && (
-                  <Button
-                    onClick={handleSignIn}
-                    disabled={authLoading}
-                    variant="outline"
-                    className="w-full bg-transparent"
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Try Again (Attempt {authAttempts + 1})
-                  </Button>
+                  <div className="w-full space-y-2">
+                    <Button
+                      onClick={handleSignIn}
+                      disabled={authLoading}
+                      variant="outline"
+                      className="w-full bg-transparent"
+                    >
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Try Again (Attempt {authAttempts + 1})
+                    </Button>
+
+                    <Button onClick={handleDemoMode} disabled={authLoading} variant="secondary" className="w-full">
+                      Continue with Demo Mode
+                    </Button>
+                  </div>
                 )}
 
                 {/* Add debug info right after the button */}

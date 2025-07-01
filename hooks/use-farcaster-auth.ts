@@ -27,6 +27,8 @@ export function useFarcasterAuth() {
     error: null,
   })
 
+  const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null)
+
   // Check if we should use real auth
   const shouldUseRealAuth = () => {
     return (
@@ -49,10 +51,18 @@ export function useFarcasterAuth() {
   const signInHook = useSignIn({
     onSuccess: (data) => {
       console.log("✅ Auth Kit sign-in successful:", data)
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+        setAuthTimeout(null)
+      }
       setAuthState((prev) => ({ ...prev, isLoading: false, error: null }))
     },
     onError: (error) => {
       console.error("❌ Auth Kit sign-in error:", error)
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+        setAuthTimeout(null)
+      }
       setAuthState((prev) => ({
         ...prev,
         error: error.message || "Authentication failed",
@@ -146,6 +156,10 @@ export function useFarcasterAuth() {
   useEffect(() => {
     if (authKitEnabled && signInHook.error) {
       console.error("🚨 Auth Kit Error:", signInHook.error)
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+        setAuthTimeout(null)
+      }
       setAuthState((prev) => ({
         ...prev,
         error: signInHook.error?.message || "Authentication failed",
@@ -154,9 +168,45 @@ export function useFarcasterAuth() {
     }
   }, [authKitEnabled, signInHook.error])
 
+  // Fallback to mock auth
+  const fallbackToMockAuth = async () => {
+    console.log("🎭 Falling back to mock authentication")
+
+    const mockUser: FarcasterUser = {
+      fid: 1234,
+      username: "demo",
+      displayName: "Demo User",
+      pfpUrl: "/placeholder.svg?height=64&width=64",
+      custodyAddress: "0xDEMO",
+      verifications: [],
+    }
+
+    const authData = {
+      timestamp: Date.now(),
+      fid: mockUser.fid,
+      custodyAddress: mockUser.custodyAddress,
+      isRealAuth: false,
+    }
+
+    localStorage.setItem("farcaster-user", JSON.stringify(mockUser))
+    localStorage.setItem("farcaster-auth", JSON.stringify(authData))
+
+    setAuthState({
+      user: mockUser,
+      isLoading: false,
+      isAuthenticated: true,
+      error: null,
+    })
+  }
+
   const signIn = async () => {
     console.log("🔐 Starting sign-in process...")
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
+
+    // Clear any existing timeout
+    if (authTimeout) {
+      clearTimeout(authTimeout)
+    }
 
     try {
       if (authKitEnabled) {
@@ -169,55 +219,55 @@ export function useFarcasterAuth() {
 
         console.log("📱 Triggering Auth Kit sign-in...")
 
-        // Add timeout handling
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => {
-            reject(new Error("Authentication timed out after 30 seconds"))
-          }, 30000)
-        })
+        // Set a timeout to prevent hanging
+        const timeout = setTimeout(() => {
+          console.warn("⏰ Auth Kit sign-in timed out after 15 seconds")
+          setAuthState((prev) => ({
+            ...prev,
+            error: "Authentication timed out. Please try again or use demo mode.",
+            isLoading: false,
+          }))
+        }, 15000) // 15 second timeout
+
+        setAuthTimeout(timeout)
 
         try {
-          // Try to trigger the sign-in with timeout
-          await Promise.race([signInHook.signIn(), timeoutPromise])
-          console.log("📱 Auth Kit sign-in triggered successfully")
+          // Try to trigger the sign-in
+          const result = await signInHook.signIn()
+          console.log("📱 Auth Kit sign-in result:", result)
+
+          // If we get here without the success callback being called, something went wrong
+          if (!signInHook.isSuccess) {
+            setTimeout(() => {
+              if (!signInHook.isSuccess && authState.isLoading) {
+                console.warn("⚠️ Auth Kit didn't complete successfully")
+                clearTimeout(timeout)
+                setAuthTimeout(null)
+                setAuthState((prev) => ({
+                  ...prev,
+                  error: "Authentication didn't complete. Please try again.",
+                  isLoading: false,
+                }))
+              }
+            }, 5000) // Give it 5 more seconds
+          }
         } catch (error) {
+          clearTimeout(timeout)
+          setAuthTimeout(null)
           console.error("❌ Auth Kit sign-in failed:", error)
           throw error
         }
       } else {
         console.log("🎭 Using mock authentication")
-
-        // Mock auth flow
         await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const mockUser: FarcasterUser = {
-          fid: 1234,
-          username: "demo",
-          displayName: "Demo User",
-          pfpUrl: "/placeholder.svg?height=64&width=64",
-          custodyAddress: "0xDEMO",
-          verifications: [],
-        }
-
-        const authData = {
-          timestamp: Date.now(),
-          fid: mockUser.fid,
-          custodyAddress: mockUser.custodyAddress,
-          isRealAuth: false,
-        }
-
-        localStorage.setItem("farcaster-user", JSON.stringify(mockUser))
-        localStorage.setItem("farcaster-auth", JSON.stringify(authData))
-
-        setAuthState({
-          user: mockUser,
-          isLoading: false,
-          isAuthenticated: true,
-          error: null,
-        })
+        await fallbackToMockAuth()
       }
     } catch (error: any) {
       console.error("🚨 Sign in error:", error)
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+        setAuthTimeout(null)
+      }
       setAuthState({
         user: null,
         isLoading: false,
@@ -229,6 +279,13 @@ export function useFarcasterAuth() {
 
   const signOut = () => {
     console.log("👋 Signing out user")
+
+    // Clear any pending timeouts
+    if (authTimeout) {
+      clearTimeout(authTimeout)
+      setAuthTimeout(null)
+    }
+
     localStorage.removeItem("farcaster-user")
     localStorage.removeItem("farcaster-auth")
 
@@ -240,6 +297,21 @@ export function useFarcasterAuth() {
     })
   }
 
+  // Force fallback to mock auth
+  const useDemoMode = async () => {
+    console.log("🎭 User requested demo mode")
+
+    // Clear any pending timeouts
+    if (authTimeout) {
+      clearTimeout(authTimeout)
+      setAuthTimeout(null)
+    }
+
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    await fallbackToMockAuth()
+  }
+
   // Update loading state based on auth kit status
   const isLoading = authState.isLoading || (authKitEnabled && (signInHook.isLoading || profileHook.isLoading))
 
@@ -248,6 +320,7 @@ export function useFarcasterAuth() {
     isLoading,
     signIn,
     signOut,
+    useDemoMode,
     // Expose auth kit state for debugging
     authKitState: authKitEnabled
       ? {
