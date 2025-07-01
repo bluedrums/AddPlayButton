@@ -38,9 +38,18 @@ export function useFarcasterAuth() {
   // Farcaster Auth Kit hooks - only use if real auth is enabled
   const authKitEnabled = shouldUseRealAuth()
 
+  console.log("🔧 Auth Kit Configuration:", {
+    authKitEnabled,
+    forceRealAuth: process.env.NEXT_PUBLIC_FORCE_REAL_AUTH,
+    hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
+    appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN,
+    appUrl: process.env.NEXT_PUBLIC_APP_URL,
+  })
+
   const signInHook = useSignIn({
     onSuccess: (data) => {
       console.log("✅ Auth Kit sign-in successful:", data)
+      setAuthState((prev) => ({ ...prev, isLoading: false, error: null }))
     },
     onError: (error) => {
       console.error("❌ Auth Kit sign-in error:", error)
@@ -49,6 +58,9 @@ export function useFarcasterAuth() {
         error: error.message || "Authentication failed",
         isLoading: false,
       }))
+    },
+    onStatusResponse: (res) => {
+      console.log("📡 Auth Kit status response:", res)
     },
   })
 
@@ -130,6 +142,18 @@ export function useFarcasterAuth() {
     }
   }, [authKitEnabled, signInHook.isSuccess, signInHook.data, profileHook.data])
 
+  // Monitor auth kit errors
+  useEffect(() => {
+    if (authKitEnabled && signInHook.error) {
+      console.error("🚨 Auth Kit Error:", signInHook.error)
+      setAuthState((prev) => ({
+        ...prev,
+        error: signInHook.error?.message || "Authentication failed",
+        isLoading: false,
+      }))
+    }
+  }, [authKitEnabled, signInHook.error])
+
   const signIn = async () => {
     console.log("🔐 Starting sign-in process...")
     setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
@@ -140,11 +164,29 @@ export function useFarcasterAuth() {
 
         // Check if auth kit is available
         if (!signInHook.signIn) {
-          throw new Error("Farcaster Auth Kit not properly initialized")
+          throw new Error("Farcaster Auth Kit not properly initialized. Check your configuration.")
         }
 
+        console.log("📱 Triggering Auth Kit sign-in...")
+
+        // Add a timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          console.error("⏰ Auth Kit sign-in timeout")
+          setAuthState((prev) => ({
+            ...prev,
+            error: "Authentication timed out. Please try again.",
+            isLoading: false,
+          }))
+        }, 30000) // 30 second timeout
+
         // Trigger the auth kit sign-in
-        signInHook.signIn()
+        try {
+          await signInHook.signIn()
+          clearTimeout(timeoutId)
+        } catch (error) {
+          clearTimeout(timeoutId)
+          throw error
+        }
       } else {
         console.log("🎭 Using mock authentication")
 
@@ -209,5 +251,16 @@ export function useFarcasterAuth() {
     isLoading,
     signIn,
     signOut,
+    // Expose auth kit state for debugging
+    authKitState: authKitEnabled
+      ? {
+          signInLoading: signInHook.isLoading,
+          signInError: signInHook.error,
+          signInData: signInHook.data,
+          profileLoading: profileHook.isLoading,
+          profileError: profileHook.error,
+          profileData: profileHook.data,
+        }
+      : null,
   }
 }

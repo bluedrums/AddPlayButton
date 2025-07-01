@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Settings, ChevronDown, ChevronUp } from "lucide-react"
+import { Settings, ChevronDown, ChevronUp, Copy } from "lucide-react"
 
 export function DebugPanel() {
   const [isOpen, setIsOpen] = useState(false)
@@ -15,7 +15,24 @@ export function DebugPanel() {
     appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN,
     appUrl: process.env.NEXT_PUBLIC_APP_URL,
     hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
-    userAgent: typeof window !== "undefined" ? navigator.userAgent : "N/A",
+    userAgent: typeof window !== "undefined" ? navigator.userAgent.substring(0, 50) + "..." : "N/A",
+    timestamp: new Date().toISOString(),
+  }
+
+  const copyDebugInfo = () => {
+    const debugText = Object.entries(debugInfo)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join("\n")
+
+    navigator.clipboard
+      .writeText(debugText)
+      .then(() => {
+        alert("Debug info copied to clipboard!")
+      })
+      .catch(() => {
+        console.log("Debug info:", debugText)
+        alert("Debug info logged to console")
+      })
   }
 
   return (
@@ -41,19 +58,32 @@ export function DebugPanel() {
             {Object.entries(debugInfo).map(([key, value]) => (
               <div key={key} className="flex justify-between items-center">
                 <span className="text-gray-600 capitalize">{key.replace(/([A-Z])/g, " $1")}:</span>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" className="text-xs max-w-[200px] truncate">
                   {value || "undefined"}
                 </Badge>
               </div>
             ))}
           </div>
 
+          <div className="mt-4 flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={copyDebugInfo}
+              className="flex items-center gap-1 bg-transparent"
+            >
+              <Copy className="h-3 w-3" />
+              Copy Debug Info
+            </Button>
+          </div>
+
           <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
             <p className="font-medium mb-1">Expected for Real Auth:</p>
             <ul className="text-gray-600 space-y-1">
               <li>• NEXT_PUBLIC_FORCE_REAL_AUTH = "true"</li>
-              <li>• NEXT_PUBLIC_APP_DOMAIN = your-domain.com</li>
-              <li>• NEXT_PUBLIC_APP_URL = https://your-domain.com</li>
+              <li>• NEXT_PUBLIC_APP_DOMAIN = your-domain.vercel.app</li>
+              <li>• NEXT_PUBLIC_APP_URL = https://your-domain.vercel.app</li>
+              <li>• WARPCAST_API_KEY = wck_...</li>
             </ul>
           </div>
         </CardContent>
