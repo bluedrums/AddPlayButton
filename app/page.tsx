@@ -1,34 +1,29 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import {
   Loader2,
   User,
   Play,
   ExternalLink,
-  X,
-  Upload,
-  ImageIcon,
-  Trash2,
   Wallet,
   DollarSign,
   CheckCircle,
+  AlertCircle,
+  Share2,
+  Settings,
 } from "lucide-react"
-
-interface FarcasterUser {
-  fid: number
-  username: string
-  displayName: string
-  pfpUrl?: string
-  walletAddress?: string
-}
+import { useFarcasterAuth } from "@/hooks/use-farcaster-auth"
+import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
+import { DebugPanel } from "@/components/debug-panel"
 
 interface StoredImage {
   id: string
@@ -36,18 +31,6 @@ interface StoredImage {
   url: string
   size: number
   uploadedAt: number
-}
-
-interface CastData {
-  id: string
-  url: string
-  embedUrl: string
-  embedType: "spotify" | "apple" | "soundcloud" | "youtube"
-  timestamp: number
-  text: string
-  coverPhoto?: string
-  title?: string
-  paymentTxHash?: string
 }
 
 interface PaymentState {
@@ -73,7 +56,7 @@ const BASE_NETWORK = {
 
 // USDC contract address on Base
 const USDC_CONTRACT_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-const RECIPIENT_ADDRESS = "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6" // Replace with your Farcaster wallet address
+const RECIPIENT_ADDRESS = "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6"
 const PAYMENT_AMOUNT = "250000" // 0.25 USDC (6 decimals)
 
 // Wallet types
@@ -86,21 +69,23 @@ interface WalletState {
 }
 
 export default function FarcasterMiniApp() {
-  const [user, setUser] = useState<FarcasterUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [showSignIn, setShowSignIn] = useState(false)
+  // Use Farcaster auth hook
+  const { user, isLoading: authLoading, isAuthenticated, error: authError, signIn, signOut } = useFarcasterAuth()
+  const { isSubmitting, error: castError, createCast, clearError } = useFarcasterCast()
+
   const [linkToPlay, setLinkToPlay] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [embedUrl, setEmbedUrl] = useState("")
   const [embedType, setEmbedType] = useState<"spotify" | "apple" | "soundcloud" | "youtube" | null>(null)
   const [isValidUrl, setIsValidUrl] = useState(false)
   const [showPlayerPopup, setShowPlayerPopup] = useState(false)
-  const [currentCast, setCurrentCast] = useState<CastData | null>(null)
-  const [recentCasts, setRecentCasts] = useState<CastData[]>([])
+  const [currentCast, setCurrentCast] = useState<any>(null)
+  const [recentCasts, setRecentCasts] = useState<any[]>([])
+  const [isLoadingCasts, setIsLoadingCasts] = useState(false)
 
   // Cover photo states
   const [coverPhoto, setCoverPhoto] = useState<string>("")
   const [title, setTitle] = useState<string>("")
+  const [customText, setCustomText] = useState<string>("")
   const [isUploading, setIsUploading] = useState(false)
   const [showImagePicker, setShowImagePicker] = useState(false)
   const [storedImages, setStoredImages] = useState<StoredImage[]>([])
@@ -119,18 +104,57 @@ export default function FarcasterMiniApp() {
     isCompleted: false,
   })
   const [showPaymentDialog, setShowPaymentDialog] = useState(false)
-  const [isDonationChecked, setIsDonationChecked] = useState(true) // Add this line
+  const [isDonationChecked, setIsDonationChecked] = useState(true)
+
+  // Debug states
+  const [showDebugInfo, setShowDebugInfo] = useState(false)
+
+  // Check if we're using real auth
+  const isUsingRealAuth = () => {
+    const savedAuth = localStorage.getItem("farcaster-auth")
+    if (savedAuth) {
+      try {
+        const authData = JSON.parse(savedAuth)
+        return authData.isRealAuth === true
+      } catch {
+        return false
+      }
+    }
+    return false
+  }
+
+  // Load user's recent casts when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadUserCasts()
+    }
+  }, [isAuthenticated, user])
+
+  const loadUserCasts = async () => {
+    if (!user) return
+
+    setIsLoadingCasts(true)
+    try {
+      const response = await fetch(`/api/user/casts?fid=${user.fid}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setRecentCasts(data.casts)
+      }
+    } catch (error) {
+      console.error("Error loading casts:", error)
+    } finally {
+      setIsLoadingCasts(false)
+    }
+  }
 
   // Connect Farcaster wallet
   const connectFarcasterWallet = async () => {
     setPaymentState((prev) => ({ ...prev, isConnecting: true, error: undefined }))
 
     try {
-      // Simulate Farcaster wallet connection
       await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // In real implementation, this would use Farcaster's wallet API
-      const mockAddress = user?.walletAddress || "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6"
+      const mockAddress = user?.custodyAddress || "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6"
 
       setWalletState({
         type: "farcaster",
@@ -154,10 +178,7 @@ export default function FarcasterMiniApp() {
     setPaymentState((prev) => ({ ...prev, isConnecting: true, error: undefined }))
 
     try {
-      // Simulate WalletConnect connection
       await new Promise((resolve) => setTimeout(resolve, 2000))
-
-      // In real implementation, this would use WalletConnect SDK
       const mockAddress = "0x" + Math.random().toString(16).substr(2, 40)
 
       setWalletState({
@@ -191,27 +212,11 @@ export default function FarcasterMiniApp() {
       let txHash: string
 
       if (walletState.type === "farcaster") {
-        // Simulate Farcaster wallet payment
         await new Promise((resolve) => setTimeout(resolve, 2000))
         txHash = "0xfc" + Math.random().toString(16).substr(2, 62)
-
-        console.log("Payment via Farcaster wallet:", {
-          from: walletState.address,
-          to: RECIPIENT_ADDRESS,
-          amount: PAYMENT_AMOUNT,
-          token: "USDC",
-        })
       } else {
-        // Simulate WalletConnect payment
         await new Promise((resolve) => setTimeout(resolve, 2500))
         txHash = "0xwc" + Math.random().toString(16).substr(2, 62)
-
-        console.log("Payment via WalletConnect:", {
-          from: walletState.address,
-          to: RECIPIENT_ADDRESS,
-          amount: PAYMENT_AMOUNT,
-          token: "USDC",
-        })
       }
 
       setPaymentState((prev) => ({
@@ -221,7 +226,6 @@ export default function FarcasterMiniApp() {
         txHash,
       }))
 
-      // Wait a moment then proceed with cast creation
       setTimeout(() => {
         setShowPaymentDialog(false)
         createCastAfterPayment(txHash)
@@ -238,38 +242,46 @@ export default function FarcasterMiniApp() {
 
   // Create cast after successful payment
   const createCastAfterPayment = async (txHash: string) => {
-    if (!embedType) return
-
-    setIsSubmitting(true)
+    if (!embedType || !user) return
 
     try {
-      const castData = await createCast(linkToPlay, embedUrl, embedType, coverPhoto, title, txHash)
+      const cast = await createCast({
+        fid: user.fid,
+        embedUrl: linkToPlay, // Use original URL for embed
+        embedType,
+        title,
+        customText,
+      })
 
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      console.log("Cast created with payment:", castData)
+      // Show success message with Warpcast link
       alert(
-        `🎵 Cast created! Your ${embedType.charAt(0).toUpperCase()}${embedType.slice(1)} play button has been added to Farcaster. Payment confirmed!`,
+        `🎵 Cast created successfully! Your ${embedType.charAt(0).toUpperCase()}${embedType.slice(1)} play button has been posted to Farcaster.\n\nView on Warpcast: ${cast.warpcastUrl}`,
       )
 
       // Reset form
-      setLinkToPlay("")
-      setEmbedUrl("")
-      setEmbedType(null)
-      setIsValidUrl(false)
-      setCoverPhoto("")
-      setTitle("")
-      setPaymentState({
-        isConnecting: false,
-        isProcessing: false,
-        isCompleted: false,
-      })
+      resetForm()
+
+      // Reload user casts
+      loadUserCasts()
     } catch (error) {
       console.error("Error creating cast:", error)
       alert("Failed to create cast. Please try again.")
-    } finally {
-      setIsSubmitting(false)
     }
+  }
+
+  const resetForm = () => {
+    setLinkToPlay("")
+    setEmbedUrl("")
+    setEmbedType(null)
+    setIsValidUrl(false)
+    setCoverPhoto("")
+    setTitle("")
+    setCustomText("")
+    setPaymentState({
+      isConnecting: false,
+      isProcessing: false,
+      isCompleted: false,
+    })
   }
 
   const validateMusicUrl = (
@@ -376,24 +388,8 @@ export default function FarcasterMiniApp() {
     }
   }
 
-  // Load data from localStorage on component mount
+  // Load stored images from localStorage
   useEffect(() => {
-    const savedCasts = localStorage.getItem("farcaster-casts")
-    if (savedCasts) {
-      try {
-        const parsedCasts = JSON.parse(savedCasts)
-        const migratedCasts = parsedCasts.map((cast: any) => ({
-          ...cast,
-          title: cast.title || undefined,
-          paymentTxHash: cast.paymentTxHash || undefined,
-        }))
-        setRecentCasts(migratedCasts)
-      } catch (error) {
-        console.error("Error parsing saved casts:", error)
-        setRecentCasts([])
-      }
-    }
-
     const savedImages = localStorage.getItem("farcaster-images")
     if (savedImages) {
       try {
@@ -405,15 +401,7 @@ export default function FarcasterMiniApp() {
     }
   }, [])
 
-  // Save cast data to Farcaster storage (simulated with localStorage)
-  const saveCastToStorage = (castData: CastData) => {
-    const existingCasts = JSON.parse(localStorage.getItem("farcaster-casts") || "[]")
-    const updatedCasts = [castData, ...existingCasts].slice(0, 10)
-    localStorage.setItem("farcaster-casts", JSON.stringify(updatedCasts))
-    setRecentCasts(updatedCasts)
-  }
-
-  // Save image to Farcaster storage (simulated with localStorage)
+  // Save image to storage
   const saveImageToStorage = (imageData: StoredImage) => {
     const existingImages = JSON.parse(localStorage.getItem("farcaster-images") || "[]")
     const updatedImages = [imageData, ...existingImages]
@@ -439,7 +427,6 @@ export default function FarcasterMiniApp() {
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500))
-
       const imageUrl = URL.createObjectURL(file)
 
       const imageData: StoredImage = {
@@ -452,8 +439,6 @@ export default function FarcasterMiniApp() {
 
       const savedUrl = saveImageToStorage(imageData)
       setCoverPhoto(savedUrl)
-
-      console.log("Image uploaded:", imageData)
     } catch (error) {
       console.error("Error uploading image:", error)
       alert("Failed to upload image. Please try again.")
@@ -502,38 +487,8 @@ export default function FarcasterMiniApp() {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  // Create a Cast with the music URL, cover photo, title, and payment hash
-  const createCast = async (
-    url: string,
-    embedUrl: string,
-    embedType: "spotify" | "apple" | "soundcloud" | "youtube",
-    coverPhoto?: string,
-    title?: string,
-    paymentTxHash?: string,
-  ) => {
-    const castId = `cast_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const platformName = embedType.charAt(0).toUpperCase() + embedType.slice(1)
-
-    const castData: CastData = {
-      id: castId,
-      url: url,
-      embedUrl: embedUrl,
-      embedType: embedType,
-      timestamp: Date.now(),
-      text: `🎵 Check out this ${embedType === "youtube" ? "video" : "track"} on ${platformName}! Click to play: ${url}`,
-      coverPhoto: coverPhoto,
-      title: title,
-      paymentTxHash: paymentTxHash,
-    }
-
-    saveCastToStorage(castData)
-    console.log("Creating Cast:", castData)
-
-    return castData
-  }
-
   // Handle Cast URL click
-  const handleCastClick = (castData: CastData) => {
+  const handleCastClick = (castData: any) => {
     setCurrentCast(castData)
     setShowPlayerPopup(true)
   }
@@ -564,88 +519,39 @@ export default function FarcasterMiniApp() {
     }) as T
   }
 
-  // Simulate Farcaster authentication check
-  useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true)
-
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      const savedUser = localStorage.getItem("farcaster-user")
-      if (savedUser) {
-        setUser(JSON.parse(savedUser))
-      } else {
-        setShowSignIn(true)
-      }
-
-      setIsLoading(false)
-    }
-
-    checkAuth()
-  }, [])
-
-  const handleSignIn = async () => {
-    setIsLoading(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    const mockUser: FarcasterUser = {
-      fid: 12345,
-      username: "alice",
-      displayName: "Alice Johnson",
-      pfpUrl: "/placeholder.svg?height=40&width=40",
-      walletAddress: "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6", // Mock Farcaster wallet
-    }
-
-    setUser(mockUser)
-    localStorage.setItem("farcaster-user", JSON.stringify(mockUser))
-    setShowSignIn(false)
-    setIsLoading(false)
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!linkToPlay.trim() || !isValidUrl || !embedType) return
+    if (!linkToPlay.trim() || !isValidUrl || !embedType || !user) return
+
+    clearError()
 
     // Only show payment dialog if donation is checked
     if (isDonationChecked) {
       setShowPaymentDialog(true)
     } else {
       // Create cast without payment
-      setIsSubmitting(true)
       try {
-        const castData = await createCast(linkToPlay, embedUrl, embedType, coverPhoto, title)
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        const cast = await createCast({
+          fid: user.fid,
+          embedUrl: linkToPlay,
+          embedType,
+          title,
+          customText,
+        })
 
-        console.log("Cast created without payment:", castData)
         alert(
-          `🎵 Cast created! Your ${embedType.charAt(0).toUpperCase()}${embedType.slice(1)} play button has been added to Farcaster.`,
+          `🎵 Cast created successfully! Your ${embedType.charAt(0).toUpperCase()}${embedType.slice(1)} play button has been posted to Farcaster.\n\nView on Warpcast: ${cast.warpcastUrl}`,
         )
 
-        // Reset form
-        setLinkToPlay("")
-        setEmbedUrl("")
-        setEmbedType(null)
-        setIsValidUrl(false)
-        setCoverPhoto("")
-        setTitle("")
+        resetForm()
+        loadUserCasts()
       } catch (error) {
-        console.error("Error creating cast:", error)
-        alert("Failed to create cast. Please try again.")
-      } finally {
-        setIsSubmitting(false)
+        // Error is handled by the hook
       }
     }
   }
 
-  const handleSignOut = () => {
-    setUser(null)
-    setWalletState({ type: null, address: "", isConnected: false })
-    localStorage.removeItem("farcaster-user")
-    setShowSignIn(true)
-  }
-
-  if (isLoading && !showSignIn) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
         <Card className="w-full max-w-md">
@@ -661,27 +567,62 @@ export default function FarcasterMiniApp() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
       <div className="max-w-md mx-auto pt-8 space-y-6">
-        {user ? (
+        {isAuthenticated && user ? (
           <>
             <Card>
               <CardHeader className="text-center">
-                <div className="flex items-center justify-center gap-3 mb-2">
-                  {user.pfpUrl ? (
-                    <img
-                      src={user.pfpUrl || "/placeholder.svg"}
-                      alt={user.displayName}
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <User className="w-10 h-10 text-purple-600" />
-                  )}
-                  <div>
-                    <CardTitle className="text-xl">Hello {user.displayName}!</CardTitle>
-                    <CardDescription>@{user.username}</CardDescription>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    {user.pfpUrl ? (
+                      <img
+                        src={user.pfpUrl || "/placeholder.svg"}
+                        alt={user.displayName}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    ) : (
+                      <User className="w-10 h-10 text-purple-600" />
+                    )}
+                    <div className="text-left">
+                      <CardTitle className="text-xl">Hello {user.displayName}!</CardTitle>
+                      <CardDescription>
+                        @{user.username} • FID: {user.fid}
+                      </CardDescription>
+                    </div>
                   </div>
+                  <Button variant="ghost" size="sm" onClick={() => setShowDebugInfo(!showDebugInfo)}>
+                    <Settings className="h-4 w-4" />
+                  </Button>
                 </div>
+
+                {/* Auth Status Badge */}
+                <div className="flex justify-center">
+                  <Badge variant={isUsingRealAuth() ? "default" : "secondary"}>
+                    {isUsingRealAuth() ? "🚀 Real Farcaster Auth" : "🎭 Mock Auth"}
+                  </Badge>
+                </div>
+
+                {/* Debug Info */}
+                {showDebugInfo && (
+                  <div className="mt-4 p-3 bg-gray-100 rounded-lg text-left">
+                    <h4 className="font-medium text-sm mb-2">Debug Information:</h4>
+                    <div className="text-xs space-y-1 text-gray-600">
+                      <div>Auth Type: {isUsingRealAuth() ? "Real" : "Mock"}</div>
+                      <div>Environment: {process.env.NODE_ENV}</div>
+                      <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
+                      <div>Has Warpcast Key: {process.env.WARPCAST_API_KEY ? "Yes" : "No"}</div>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
+                {/* Error Display */}
+                {(authError || castError) && (
+                  <Alert className="mb-4" variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{authError || castError}</AlertDescription>
+                  </Alert>
+                )}
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="link-to-play">Link to Play</Label>
@@ -710,68 +651,20 @@ export default function FarcasterMiniApp() {
                     )}
                   </div>
 
-                  {/* Cover Photo Section */}
+                  {/* Custom Text Section */}
                   <div className="space-y-2">
-                    <Label>Cover Photo (Optional)</Label>
-                    {coverPhoto ? (
-                      <div className="relative">
-                        <img
-                          src={coverPhoto || "/placeholder.svg"}
-                          alt="Cover photo"
-                          className="w-full h-32 object-cover rounded-lg border"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={removeCoverPhoto}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1 bg-transparent"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isUploading}
-                        >
-                          {isUploading ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Uploading...
-                            </>
-                          ) : (
-                            <>
-                              <Upload className="mr-2 h-4 w-4" />
-                              Upload
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="flex-1 bg-transparent"
-                          onClick={() => setShowImagePicker(true)}
-                        >
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          Choose
-                        </Button>
-                      </div>
-                    )}
-                    <p className="text-xs text-gray-500">
-                      Upload an image (max 100MB) or choose from your Farcaster storage
-                    </p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileInputChange}
-                      className="hidden"
+                    <Label htmlFor="custom-text">Cast Text (Optional)</Label>
+                    <Input
+                      id="custom-text"
+                      type="text"
+                      placeholder="Custom text for your cast (leave empty for auto-generated)"
+                      value={customText}
+                      onChange={(e) => setCustomText(e.target.value)}
+                      maxLength={280}
                     />
+                    <p className="text-xs text-gray-500">
+                      {customText.length}/280 characters. Leave empty to auto-generate cast text.
+                    </p>
                   </div>
 
                   {/* Title Section */}
@@ -780,12 +673,12 @@ export default function FarcasterMiniApp() {
                     <Input
                       id="title"
                       type="text"
-                      placeholder="Enter a title for your cast"
+                      placeholder="Enter a title for your music/video"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       maxLength={100}
                     />
-                    <p className="text-xs text-gray-500">Add a custom title to describe your music or video</p>
+                    <p className="text-xs text-gray-500">Used in auto-generated cast text if no custom text provided</p>
                   </div>
 
                   {/* Donation Section */}
@@ -820,12 +713,14 @@ export default function FarcasterMiniApp() {
                       </>
                     ) : (
                       <>
-                        <Play className="mr-2 h-4 w-4" />
-                        Add Play Button
+                        <Share2 className="mr-2 h-4 w-4" />
+                        Post to Farcaster
                       </>
                     )}
                   </Button>
                 </form>
+
+                {/* Preview */}
                 {embedUrl && embedType && (
                   <div className="mt-6 space-y-2">
                     <Label className="text-sm font-medium">Preview</Label>
@@ -876,20 +771,33 @@ export default function FarcasterMiniApp() {
                     </div>
                   </div>
                 )}
-                <Button variant="ghost" onClick={handleSignOut} className="w-full mt-4 text-gray-600">
+
+                <Button variant="ghost" onClick={signOut} className="w-full mt-4 text-gray-600">
                   Sign Out
                 </Button>
               </CardContent>
             </Card>
 
             {/* Recent Casts */}
-            {recentCasts.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Your Recent Casts</CardTitle>
-                  <CardDescription>Click on any cast to open the media player</CardDescription>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">Your Music Casts</CardTitle>
+                    <CardDescription>Recent casts with music/video embeds</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={loadUserCasts} disabled={isLoadingCasts}>
+                    {isLoadingCasts ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCasts ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                    <span className="ml-2 text-gray-600">Loading casts...</span>
+                  </div>
+                ) : recentCasts.length > 0 ? (
                   <div className="space-y-3">
                     {recentCasts.map((cast) => (
                       <div
@@ -898,65 +806,103 @@ export default function FarcasterMiniApp() {
                         onClick={() => handleCastClick(cast)}
                       >
                         <div className="flex items-center gap-3">
-                          {cast.coverPhoto && (
-                            <img
-                              src={cast.coverPhoto || "/placeholder.svg"}
-                              alt="Cover"
-                              className="w-12 h-12 object-cover rounded"
-                            />
-                          )}
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Play className="h-4 w-4 text-purple-600" />
                                 <span className="text-sm font-medium">
-                                  {cast.title ||
-                                    `${cast.embedType.charAt(0).toUpperCase() + cast.embedType.slice(1)} ${cast.embedType === "youtube" ? "Video" : "Track"}`}
+                                  {cast.embedType.charAt(0).toUpperCase() + cast.embedType.slice(1)}{" "}
+                                  {cast.embedType === "youtube" ? "Video" : "Track"}
                                 </span>
-                                {cast.paymentTxHash && (
-                                  <CheckCircle className="h-3 w-3 text-green-600" title="Payment confirmed" />
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <ExternalLink className="h-4 w-4 text-gray-400" />
+                                {cast.warpcastUrl && (
+                                  <a
+                                    href={cast.warpcastUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs text-purple-600 hover:underline"
+                                  >
+                                    View on Warpcast
+                                  </a>
                                 )}
                               </div>
-                              <ExternalLink className="h-4 w-4 text-gray-400" />
                             </div>
-                            <p className="text-xs text-gray-600 mt-1 truncate">
-                              {new Date(cast.timestamp).toLocaleString()}
-                            </p>
+                            <p className="text-xs text-gray-600 mt-1 line-clamp-2">{cast.text}</p>
+                            <p className="text-xs text-gray-500 mt-1">{new Date(cast.timestamp).toLocaleString()}</p>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        ) : null}
-
-        {/* Sign In Dialog */}
-        <Dialog open={showSignIn} onOpenChange={setShowSignIn}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="text-center">Sign in with Farcaster</DialogTitle>
-              <DialogDescription className="text-center">Connect your Farcaster account to continue</DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col items-center space-y-4 py-4">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                <User className="w-8 h-8 text-purple-600" />
-              </div>
-              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Connecting...
-                  </>
                 ) : (
-                  "Connect Farcaster"
+                  <div className="text-center py-8 text-gray-500">
+                    <Play className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No music casts found.</p>
+                    <p className="text-sm">Create your first cast above!</p>
+                  </div>
                 )}
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          /* Sign In Card */
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle>Sign in with Farcaster</CardTitle>
+              <CardDescription>
+                Connect your Farcaster account to start posting music and video play buttons
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {authError && (
+                <Alert className="mb-4" variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{authError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex flex-col items-center space-y-4 py-4">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                  <User className="w-8 h-8 text-purple-600" />
+                </div>
+                <Button
+                  onClick={() => {
+                    console.log("🔘 Connect Farcaster button clicked")
+                    signIn()
+                  }}
+                  disabled={authLoading}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  {authLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    "Connect Farcaster"
+                  )}
+                </Button>
+
+                {/* Add debug info right after the button */}
+                <div className="text-center">
+                  <Badge variant="secondary" className="text-xs">
+                    {process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true" ? "🚀 Real Auth Forced" : "🎭 Mock Mode"}
+                  </Badge>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Auth Kit: {process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true" ? "Enabled" : "Disabled"}
+                  </p>
+                </div>
+                <DebugPanel />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Payment Dialog */}
         <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
@@ -1089,136 +1035,100 @@ export default function FarcasterMiniApp() {
           </DialogContent>
         </Dialog>
 
-        {/* Image Picker Dialog */}
-        <Dialog open={showImagePicker} onOpenChange={setShowImagePicker}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Choose from Farcaster Storage</DialogTitle>
-              <DialogDescription>Select an image from your previously uploaded files</DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              {storedImages.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <ImageIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No images in your Farcaster storage yet.</p>
-                  <p className="text-sm">Upload some images to see them here!</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-4 max-h-96 overflow-y-auto">
-                  {storedImages.map((image) => (
-                    <div key={image.id} className="relative group">
-                      <img
-                        src={image.url || "/placeholder.svg"}
-                        alt={image.name}
-                        className="w-full h-24 object-cover rounded-lg border cursor-pointer hover:opacity-80 transition-opacity"
-                        onClick={() => handleImageSelect(image.url)}
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteStoredImage(image.id)
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                      <div className="absolute bottom-1 left-1 right-1 bg-black bg-opacity-75 text-white text-xs p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="truncate">{image.name}</p>
-                        <p>{formatFileSize(image.size)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
         {/* Media Player Popup */}
         <Dialog open={showPlayerPopup} onOpenChange={setShowPlayerPopup}>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Play className="h-5 w-5 text-purple-600" />
-                {currentCast?.title ||
-                  `${currentCast?.embedType.charAt(0).toUpperCase()}${currentCast?.embedType.slice(1)} Player`}
+                {currentCast?.embedType.charAt(0).toUpperCase()}
+                {currentCast?.embedType.slice(1)} Player
               </DialogTitle>
               <DialogDescription>Playing from your Farcaster Cast</DialogDescription>
             </DialogHeader>
             <div className="py-4">
               {currentCast && (
-                <div className="border rounded-lg overflow-hidden bg-gray-50">
-                  {currentCast.embedType === "spotify" && (
-                    <iframe
-                      src={currentCast.embedUrl}
-                      width="100%"
-                      height="152"
-                      frameBorder="0"
-                      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                      loading="lazy"
-                      title="Spotify Player"
-                    />
-                  )}
-                  {currentCast.embedType === "apple" && (
-                    <iframe
-                      src={currentCast.embedUrl}
-                      width="100%"
-                      height="150"
-                      frameBorder="0"
-                      allow="autoplay *; encrypted-media *; fullscreen *"
-                      sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-                      title="Apple Music Player"
-                    />
-                  )}
-                  {currentCast.embedType === "soundcloud" && (
-                    <iframe
-                      src={currentCast.embedUrl}
-                      width="100%"
-                      height="166"
-                      frameBorder="0"
-                      allow="autoplay"
-                      title="SoundCloud Player"
-                    />
-                  )}
-                  {currentCast.embedType === "youtube" && (
-                    <iframe
-                      src={currentCast.embedUrl}
-                      width="100%"
-                      height="315"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                      allowFullScreen
-                      title="YouTube Player"
-                    />
-                  )}
+                <div className="space-y-4">
+                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                    {currentCast.embedType === "spotify" && (
+                      <iframe
+                        src={currentCast.embedUrl.replace("open.spotify.com", "open.spotify.com/embed")}
+                        width="100%"
+                        height="152"
+                        frameBorder="0"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                        title="Spotify Player"
+                      />
+                    )}
+                    {currentCast.embedType === "apple" && (
+                      <iframe
+                        src={currentCast.embedUrl.replace("music.apple.com", "embed.music.apple.com")}
+                        width="100%"
+                        height="150"
+                        frameBorder="0"
+                        allow="autoplay *; encrypted-media *; fullscreen *"
+                        sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
+                        title="Apple Music Player"
+                      />
+                    )}
+                    {currentCast.embedType === "soundcloud" && (
+                      <iframe
+                        src={`https://w.soundcloud.com/player/?url=${encodeURIComponent(currentCast.embedUrl)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`}
+                        width="100%"
+                        height="166"
+                        frameBorder="0"
+                        allow="autoplay"
+                        title="SoundCloud Player"
+                      />
+                    )}
+                    {currentCast.embedType === "youtube" && (
+                      <iframe
+                        src={currentCast.embedUrl}
+                        width="100%"
+                        height="315"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        title="YouTube Player"
+                      />
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-gray-100 rounded-lg space-y-2">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Cast Text:</p>
+                      <p className="text-sm text-gray-600">{currentCast.text}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Original URL:</p>
+                      <a
+                        href={currentCast.embedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-purple-600 hover:underline break-all"
+                      >
+                        {currentCast.embedUrl}
+                      </a>
+                    </div>
+
+                    {currentCast.warpcastUrl && (
+                      <div>
+                        <p className="text-sm font-medium text-gray-700">View on Warpcast:</p>
+                        <a
+                          href={currentCast.warpcastUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-purple-600 hover:underline"
+                        >
+                          {currentCast.warpcastUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
-              <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-                <p className="text-sm text-gray-600">Original URL:</p>
-                <a
-                  href={currentCast?.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-purple-600 hover:underline break-all"
-                >
-                  {currentCast?.url}
-                </a>
-                {currentCast?.paymentTxHash && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-600">Payment Transaction:</p>
-                    <a
-                      href={`https://basescan.org/tx/${currentCast.paymentTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-green-600 hover:underline break-all"
-                    >
-                      {currentCast.paymentTxHash}
-                    </a>
-                  </div>
-                )}
-              </div>
             </div>
           </DialogContent>
         </Dialog>
