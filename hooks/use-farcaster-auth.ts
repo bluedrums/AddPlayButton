@@ -168,23 +168,43 @@ export function useFarcasterAuth() {
         }
 
         console.log("📱 Triggering Auth Kit sign-in...")
+        console.log("🔍 Auth Kit Hook State:", {
+          isLoading: signInHook.isLoading,
+          isSuccess: signInHook.isSuccess,
+          isError: signInHook.isError,
+          error: signInHook.error,
+          data: signInHook.data,
+        })
 
-        // Add a timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-          console.error("⏰ Auth Kit sign-in timeout")
-          setAuthState((prev) => ({
-            ...prev,
-            error: "Authentication timed out. Please try again.",
-            isLoading: false,
-          }))
-        }, 30000) // 30 second timeout
+        // Add detailed timeout with progress updates
+        let timeoutCount = 0
+        const progressInterval = setInterval(() => {
+          timeoutCount++
+          console.log(`⏳ Auth Kit waiting... ${timeoutCount * 2}s`)
 
-        // Trigger the auth kit sign-in
+          if (timeoutCount >= 15) {
+            // 30 seconds total
+            clearInterval(progressInterval)
+            console.error("⏰ Auth Kit sign-in timeout after 30 seconds")
+            setAuthState((prev) => ({
+              ...prev,
+              error:
+                "Authentication timed out. This might be due to popup blockers or network issues. Please try again and ensure popups are allowed.",
+              isLoading: false,
+            }))
+          }
+        }, 2000)
+
         try {
-          await signInHook.signIn()
-          clearTimeout(timeoutId)
+          // Try to trigger the sign-in
+          const result = await signInHook.signIn()
+          clearInterval(progressInterval)
+          console.log("📱 Auth Kit sign-in triggered, result:", result)
+
+          // Don't set loading to false here - let the success/error handlers do it
         } catch (error) {
-          clearTimeout(timeoutId)
+          clearInterval(progressInterval)
+          console.error("❌ Auth Kit sign-in failed:", error)
           throw error
         }
       } else {

@@ -18,14 +18,29 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
     return <>{children}</>
   }
 
+  // Get the actual hostname from the browser
+  const actualHostname = typeof window !== "undefined" ? window.location.hostname : ""
+  const actualOrigin = typeof window !== "undefined" ? window.location.origin : ""
+
+  // Use the actual hostname if available, otherwise fall back to env vars
+  const domain = actualHostname || process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000"
+  const siweUri = actualOrigin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+
   const config = {
-    domain: process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000",
-    siweUri: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    domain,
+    siweUri,
     rpcUrl: "https://mainnet.optimism.io",
     relay: "https://relay.farcaster.xyz",
   }
 
   console.log("🔧 Initializing Farcaster Auth Kit with config:", config)
+  console.log("🌐 Domain matching check:", {
+    configuredDomain: domain,
+    actualHostname,
+    configuredSiweUri: siweUri,
+    actualOrigin,
+    match: domain === actualHostname,
+  })
 
   // Validate required config
   if (!config.domain || !config.siweUri) {
