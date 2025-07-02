@@ -1,6 +1,7 @@
 "use client"
 
 import { AuthKitProvider } from "@farcaster/auth-kit"
+import React from "react"
 import type React from "react"
 
 interface FarcasterAuthProviderProps {
