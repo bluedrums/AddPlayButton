@@ -237,31 +237,8 @@ export function useFarcasterAuth() {
 
         try {
           // Try to trigger the sign-in
-          const result = await signInHook.signIn()
-          console.log("📱 Auth Kit sign-in result:", result)
-
-          // Handle undefined / falsy result explicitly
-          if (!result) {
-            console.error("⚠️ Auth Kit returned undefined result")
-            setFailureCount((prev) => prev + 1)
-            throw new Error("Authentication returned no result")
-          }
-
-          // If we get here without the success callback being called, something went wrong
-          if (!signInHook.isSuccess) {
-            setTimeout(() => {
-              if (!signInHook.isSuccess && authState.isLoading) {
-                console.warn("⚠️ Auth Kit didn't complete successfully")
-                clearTimeout(timeout)
-                setAuthTimeout(null)
-                setAuthState((prev) => ({
-                  ...prev,
-                  error: "Authentication didn't complete. Please try again.",
-                  isLoading: false,
-                }))
-              }
-            }, 5000) // Give it 5 more seconds
-          }
+          await signInHook.signIn()
+          console.log("📱 Auth Kit sign-in triggered")
         } catch (error) {
           clearTimeout(timeout)
           setAuthTimeout(null)
