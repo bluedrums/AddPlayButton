@@ -8,6 +8,21 @@ interface FarcasterAuthProviderProps {
 }
 
 export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) {
+  /* ------------------------------------------------------------------
+   * Ensure the provider only runs in the browser
+   * ------------------------------------------------------------------ */
+  const [isClient, setIsClient] = React.useState(false)
+
+  React.useEffect(() => {
+    // Runs once after mount
+    setIsClient(true)
+  }, [])
+
+  // During SSR ‑or- before the component hydrates, just render children.
+  if (!isClient) {
+    return <>{children}</>
+  }
+
   // Only initialize if we should use real auth
   const shouldUseRealAuth =
     process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true" ||
