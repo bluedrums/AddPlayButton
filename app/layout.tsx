@@ -31,6 +31,13 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  // Farcaster Auth Kit configuration pulled from environment variables
+  const config = {
+    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+    domain: process.env.NEXT_PUBLIC_APP_DOMAIN,
+    siweUri: process.env.NEXT_PUBLIC_APP_URL,
+  }
+
   return (
     <html lang="en">
       <head>
@@ -43,7 +50,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Add Play Button" />
       </head>
       <body>
-        <FarcasterAuthProvider>{children}</FarcasterAuthProvider>
+        <FarcasterAuthProvider config={config}>{children}</FarcasterAuthProvider>
       </body>
     </html>
   )
