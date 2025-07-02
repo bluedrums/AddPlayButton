@@ -28,6 +28,8 @@ export function useFarcasterAuth() {
   })
 
   const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null)
+  // Track consecutive real-auth failures
+  const [failureCount, setFailureCount] = useState(0)
 
   // Check if we should use real auth
   const shouldUseRealAuth = () => {
@@ -221,13 +223,15 @@ export function useFarcasterAuth() {
 
         // Set a timeout to prevent hanging
         const timeout = setTimeout(() => {
-          console.warn("⏰ Auth Kit sign-in timed out after 15 seconds")
+          console.warn("⏰ Auth Kit sign-in timed out after 30 seconds")
           setAuthState((prev) => ({
             ...prev,
             error: "Authentication timed out. Please try again or use demo mode.",
             isLoading: false,
           }))
-        }, 15000) // 15 second timeout
+          // Count this as a failure
+          setFailureCount((prev) => prev + 1)
+        }, 30000) // 30-second timeout
 
         setAuthTimeout(timeout)
 
@@ -235,6 +239,13 @@ export function useFarcasterAuth() {
           // Try to trigger the sign-in
           const result = await signInHook.signIn()
           console.log("📱 Auth Kit sign-in result:", result)
+
+          // Handle undefined / falsy result explicitly
+          if (!result) {
+            console.error("⚠️ Auth Kit returned undefined result")
+            setFailureCount((prev) => prev + 1)
+            throw new Error("Authentication returned no result")
+          }
 
           // If we get here without the success callback being called, something went wrong
           if (!signInHook.isSuccess) {
@@ -274,6 +285,10 @@ export function useFarcasterAuth() {
         isAuthenticated: false,
         error: error.message || "Failed to sign in",
       })
+      // Increment failure counter after any caught error
+      if (authKitEnabled) {
+        setFailureCount((prev) => prev + 1)
+      }
     }
   }
 
@@ -296,6 +311,24 @@ export function useFarcasterAuth() {
       error: null,
     })
   }
+
+  // Automatically switch to demo mode after two consecutive failures
+  useEffect(() => {
+    if (failureCount >= 2 && !authState.isAuthenticated) {
+      console.warn("🔄 Two consecutive auth failures detected – switching to demo mode")
+      fallbackToMockAuth()
+      setFailureCount(0)
+    }
+  }, [failureCount, authState.isAuthenticated])
+
+  // Ensure timers are cleared if component unmounts
+  useEffect(() => {
+    return () => {
+      if (authTimeout) {
+        clearTimeout(authTimeout)
+      }
+    }
+  }, [authTimeout])
 
   // Force fallback to mock auth
   const useDemoMode = async () => {
