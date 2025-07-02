@@ -148,7 +148,13 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
   }
 
   try {
-    return <AuthKitProvider config={config}>{children}</AuthKitProvider>
+    // Force pop-up based sign-in so browsers that block 3rd-party cookies
+    // (Edge “tracking prevention”, Safari ITP, etc.) don’t hang the iframe flow
+    return (
+      <AuthKitProvider config={config} options={{ signIn: { method: "window" } }}>
+        {children}
+      </AuthKitProvider>
+    )
   } catch (error) {
     console.error("❌ Failed to initialize Auth Kit Provider:", error)
 
