@@ -237,7 +237,8 @@ export function useFarcasterAuth() {
 
         try {
           // Try to trigger the sign-in
-          await signInHook.signIn()
+          // Force pop-up transport so browsers that block 3rd-party-cookie iframes can complete auth
+          await signInHook.signIn({ method: "popup" })
           console.log("📱 Auth Kit sign-in triggered")
         } catch (error) {
           clearTimeout(timeout)
