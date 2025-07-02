@@ -31,9 +31,10 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
 
   const { hostname: actualHostname, origin: actualOrigin, protocol } = getLocationParts()
 
-  // Use the actual hostname if available, otherwise fall back to env vars
-  const domain = actualHostname || process.env.NEXT_PUBLIC_APP_DOMAIN || "localhost:3000"
-  const siweUri = actualOrigin || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+  // Use environment variables for config (consistent and predictable)
+  // This ensures the same values are used regardless of www subdomain or other variations
+  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN || "addplaybutton.xyz"
+  const siweUri = process.env.NEXT_PUBLIC_APP_URL || "https://www.addplaybutton.xyz"
 
   const config = {
     domain,
