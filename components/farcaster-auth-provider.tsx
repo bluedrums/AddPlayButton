@@ -31,10 +31,31 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
 
   const { hostname: actualHostname, origin: actualOrigin, protocol } = getLocationParts()
 
-  // Use environment variables for config (consistent and predictable)
-  // This ensures the same values are used regardless of www subdomain or other variations
-  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN || "addplaybutton.xyz"
-  const siweUri = process.env.NEXT_PUBLIC_APP_URL || "https://www.addplaybutton.xyz"
+  /* ------------------------------------------------------------------
+   * Determine domain / siweUri for Auth Kit
+   *
+   * Rules:
+   * 1. If we’re in the browser **and** the current hostname is included
+   *    in NEXT_PUBLIC_ALLOWED_DOMAINS (plus the primary APP_DOMAIN),
+   *    use the browser’s hostname/origin so it matches exactly.
+   * 2. Otherwise (SSR or non-allowed domain) fall back to env vars.
+   * ------------------------------------------------------------------ */
+
+  // Build list of allowed domains from env (comma-separated) + primary domain
+  const allowedDomainsEnv =
+    process.env.NEXT_PUBLIC_ALLOWED_DOMAINS?.split(",").map((d) => d.trim()) ?? []
+  const primaryDomain = process.env.NEXT_PUBLIC_APP_DOMAIN || "addplaybutton.xyz"
+  const allowedDomains = Array.from(new Set([primaryDomain, ...allowedDomainsEnv]))
+
+  const domain =
+    typeof window !== "undefined" && allowedDomains.includes(actualHostname)
+      ? actualHostname
+      : primaryDomain
+
+  const siweUri =
+    typeof window !== "undefined" && allowedDomains.includes(actualHostname)
+      ? actualOrigin
+      : process.env.NEXT_PUBLIC_APP_URL || "https://www.addplaybutton.xyz"
 
   const config = {
     domain,
@@ -56,11 +77,6 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
    * Additional domain / protocol validation & warnings
    * ------------------------------------------------------------------ */
 
-  // Build list of allowed domains from env (comma-separated) + current config
-  const allowedDomainsEnv =
-    process.env.NEXT_PUBLIC_ALLOWED_DOMAINS?.split(",").map((d) => d.trim()) ?? []
-  const allowedDomains = Array.from(new Set([domain, ...allowedDomainsEnv]))
-
   if (shouldUseRealAuth && actualHostname && !allowedDomains.includes(actualHostname)) {
     console.warn("⚠️ Current hostname is NOT in allowed domains list for Auth Kit:", {
       actualHostname,
@@ -68,7 +84,7 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
     })
   }
 
-  if (shouldUseRealAuth && domain !== actualHostname) {
+  if (shouldUseRealAuth && domain !== actualHostname && allowedDomains.includes(actualHostname)) {
     console.warn("⚠️ Configured domain differs from current hostname – this may break SIWE:", {
       configuredDomain: domain,
       actualHostname,
