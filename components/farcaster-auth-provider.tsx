@@ -51,9 +51,9 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
    * Determine domain / siweUri for Auth Kit
    *
    * Rules:
-   * 1. If we’re in the browser **and** the current hostname is included
+   * 1. If we're in the browser **and** the current hostname is included
    *    in NEXT_PUBLIC_ALLOWED_DOMAINS (plus the primary APP_DOMAIN),
-   *    use the browser’s hostname/origin so it matches exactly.
+   *    use the browser's hostname/origin so it matches exactly.
    * 2. Otherwise (SSR or non-allowed domain) fall back to env vars.
    * ------------------------------------------------------------------ */
 
@@ -149,7 +149,7 @@ export function FarcasterAuthProvider({ children }: FarcasterAuthProviderProps) 
 
   try {
     // Force pop-up based sign-in so browsers that block 3rd-party cookies
-    // (Edge “tracking prevention”, Safari ITP, etc.) don’t hang the iframe flow
+    // (Edge "tracking prevention", Safari ITP, etc.) don't hang the iframe flow
     return (
       <AuthKitProvider config={config} options={{ signIn: { method: "window" } }}>
         {children}
