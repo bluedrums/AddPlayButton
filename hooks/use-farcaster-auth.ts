@@ -237,13 +237,11 @@ export function useFarcasterAuth() {
 
         try {
           // Try to trigger the sign-in
+          // Force pop-up transport so browsers that block 3rd-party-cookie iframes can complete auth
           await signInHook.signIn({
             method: "window",
             flow: "oauth",
-            redirectUri:
-              typeof window !== "undefined"
-                ? `${window.location.origin}/auth/callback`
-                : undefined,
+            redirectUri: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
           })
           console.log("📱 Auth Kit sign-in triggered")
         } catch (error) {
