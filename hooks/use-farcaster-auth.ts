@@ -237,7 +237,6 @@ export function useFarcasterAuth() {
 
         try {
           // Try to trigger the sign-in
-          // Force pop-up transport so browsers that block 3rd-party-cookie iframes can complete auth
           await signInHook.signIn({
             method: "window",
             flow: "oauth",
@@ -332,6 +331,20 @@ export function useFarcasterAuth() {
 
   // Update loading state based on auth kit status
   const isLoading = authState.isLoading || (authKitEnabled && (signInHook.isLoading || profileHook.isLoading))
+
+  // ------------------------------------------------------------------
+  // Expose live Auth-Kit state on window for console debugging
+  // ------------------------------------------------------------------
+  if (typeof window !== "undefined") {
+    ;(window as any).__authDebug = {
+      signInLoading: signInHook.isLoading,
+      signInError: signInHook.error,
+      signInData: signInHook.data,
+      profileLoading: profileHook.isLoading,
+      profileError: profileHook.error,
+      profileData: profileHook.data,
+    }
+  }
 
   return {
     ...authState,
