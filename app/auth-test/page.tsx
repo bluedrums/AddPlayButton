@@ -1,6 +1,7 @@
 "use client";
 
 import { useSignIn, useProfile } from "@farcaster/auth-kit";
+import { actions } from "@farcaster/frames"; // 💡 for Frames preview “ready”
 import { useEffect, useState } from "react";
 
 export default function AuthTest() {
@@ -34,6 +35,9 @@ export default function AuthTest() {
         profileData: profile.data
       })
     };
+
+    // Notify Frames preview that the app is ready
+    actions.ready();
   }, [signIn, profile, lastAttempt]);
 
   const handleSignIn = () => {
