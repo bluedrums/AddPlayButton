@@ -9,7 +9,8 @@
     "start": "next start"
   },
   "dependencies": {
-    "@farcaster/auth-kit": "^0.8.1",
+    "@farcaster/auth-kit": "^0.6.1",
+    "@farcaster/frames": "^0.7.0",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
