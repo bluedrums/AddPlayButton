@@ -1,8 +1,7 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useSignIn, useProfile } from "@farcaster/auth-kit";
-import { actions } from "@farcaster/frame-sdk";
+import { getFarcasterFromMiniApp } from "@farcaster/miniapp-sdk";
 import { useEffect, useState } from "react";
 
 export default function AuthTest() {
@@ -38,7 +37,9 @@ export default function AuthTest() {
     };
 
     // Notify Frames preview that the app is ready
-    actions.ready();
+    getFarcasterFromMiniApp()
+      .then((fc) => fc.setFrameReady(true))
+      .catch(console.error);
   }, [signIn, profile, lastAttempt]);
 
   const handleSignIn = () => {
