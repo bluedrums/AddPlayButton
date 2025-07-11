@@ -1,7 +1,8 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 "use client";
 
 import { useSignIn, useProfile } from "@farcaster/auth-kit";
-import { actions } from "@farcaster/frames"; // 💡 for Frames preview “ready”
+import { actions } from "@farcaster/frame-sdk";
 import { useEffect, useState } from "react";
 
 export default function AuthTest() {
