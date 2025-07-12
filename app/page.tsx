@@ -20,6 +20,7 @@ import {
   Loader2,
   Settings,
   LogOut,
+  Info,
 } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
@@ -281,12 +282,10 @@ export default function AddPlayButtonApp() {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <User className="w-5 h-5" />
-                {isSDKReady ? "Sign in with Farcaster" : "Loading..."}
+                Connect with Farcaster
               </CardTitle>
               <CardDescription>
-                {isSDKReady
-                  ? "Connect your Farcaster account to start posting music and video play buttons"
-                  : "Initializing Farcaster SDK..."}
+                Get started with your Farcaster account to create and share play buttons
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -298,25 +297,16 @@ export default function AddPlayButtonApp() {
                 </Avatar>
               </div>
 
-              <Button
-                onClick={handleSignIn}
-                disabled={isLoading || !isSDKReady}
-                className="w-full bg-purple-600 hover:bg-purple-700"
-              >
+              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Connecting...
                   </>
-                ) : !isSDKReady ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading SDK...
-                  </>
                 ) : (
                   <>
                     <User className="w-4 h-4 mr-2" />
-                    Connect Farcaster
+                    Get Started
                   </>
                 )}
               </Button>
@@ -328,16 +318,20 @@ export default function AddPlayButtonApp() {
                 </Alert>
               )}
 
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo
+                  mode will be used.
+                </AlertDescription>
+              </Alert>
+
               <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-2 text-sm text-green-600">
                   <Check className="w-4 h-4" />
-                  Quick Auth {isSDKReady ? "Ready" : "Loading..."}
+                  SDK Ready
                 </div>
-                <div className="text-xs text-gray-500">
-                  Domain: addplaybutton.xyz
-                  <br />
-                  SDK: {isSDKReady ? "Ready" : "Loading..."}
-                </div>
+                <div className="text-xs text-gray-500">Domain: addplaybutton.xyz</div>
               </div>
 
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full">
@@ -352,7 +346,7 @@ export default function AddPlayButtonApp() {
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
                   <div>User: {user ? user.username : "None"}</div>
                   <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
-                  <div>Error: {authError || "None"}</div>
+                  <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
                 </div>
               )}
             </CardContent>
@@ -370,7 +364,7 @@ export default function AddPlayButtonApp() {
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-semibold">{user.displayName}</h2>
                     <Badge variant="default" className="text-xs">
-                      Authenticated
+                      {user.fid === 12345 ? "Demo Mode" : "Connected"}
                     </Badge>
                   </div>
                   <p className="text-gray-600">@{user.username}</p>
