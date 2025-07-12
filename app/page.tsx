@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info } from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
@@ -20,6 +22,7 @@ interface PlayButton {
   title: string
   artist?: string
   embedUrl: string
+  coverImage?: string
   createdAt: Date
 }
 
@@ -29,9 +32,13 @@ export default function AddPlayButtonApp() {
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
 
   const [url, setUrl] = useState("")
+  const [title, setTitle] = useState("")
+  const [coverImage, setCoverImage] = useState<string | null>(null)
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState("")
+  const [imageError, setImageError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
 
@@ -53,6 +60,102 @@ export default function AddPlayButtonApp() {
 
   const savePlayButtons = (buttons: PlayButton[]) => {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
+  }
+
+  const validateImage = (file: File): Promise<{ isValid: boolean; error?: string; dataUrl?: string }> => {
+    return new Promise((resolve) => {
+      // Check file size (10MB = 10 * 1024 * 1024 bytes)
+      const maxSize = 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        resolve({ isValid: false, error: "File size must be less than 10MB" })
+        return
+      }
+
+      // Check file type
+      if (!file.type.startsWith("image/")) {
+        resolve({ isValid: false, error: "Please select an image file" })
+        return
+      }
+
+      const img = new Image()
+      const reader = new FileReader()
+
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string
+        img.onload = () => {
+          const { width, height } = img
+          const aspectRatio = width / height
+
+          // Check minimum dimensions
+          if (width < 600 || height < 400) {
+            resolve({ isValid: false, error: "Image must be at least 600x400px" })
+            return
+          }
+
+          // Check maximum dimensions
+          if (width > 3000 || height > 2000) {
+            resolve({ isValid: false, error: "Image must not exceed 3000x2000px" })
+            return
+          }
+
+          // Check aspect ratio (3:2 = 1.5, allow some tolerance)
+          const targetRatio = 3 / 2
+          const tolerance = 0.1
+          if (Math.abs(aspectRatio - targetRatio) > tolerance) {
+            resolve({
+              isValid: false,
+              error: `Image must have a 3:2 aspect ratio (current: ${width}x${height})`,
+            })
+            return
+          }
+
+          resolve({ isValid: true, dataUrl })
+        }
+
+        img.onerror = () => {
+          resolve({ isValid: false, error: "Invalid image file" })
+        }
+
+        img.src = dataUrl
+      }
+
+      reader.onerror = () => {
+        resolve({ isValid: false, error: "Failed to read image file" })
+      }
+
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setImageError("")
+
+    const validation = await validateImage(file)
+
+    if (!validation.isValid) {
+      setImageError(validation.error || "Invalid image")
+      setCoverImage(null)
+      setCoverImageFile(null)
+      return
+    }
+
+    setCoverImage(validation.dataUrl || null)
+    setCoverImageFile(file)
+    setImageError("")
+  }
+
+  const handleRemoveImage = () => {
+    setCoverImage(null)
+    setCoverImageFile(null)
+    setImageError("")
+    // Reset the file input
+    const fileInput = document.getElementById("cover-image-input") as HTMLInputElement
+    if (fileInput) {
+      fileInput.value = ""
+    }
   }
 
   const detectPlatform = (url: string): { platform: string; embedUrl: string } | null => {
@@ -136,7 +239,7 @@ export default function AddPlayButtonApp() {
       return {
         platform: detection.platform,
         embedUrl: detection.embedUrl,
-        title: `Sample ${detection.platform} Track`,
+        suggestedTitle: `Sample ${detection.platform} Track`,
         artist: "Sample Artist",
       }
     } catch (error) {
@@ -154,6 +257,16 @@ export default function AddPlayButtonApp() {
       return
     }
 
+    if (!title.trim()) {
+      setValidationError("Please enter a title")
+      return
+    }
+
+    if (imageError) {
+      setValidationError("Please fix the image error before proceeding")
+      return
+    }
+
     try {
       const validated = await validateUrl(url)
 
@@ -161,9 +274,10 @@ export default function AddPlayButtonApp() {
         id: Date.now().toString(),
         url: url.trim(),
         platform: validated.platform,
-        title: validated.title,
+        title: title.trim(),
         artist: validated.artist,
         embedUrl: validated.embedUrl,
+        coverImage: coverImage || undefined,
         createdAt: new Date(),
       }
 
@@ -171,7 +285,17 @@ export default function AddPlayButtonApp() {
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
       setUrl("")
+      setTitle("")
+      setCoverImage(null)
+      setCoverImageFile(null)
       setValidationError("")
+      setImageError("")
+
+      // Reset the file input
+      const fileInput = document.getElementById("cover-image-input") as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ""
+      }
 
       toast.success(`${validated.platform} play button added successfully!`)
     } catch (error) {
@@ -350,10 +474,25 @@ export default function AddPlayButtonApp() {
             <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Title Input Field */}
+            <div className="space-y-2">
+              <label htmlFor="title-input" className="text-sm font-medium text-gray-700">
+                Title <span className="text-red-500">*</span>
+              </label>
+              <Input
+                id="title-input"
+                placeholder="Enter a title for your play button..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full"
+                disabled={isValidating}
+              />
+            </div>
+
             {/* URL Input Field */}
             <div className="space-y-2">
               <label htmlFor="url-input" className="text-sm font-medium text-gray-700">
-                Music or Video URL
+                Music or Video URL <span className="text-red-500">*</span>
               </label>
               <Input
                 id="url-input"
@@ -366,10 +505,66 @@ export default function AddPlayButtonApp() {
               />
             </div>
 
+            {/* Cover Image Upload */}
+            <div className="space-y-2">
+              <label htmlFor="cover-image-input" className="text-sm font-medium text-gray-700">
+                Cover Image <span className="text-gray-500">(optional)</span>
+              </label>
+              <div className="space-y-3">
+                {!coverImage ? (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      id="cover-image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={isValidating}
+                    />
+                    <label htmlFor="cover-image-input" className="cursor-pointer flex flex-col items-center gap-2">
+                      <Upload className="w-8 h-8 text-gray-400" />
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-purple-600 hover:text-purple-500">Click to upload</span> or
+                        drag and drop
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        3:2 aspect ratio • 600x400px to 3000x2000px • Max 10MB
+                      </div>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="aspect-[3/2] w-full max-w-md mx-auto rounded-lg overflow-hidden border">
+                      <img
+                        src={coverImage || "/placeholder.svg"}
+                        alt="Cover preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRemoveImage}
+                      className="absolute top-2 right-2"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {imageError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{imageError}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+            </div>
+
             {/* Add Button */}
             <Button
               onClick={handleAddPlayButton}
-              disabled={isValidating || !url.trim()}
+              disabled={isValidating || !url.trim() || !title.trim() || !!imageError}
               className="w-full bg-purple-600 hover:bg-purple-700"
             >
               {isValidating ? (

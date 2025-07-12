@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Check, ExternalLink, Trash2, MessageSquare, MoreHorizontal, Share } from "lucide-react"
+import { Copy, Check, ExternalLink, Trash2, MessageSquare, MoreHorizontal, Share, ImageIcon } from "lucide-react"
 import { CastComposer } from "@/components/cast-composer"
 import {
   DropdownMenu,
@@ -24,6 +24,7 @@ interface PlayButton {
   title: string
   artist?: string
   embedUrl: string
+  coverImage?: string
   createdAt: Date
 }
 
@@ -72,6 +73,19 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <CardContent className="p-0">
         <div className="flex">
+          {/* Cover Image */}
+          {playButton.coverImage && (
+            <div className="w-48 flex-shrink-0">
+              <div className="aspect-[3/2] w-full">
+                <img
+                  src={playButton.coverImage || "/placeholder.svg"}
+                  alt={`${playButton.title} cover`}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1 min-w-0">
@@ -79,6 +93,12 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                 {playButton.artist && <p className="text-gray-600 truncate">{playButton.artist}</p>}
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="outline">{playButton.platform}</Badge>
+                  {playButton.coverImage && (
+                    <Badge variant="secondary" className="text-xs">
+                      <ImageIcon className="w-3 h-3 mr-1" />
+                      Custom Cover
+                    </Badge>
+                  )}
                   <span className="text-sm text-gray-500">{playButton.createdAt.toLocaleDateString()}</span>
                 </div>
               </div>
