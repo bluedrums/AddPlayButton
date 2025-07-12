@@ -1,0 +1,21 @@
+{
+  "accountAssociation": {
+    "header": {
+      "fid": 12345,
+      "type": "custody",
+      "key": "0x..."
+    },
+    "payload": "addplaybutton.xyz",
+    "signature": "0x..."
+  },
+  "frame": {
+    "version": "next",
+    "name": "Add Play Button",
+    "iconUrl": "https://addplaybutton.xyz/icon-192x192.png",
+    "homeUrl": "https://addplaybutton.xyz",
+    "imageUrl": "https://addplaybutton.xyz/og-image.png",
+    "buttonTitle": "🎵 Add Play Button",
+    "splashImageUrl": "https://addplaybutton.xyz/splash.png",
+    "splashBackgroundColor": "#8B5CF6"
+  }
+}

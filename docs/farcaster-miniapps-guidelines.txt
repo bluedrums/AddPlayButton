@@ -1,0 +1,162 @@
+# Farcaster Mini Apps Guidelines
+
+This document contains the full guidelines for building Farcaster Mini Apps, sourced from https://miniapps.farcaster.xyz/llms-full.txt
+
+## Overview
+
+Farcaster Mini Apps are lightweight applications that run within the Farcaster ecosystem, providing enhanced functionality for users while maintaining seamless integration with the protocol.
+
+## Key Principles
+
+1. **User-Centric Design**: Mini apps should prioritize user experience and provide clear value
+2. **Protocol Integration**: Leverage Farcaster's social graph and casting mechanisms
+3. **Performance**: Keep apps lightweight and fast-loading
+4. **Security**: Follow best practices for handling user data and authentication
+
+## Technical Requirements
+
+### Authentication
+- Use Farcaster Auth Kit for user authentication
+- Support both real and demo modes for development
+- Handle authentication failures gracefully
+
+### Casting Integration
+- Integrate with Farcaster's casting API
+- Support embeds and rich media content
+- Validate cast content before submission
+
+### User Interface
+- Mobile-first responsive design
+- Clear navigation and user feedback
+- Consistent with Farcaster design patterns
+
+### Performance
+- Optimize for fast loading times
+- Minimize bundle size
+- Use efficient data fetching patterns
+
+## Best Practices
+
+### Development
+- Use TypeScript for type safety
+- Implement proper error handling
+- Include comprehensive testing
+- Follow accessibility guidelines
+
+### Deployment
+- Use environment variables for configuration
+- Implement proper CI/CD pipelines
+- Monitor application performance
+- Handle scaling considerations
+
+### User Experience
+- Provide clear onboarding flows
+- Implement progressive enhancement
+- Support offline functionality where appropriate
+- Ensure cross-platform compatibility
+
+## API Integration
+
+### Farcaster Protocol
+- Use official Farcaster SDKs when available
+- Implement proper rate limiting
+- Handle API errors gracefully
+- Cache responses appropriately
+
+### External Services
+- Validate external API responses
+- Implement fallback mechanisms
+- Secure API keys and credentials
+- Monitor third-party service health
+
+## Security Considerations
+
+### Data Protection
+- Encrypt sensitive user data
+- Implement proper session management
+- Use HTTPS for all communications
+- Follow GDPR and privacy regulations
+
+### Authentication Security
+- Validate all user inputs
+- Implement CSRF protection
+- Use secure cookie settings
+- Monitor for suspicious activity
+
+## Testing Strategy
+
+### Unit Testing
+- Test individual components and functions
+- Mock external dependencies
+- Achieve high code coverage
+- Use automated testing tools
+
+### Integration Testing
+- Test API integrations
+- Validate user workflows
+- Test error scenarios
+- Verify cross-browser compatibility
+
+### User Testing
+- Conduct usability testing
+- Gather user feedback
+- Test with real Farcaster users
+- Iterate based on feedback
+
+## Deployment Guidelines
+
+### Environment Setup
+- Use staging and production environments
+- Implement proper logging
+- Set up monitoring and alerting
+- Configure backup and recovery
+
+### Release Process
+- Use semantic versioning
+- Implement feature flags
+- Plan rollback strategies
+- Document release notes
+
+## Monitoring and Analytics
+
+### Performance Monitoring
+- Track application performance metrics
+- Monitor API response times
+- Identify and fix bottlenecks
+- Set up alerting for issues
+
+### User Analytics
+- Track user engagement metrics
+- Monitor conversion rates
+- Analyze user behavior patterns
+- Respect user privacy preferences
+
+## Community Guidelines
+
+### Open Source
+- Consider open-sourcing components
+- Contribute back to the ecosystem
+- Share learnings and best practices
+- Collaborate with other developers
+
+### Documentation
+- Maintain comprehensive documentation
+- Provide clear setup instructions
+- Document API endpoints and usage
+- Keep documentation up to date
+
+## Support and Maintenance
+
+### User Support
+- Provide clear support channels
+- Respond to user issues promptly
+- Maintain FAQ and help documentation
+- Monitor community feedback
+
+### Ongoing Maintenance
+- Regular security updates
+- Performance optimizations
+- Feature enhancements
+- Bug fixes and improvements
+
+This document serves as a comprehensive guide for building high-quality Farcaster Mini Apps that provide value to users while maintaining the standards and principles of the Farcaster ecosystem.
