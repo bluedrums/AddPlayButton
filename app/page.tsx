@@ -6,24 +6,11 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Play,
-  Music,
-  Video,
-  ExternalLink,
-  User,
-  Copy,
-  Check,
-  AlertCircle,
-  Loader2,
-  Settings,
-  LogOut,
-  Info,
-} from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
+import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 
 interface PlayButton {
@@ -39,7 +26,7 @@ interface PlayButton {
 export default function AddPlayButtonApp() {
   const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
 
-  const { createCast, isCreating, error: castError } = useFarcasterCast()
+  const { createPlayButtonCast, isCreating } = useFarcasterCast()
 
   const [url, setUrl] = useState("")
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
@@ -187,28 +174,6 @@ export default function AddPlayButtonApp() {
       setValidationError("")
 
       toast.success(`${validated.platform} play button added successfully!`)
-
-      // Create cast if authenticated
-      if (isAuthenticated) {
-        try {
-          const result = await createCast({
-            text: `🎵 Check out this ${validated.platform} track: ${validated.title}${validated.artist ? ` by ${validated.artist}` : ""}`,
-            embeds: [{ url: url.trim() }],
-          })
-
-          if (result.warpcastUrl) {
-            toast.success("Cast created successfully!", {
-              action: {
-                label: "View",
-                onClick: () => window.open(result.warpcastUrl, "_blank"),
-              },
-            })
-          }
-        } catch (error) {
-          console.error("Failed to create cast:", error)
-          toast.error("Play button added, but failed to create cast")
-        }
-      }
     } catch (error) {
       // Error already handled in validateUrl
     }
@@ -326,14 +291,6 @@ export default function AddPlayButtonApp() {
                 </AlertDescription>
               </Alert>
 
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-green-600">
-                  <Check className="w-4 h-4" />
-                  SDK Ready
-                </div>
-                <div className="text-xs text-gray-500">Domain: addplaybutton.xyz</div>
-              </div>
-
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full">
                 <Settings className="w-4 h-4 mr-2" />
                 Debug Info
@@ -393,45 +350,45 @@ export default function AddPlayButtonApp() {
             <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            {/* URL Input Field */}
+            <div className="space-y-2">
+              <label htmlFor="url-input" className="text-sm font-medium text-gray-700">
+                Music or Video URL
+              </label>
               <Input
+                id="url-input"
                 placeholder="https://open.spotify.com/track/..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="flex-1"
+                className="w-full"
                 disabled={isValidating}
                 onKeyDown={(e) => e.key === "Enter" && handleAddPlayButton()}
               />
-              <Button
-                onClick={handleAddPlayButton}
-                disabled={isValidating || !url.trim()}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {isValidating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    Add Play Button
-                  </>
-                )}
-              </Button>
             </div>
+
+            {/* Add Button */}
+            <Button
+              onClick={handleAddPlayButton}
+              disabled={isValidating || !url.trim()}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              {isValidating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Add Play Button
+                </>
+              )}
+            </Button>
 
             {validationError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{validationError}</AlertDescription>
-              </Alert>
-            )}
-
-            {castError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>Play button added, but failed to create cast: {castError}</AlertDescription>
               </Alert>
             )}
           </CardContent>
@@ -446,49 +403,13 @@ export default function AddPlayButtonApp() {
             </h2>
 
             {playButtons.map((playButton) => (
-              <Card key={playButton.id} className="overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="flex">
-                    <div className="flex-1 p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">{playButton.title}</h3>
-                          {playButton.artist && <p className="text-gray-600">{playButton.artist}</p>}
-                          <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="outline">{playButton.platform}</Badge>
-                            <span className="text-sm text-gray-500">{playButton.createdAt.toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => handleCopyLink(playButton)}>
-                            {copiedId === playButton.id ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => window.open(playButton.url, "_blank")}>
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleRemovePlayButton(playButton.id)}>
-                            Remove
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Separator className="mb-4" />
-
-                      <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-                        <iframe
-                          src={playButton.embedUrl}
-                          width="100%"
-                          height="100%"
-                          frameBorder="0"
-                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                          loading="lazy"
-                          className="w-full h-full"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <PlayButtonCard
+                key={playButton.id}
+                playButton={playButton}
+                onRemove={handleRemovePlayButton}
+                onCopyLink={handleCopyLink}
+                copiedId={copiedId}
+              />
             ))}
           </div>
         )}
