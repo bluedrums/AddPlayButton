@@ -281,10 +281,12 @@ export default function AddPlayButtonApp() {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <User className="w-5 h-5" />
-                Sign in with Farcaster
+                {isSDKReady ? "Sign in with Farcaster" : "Loading..."}
               </CardTitle>
               <CardDescription>
-                Connect your Farcaster account to start posting music and video play buttons
+                {isSDKReady
+                  ? "Connect your Farcaster account to start posting music and video play buttons"
+                  : "Initializing Farcaster SDK..."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -296,11 +298,20 @@ export default function AddPlayButtonApp() {
                 </Avatar>
               </div>
 
-              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button
+                onClick={handleSignIn}
+                disabled={isLoading || !isSDKReady}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Connecting...
+                  </>
+                ) : !isSDKReady ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading SDK...
                   </>
                 ) : (
                   <>
@@ -320,12 +331,12 @@ export default function AddPlayButtonApp() {
               <div className="text-center space-y-2">
                 <div className="flex items-center justify-center gap-2 text-sm text-green-600">
                   <Check className="w-4 h-4" />
-                  Quick Auth Enabled
+                  Quick Auth {isSDKReady ? "Ready" : "Loading..."}
                 </div>
                 <div className="text-xs text-gray-500">
                   Domain: addplaybutton.xyz
                   <br />
-                  SDK: Ready
+                  SDK: {isSDKReady ? "Ready" : "Loading..."}
                 </div>
               </div>
 
@@ -339,7 +350,9 @@ export default function AddPlayButtonApp() {
                   <div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div>
                   <div>Loading: {isLoading ? "Yes" : "No"}</div>
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
+                  <div>User: {user ? user.username : "None"}</div>
                   <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
+                  <div>Error: {authError || "None"}</div>
                 </div>
               )}
             </CardContent>

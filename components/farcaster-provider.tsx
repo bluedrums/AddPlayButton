@@ -54,18 +54,27 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
         await sdk.actions.ready()
         setIsSDKReady(true)
 
-        // Try to get existing session
-        const response = await sdk.quickAuth.fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL || "https://addplaybutton.xyz"}/api/me`,
-        )
+        // Try to get existing session using Quick Auth
+        try {
+          const response = await sdk.quickAuth.fetch(
+            `${process.env.NEXT_PUBLIC_APP_URL || "https://addplaybutton.xyz"}/api/me`,
+          )
 
-        if (response.ok) {
-          const userData = await response.json()
-          setUser(userData)
+          if (response.ok) {
+            const userData = await response.json()
+            setUser(userData)
+            setError(null) // Clear any previous errors
+          } else {
+            // If no existing session, that's normal - don't set an error
+            console.log("No existing session found")
+          }
+        } catch (sessionError) {
+          // Session check failed, but that's okay - user just needs to sign in
+          console.log("Session check failed:", sessionError)
         }
       } catch (err) {
         console.error("SDK initialization error:", err)
-        setError(err instanceof Error ? err.message : "Failed to initialize SDK")
+        setError("Failed to initialize SDK")
       } finally {
         setIsLoading(false)
       }
@@ -88,14 +97,17 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
       )
 
       if (!response.ok) {
-        throw new Error("Authentication failed")
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Authentication failed")
       }
 
       const userData = await response.json()
       setUser(userData)
+      setError(null) // Clear any errors on success
     } catch (err) {
       console.error("Sign in error:", err)
-      setError(err instanceof Error ? err.message : "Sign in failed")
+      const errorMessage = err instanceof Error ? err.message : "Sign in failed"
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
