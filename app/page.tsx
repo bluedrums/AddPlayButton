@@ -339,11 +339,7 @@ export default function AddPlayButtonApp() {
   const handleSignIn = async () => {
     try {
       await signIn()
-      if (authType === "real") {
-        toast.success("Successfully signed in with Farcaster!")
-      } else {
-        toast.success("Demo mode activated - sign in from Warpcast for real casting")
-      }
+      // Toast messages are now handled in the provider
     } catch (error) {
       toast.error("Failed to sign in")
     }
@@ -391,9 +387,7 @@ export default function AddPlayButtonApp() {
                 <User className="w-5 h-5" />
                 Connect with Farcaster
               </CardTitle>
-              <CardDescription>
-                Get started with your Farcaster account to create and share play buttons
-              </CardDescription>
+              <CardDescription>Authentication will happen automatically when opened from Warpcast</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col items-center space-y-4">
@@ -416,7 +410,7 @@ export default function AddPlayButtonApp() {
                   ) : (
                     <>
                       <User className="w-4 h-4 mr-2" />
-                      Get Started
+                      Try Authentication
                     </>
                   )}
                 </Button>
@@ -432,8 +426,7 @@ export default function AddPlayButtonApp() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>For Real Casting:</strong> Open this app from within Warpcast to create actual casts on your
-                  timeline.
+                  <strong>Automatic Auth:</strong> When opened from Warpcast, you'll be automatically signed in.
                   <br />
                   <strong>Demo Mode:</strong> You can still create and preview play buttons without authentication.
                 </AlertDescription>
@@ -459,6 +452,9 @@ export default function AddPlayButtonApp() {
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
                   <div>Auth Type: {authType}</div>
                   <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
+                  <div>
+                    Referrer: {typeof window !== "undefined" ? document.referrer.substring(0, 30) + "..." : "N/A"}
+                  </div>
                 </div>
               )}
             </CardContent>
