@@ -17,7 +17,19 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
-import { Send, Music, Loader2, ExternalLink, AlertCircle, Check, MessageSquare, X, Play, ImageIcon } from "lucide-react"
+import {
+  Send,
+  Music,
+  Loader2,
+  ExternalLink,
+  AlertCircle,
+  Check,
+  MessageSquare,
+  X,
+  Play,
+  ImageIcon,
+  Info,
+} from "lucide-react"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
@@ -75,13 +87,22 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
       if (result.success) {
         setLastCreatedCast(result)
 
-        // Show success message with embedded player option
-        toast.success("Cast created successfully!", {
-          action: {
-            label: "View Player",
-            onClick: () => setShowPlayerModal(true),
-          },
-        })
+        // Show different success messages for demo vs real casts
+        if (result.isDemo) {
+          toast.success("Demo cast created! (Real casting requires Warpcast API key)", {
+            action: {
+              label: "View Player",
+              onClick: () => setShowPlayerModal(true),
+            },
+          })
+        } else {
+          toast.success("Cast published to your timeline!", {
+            action: {
+              label: "View on Warpcast",
+              onClick: () => result.warpcastUrl && window.open(result.warpcastUrl, "_blank"),
+            },
+          })
+        }
 
         // Auto-open the embedded player modal
         setTimeout(() => {
@@ -140,9 +161,20 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
                   <p className="text-sm text-gray-600">@{user.username}</p>
                 </div>
                 <Badge variant="outline" className="ml-auto">
-                  {user.fid === 12345 ? "Demo" : "Connected"}
+                  {user.fid === 12345 ? "Demo Mode" : "Connected"}
                 </Badge>
               </div>
+            )}
+
+            {/* Demo Mode Notice */}
+            {user?.fid === 12345 && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>Demo Mode:</strong> This will create a simulated cast. To publish real casts to your timeline,
+                  you need to configure the Warpcast API key in your environment variables.
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Cast Composer */}
@@ -243,12 +275,18 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
             {/* Last Created Cast */}
             {lastCreatedCast && (
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-green-700">Cast Created Successfully!</h4>
+                <h4 className="text-sm font-medium text-green-700">
+                  {lastCreatedCast.isDemo ? "Demo Cast Created!" : "Cast Published Successfully!"}
+                </h4>
                 <Alert className="border-green-200 bg-green-50">
                   <Check className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-800">
                     <div className="flex items-center justify-between">
-                      <span>Your cast has been published to Farcaster!</span>
+                      <span>
+                        {lastCreatedCast.isDemo
+                          ? "Demo cast created (not published to timeline)"
+                          : "Your cast has been published to Farcaster!"}
+                      </span>
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
@@ -259,7 +297,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
                           <Play className="w-4 h-4 mr-1" />
                           Play
                         </Button>
-                        {lastCreatedCast.warpcastUrl && (
+                        {lastCreatedCast.warpcastUrl && !lastCreatedCast.isDemo && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -298,7 +336,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Create Cast
+                    {user?.fid === 12345 ? "Create Demo Cast" : "Create Cast"}
                   </>
                 )}
               </Button>

@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { sdk } from "@farcaster/miniapp-sdk"
 
 interface FarcasterUser {
   fid: number
@@ -13,6 +12,7 @@ interface FarcasterUser {
   followerCount?: number
   followingCount?: number
   verifications?: string[]
+  sessionToken?: string
 }
 
 interface FarcasterContextType {
@@ -23,6 +23,7 @@ interface FarcasterContextType {
   signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
+  authType: "real" | "demo"
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -33,6 +34,7 @@ const FarcasterContext = createContext<FarcasterContextType>({
   signIn: async () => {},
   signOut: () => {},
   isSDKReady: false,
+  authType: "demo",
 })
 
 export function useFarcaster() {
@@ -44,113 +46,205 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSDKReady, setIsSDKReady] = useState(false)
+  const [authType, setAuthType] = useState<"real" | "demo">("demo")
 
   const isAuthenticated = !!user
 
   useEffect(() => {
-    const initializeSDK = async () => {
+    const initializeAuth = async () => {
       try {
-        // Initialize the SDK
-        await sdk.actions.ready()
         setIsSDKReady(true)
 
-        // Check if we're in a Farcaster context and get user data
-        try {
-          // Try to get user context from the SDK
-          const context = await sdk.context
-
-          if (context?.user) {
-            // User is already authenticated in the Mini App context
-            const userData: FarcasterUser = {
-              fid: context.user.fid,
-              username: context.user.username || `user${context.user.fid}`,
-              displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-              pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
-              bio: context.user.bio,
-              followerCount: context.user.followerCount,
-              followingCount: context.user.followingCount,
-              verifications: context.user.verifications || [],
+        // Check for existing auth in localStorage
+        const savedAuth = localStorage.getItem("farcaster-auth")
+        if (savedAuth) {
+          try {
+            const authData = JSON.parse(savedAuth)
+            if (authData.user && authData.sessionToken && authData.expiresAt > Date.now()) {
+              console.log("🔐 Found valid saved auth session")
+              setUser(authData.user)
+              setAuthType("real")
+              setError(null)
+              return
+            } else {
+              console.log("🔐 Saved auth expired, clearing...")
+              localStorage.removeItem("farcaster-auth")
             }
-
-            setUser(userData)
-            setError(null)
-          } else {
-            // No user context available - user needs to authenticate
-            console.log("No user context available")
+          } catch (e) {
+            console.error("Error parsing saved auth:", e)
+            localStorage.removeItem("farcaster-auth")
           }
-        } catch (contextError) {
-          // No user context available, which is normal for unauthenticated users
-          console.log("No user context:", contextError)
         }
-      } catch (err) {
-        console.error("SDK initialization error:", err)
-        setError("Failed to initialize Farcaster SDK")
+
+        // Check if we're in a Farcaster frame context
+        const isInFrame = window.self !== window.top
+        if (isInFrame) {
+          console.log("🖼️ Running in Farcaster frame - checking for user context")
+
+          // Listen for user data from parent frame
+          const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === "farcaster_user") {
+              console.log("👤 Received user data from frame:", event.data.user)
+              const frameUser: FarcasterUser = {
+                fid: event.data.user.fid,
+                username: event.data.user.username,
+                displayName: event.data.user.displayName || event.data.user.username,
+                pfpUrl: event.data.user.pfpUrl || "/placeholder-user.jpg",
+                bio: event.data.user.bio,
+                followerCount: event.data.user.followerCount,
+                followingCount: event.data.user.followingCount,
+                verifications: event.data.user.verifications || [],
+                sessionToken: event.data.sessionToken,
+              }
+
+              setUser(frameUser)
+              setAuthType("real")
+              setError(null)
+
+              // Save auth data
+              if (event.data.sessionToken) {
+                const authData = {
+                  user: frameUser,
+                  sessionToken: event.data.sessionToken,
+                  expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+                  timestamp: Date.now(),
+                }
+                localStorage.setItem("farcaster-auth", JSON.stringify(authData))
+              }
+            }
+          }
+
+          window.addEventListener("message", handleMessage)
+
+          // Request user data from parent
+          window.parent.postMessage({ type: "request_user_data" }, "*")
+
+          // Cleanup
+          return () => window.removeEventListener("message", handleMessage)
+        }
+
+        // Not in frame - create demo user for testing
+        console.log("🎭 Not in Farcaster frame - using demo mode")
+        await createDemoUser()
+      } catch (error) {
+        console.error("Auth initialization error:", error)
+        await createDemoUser()
       } finally {
         setIsLoading(false)
       }
     }
 
-    initializeSDK()
+    initializeAuth()
   }, [])
+
+  const createDemoUser = async () => {
+    const demoUser: FarcasterUser = {
+      fid: 12345,
+      username: "demo_user",
+      displayName: "Demo User",
+      pfpUrl: "/placeholder-user.jpg",
+      bio: "Demo user for testing the Add Play Button app",
+      followerCount: 100,
+      followingCount: 50,
+      verifications: [],
+    }
+
+    setUser(demoUser)
+    setAuthType("demo")
+    setError(null)
+  }
 
   const signIn = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      // For Mini Apps, authentication is typically handled by the parent frame
-      // We can try to trigger the authentication flow
+      // Check if we're in a Farcaster context first
+      const isInFrame = window.self !== window.top
 
-      // First, check if we can get user context after a brief delay
-      // (sometimes the context becomes available after user interaction)
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      if (isInFrame) {
+        // Request authentication from parent frame
+        window.parent.postMessage({ type: "request_auth" }, "*")
 
-      const context = await sdk.context
+        // Wait for auth response
+        await new Promise((resolve, reject) => {
+          const handleAuthResponse = (event: MessageEvent) => {
+            if (event.data.type === "auth_success") {
+              window.removeEventListener("message", handleAuthResponse)
+              resolve(event.data)
+            } else if (event.data.type === "auth_error") {
+              window.removeEventListener("message", handleAuthResponse)
+              reject(new Error(event.data.error))
+            }
+          }
 
-      if (context?.user) {
-        const userData: FarcasterUser = {
-          fid: context.user.fid,
-          username: context.user.username || `user${context.user.fid}`,
-          displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-          pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
-          bio: context.user.bio,
-          followerCount: context.user.followerCount,
-          followingCount: context.user.followingCount,
-          verifications: context.user.verifications || [],
-        }
+          window.addEventListener("message", handleAuthResponse)
 
-        setUser(userData)
-        setError(null)
+          // Timeout after 30 seconds
+          setTimeout(() => {
+            window.removeEventListener("message", handleAuthResponse)
+            reject(new Error("Authentication timeout"))
+          }, 30000)
+        })
       } else {
-        // If no context is available, create a demo user for testing
-        const demoUser: FarcasterUser = {
-          fid: 12345,
-          username: "demo_user",
-          displayName: "Demo User",
-          pfpUrl: "/placeholder-user.jpg",
-          bio: "Demo user for testing the Add Play Button app",
-          followerCount: 100,
-          followingCount: 50,
-          verifications: [],
+        // Try Warpcast Connect for web
+        console.log("🌐 Attempting Warpcast Connect authentication")
+
+        // Check if Warpcast Connect is available
+        if (typeof window !== "undefined" && (window as any).warpcast) {
+          const result = await (window as any).warpcast.requestAuth()
+
+          if (result.success) {
+            const realUser: FarcasterUser = {
+              fid: result.user.fid,
+              username: result.user.username,
+              displayName: result.user.displayName,
+              pfpUrl: result.user.pfpUrl || "/placeholder-user.jpg",
+              bio: result.user.bio,
+              followerCount: result.user.followerCount,
+              followingCount: result.user.followingCount,
+              verifications: result.user.verifications || [],
+              sessionToken: result.sessionToken,
+            }
+
+            setUser(realUser)
+            setAuthType("real")
+
+            // Save auth data
+            const authData = {
+              user: realUser,
+              sessionToken: result.sessionToken,
+              expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+              timestamp: Date.now(),
+            }
+            localStorage.setItem("farcaster-auth", JSON.stringify(authData))
+
+            return
+          }
         }
 
-        setUser(demoUser)
-        setError(null)
-
-        // Show a message that this is demo mode
-        console.log("Using demo user - real authentication not available in this context")
+        // Fallback: Show instructions or redirect to Warpcast
+        throw new Error("Please open this app from within Warpcast for full functionality")
       }
     } catch (err) {
-      console.error("Sign in error:", err)
-      setError("Authentication failed. Please try again.")
+      console.error("Authentication failed:", err)
+      setError(err instanceof Error ? err.message : "Authentication failed")
+
+      // Fallback to demo mode
+      await createDemoUser()
     } finally {
       setIsLoading(false)
     }
   }
 
   const signOut = () => {
+    localStorage.removeItem("farcaster-auth")
     setUser(null)
+    setAuthType("demo")
     setError(null)
+
+    // Create new demo user
+    createDemoUser()
   }
 
   const value: FarcasterContextType = {
@@ -161,6 +255,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     isSDKReady,
+    authType,
   }
 
   return <FarcasterContext.Provider value={value}>{children}</FarcasterContext.Provider>

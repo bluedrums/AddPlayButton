@@ -9,7 +9,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
+import {
+  Play,
+  Music,
+  Video,
+  User,
+  AlertCircle,
+  Loader2,
+  Settings,
+  LogOut,
+  Info,
+  Upload,
+  X,
+  Key,
+  Globe,
+} from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
@@ -27,7 +41,7 @@ interface PlayButton {
 }
 
 export default function AddPlayButtonApp() {
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, authType } = useFarcaster()
 
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
 
@@ -325,7 +339,11 @@ export default function AddPlayButtonApp() {
   const handleSignIn = async () => {
     try {
       await signIn()
-      toast.success("Successfully signed in!")
+      if (authType === "real") {
+        toast.success("Successfully signed in with Farcaster!")
+      } else {
+        toast.success("Demo mode activated - sign in from Warpcast for real casting")
+      }
     } catch (error) {
       toast.error("Failed to sign in")
     }
@@ -410,8 +428,10 @@ export default function AddPlayButtonApp() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo
-                  mode will be used.
+                  <strong>For Real Casting:</strong> Open this app from within Warpcast to create actual casts on your
+                  timeline.
+                  <br />
+                  <strong>Demo Mode:</strong> You can still create and preview play buttons without authentication.
                 </AlertDescription>
               </Alert>
 
@@ -422,11 +442,18 @@ export default function AddPlayButtonApp() {
 
               {showDebug && (
                 <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-3 h-3" />
+                    <span>API Key: {process.env.WARPCAST_API_KEY ? "✅ Configured" : "❌ Missing"}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-3 h-3" />
+                    <span>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</span>
+                  </div>
                   <div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div>
                   <div>Loading: {isLoading ? "Yes" : "No"}</div>
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
-                  <div>User: {user ? user.username : "None"}</div>
-                  <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
+                  <div>Auth Type: {authType}</div>
                   <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
                 </div>
               )}
@@ -444,8 +471,8 @@ export default function AddPlayButtonApp() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-semibold">{user.displayName}</h2>
-                    <Badge variant="default" className="text-xs">
-                      {user.fid === 12345 ? "Demo Mode" : "Connected"}
+                    <Badge variant={authType === "real" ? "default" : "secondary"} className="text-xs">
+                      {authType === "real" ? "🔗 Connected" : "🎭 Demo Mode"}
                     </Badge>
                   </div>
                   <p className="text-gray-600">@{user.username}</p>
@@ -454,6 +481,14 @@ export default function AddPlayButtonApp() {
                     <span>{user.followerCount?.toLocaleString()} followers</span>
                     <span>{user.followingCount?.toLocaleString()} following</span>
                   </div>
+                  {authType === "demo" && (
+                    <Alert className="mt-3">
+                      <Info className="h-4 w-4" />
+                      <AlertDescription className="text-sm">
+                        <strong>Demo Mode:</strong> Open from Warpcast to create real casts on your timeline.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />

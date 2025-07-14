@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@farcaster/auth-kit": "latest",
-    "@farcaster/miniapp-sdk": "latest",
+    "@farcaster/miniapp-sdk": "^0.1.0",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
