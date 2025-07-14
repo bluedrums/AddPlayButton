@@ -396,27 +396,31 @@ export default function AddPlayButtonApp() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-center">
+              <div className="flex flex-col items-center space-y-4">
                 <Avatar className="w-16 h-16">
                   <AvatarFallback>
                     <User className="w-8 h-8" />
                   </AvatarFallback>
                 </Avatar>
-              </div>
 
-              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connecting...
-                  </>
-                ) : (
-                  <>
-                    <User className="w-4 h-4 mr-2" />
-                    Get Started
-                  </>
-                )}
-              </Button>
+                <Button
+                  onClick={handleSignIn}
+                  disabled={isLoading}
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Connecting...
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-4 h-4 mr-2" />
+                      Get Started
+                    </>
+                  )}
+                </Button>
+              </div>
 
               {authError && (
                 <Alert variant="destructive">

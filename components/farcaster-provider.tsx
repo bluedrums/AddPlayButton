@@ -76,55 +76,8 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // Check if we're in a Farcaster frame context
-        const isInFrame = window.self !== window.top
-        if (isInFrame) {
-          console.log("🖼️ Running in Farcaster frame - checking for user context")
-
-          // Listen for user data from parent frame
-          const handleMessage = (event: MessageEvent) => {
-            if (event.data.type === "farcaster_user") {
-              console.log("👤 Received user data from frame:", event.data.user)
-              const frameUser: FarcasterUser = {
-                fid: event.data.user.fid,
-                username: event.data.user.username,
-                displayName: event.data.user.displayName || event.data.user.username,
-                pfpUrl: event.data.user.pfpUrl || "/placeholder-user.jpg",
-                bio: event.data.user.bio,
-                followerCount: event.data.user.followerCount,
-                followingCount: event.data.user.followingCount,
-                verifications: event.data.user.verifications || [],
-                sessionToken: event.data.sessionToken,
-              }
-
-              setUser(frameUser)
-              setAuthType("real")
-              setError(null)
-
-              // Save auth data
-              if (event.data.sessionToken) {
-                const authData = {
-                  user: frameUser,
-                  sessionToken: event.data.sessionToken,
-                  expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-                  timestamp: Date.now(),
-                }
-                localStorage.setItem("farcaster-auth", JSON.stringify(authData))
-              }
-            }
-          }
-
-          window.addEventListener("message", handleMessage)
-
-          // Request user data from parent
-          window.parent.postMessage({ type: "request_user_data" }, "*")
-
-          // Cleanup
-          return () => window.removeEventListener("message", handleMessage)
-        }
-
-        // Not in frame - create demo user for testing
-        console.log("🎭 Not in Farcaster frame - using demo mode")
+        // Start with demo user for immediate functionality
+        console.log("🎭 Starting with demo mode")
         await createDemoUser()
       } catch (error) {
         console.error("Auth initialization error:", error)
@@ -159,79 +112,63 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     setError(null)
 
     try {
-      // Check if we're in a Farcaster context first
-      const isInFrame = window.self !== window.top
+      console.log("🚀 Attempting QuickAuth authentication")
 
-      if (isInFrame) {
-        // Request authentication from parent frame
-        window.parent.postMessage({ type: "request_auth" }, "*")
+      // Use QuickAuth for mini apps
+      const authResponse = await fetch("/api/auth/quickauth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "request_auth",
+          domain: window.location.hostname,
+        }),
+      })
 
-        // Wait for auth response
-        await new Promise((resolve, reject) => {
-          const handleAuthResponse = (event: MessageEvent) => {
-            if (event.data.type === "auth_success") {
-              window.removeEventListener("message", handleAuthResponse)
-              resolve(event.data)
-            } else if (event.data.type === "auth_error") {
-              window.removeEventListener("message", handleAuthResponse)
-              reject(new Error(event.data.error))
-            }
-          }
+      if (!authResponse.ok) {
+        throw new Error("QuickAuth request failed")
+      }
 
-          window.addEventListener("message", handleAuthResponse)
+      const authData = await authResponse.json()
 
-          // Timeout after 30 seconds
-          setTimeout(() => {
-            window.removeEventListener("message", handleAuthResponse)
-            reject(new Error("Authentication timeout"))
-          }, 30000)
-        })
-      } else {
-        // Try Warpcast Connect for web
-        console.log("🌐 Attempting Warpcast Connect authentication")
+      if (authData.success && authData.user) {
+        console.log("✅ QuickAuth successful:", authData.user.username)
 
-        // Check if Warpcast Connect is available
-        if (typeof window !== "undefined" && (window as any).warpcast) {
-          const result = await (window as any).warpcast.requestAuth()
-
-          if (result.success) {
-            const realUser: FarcasterUser = {
-              fid: result.user.fid,
-              username: result.user.username,
-              displayName: result.user.displayName,
-              pfpUrl: result.user.pfpUrl || "/placeholder-user.jpg",
-              bio: result.user.bio,
-              followerCount: result.user.followerCount,
-              followingCount: result.user.followingCount,
-              verifications: result.user.verifications || [],
-              sessionToken: result.sessionToken,
-            }
-
-            setUser(realUser)
-            setAuthType("real")
-
-            // Save auth data
-            const authData = {
-              user: realUser,
-              sessionToken: result.sessionToken,
-              expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-              timestamp: Date.now(),
-            }
-            localStorage.setItem("farcaster-auth", JSON.stringify(authData))
-
-            return
-          }
+        const realUser: FarcasterUser = {
+          fid: authData.user.fid,
+          username: authData.user.username,
+          displayName: authData.user.displayName,
+          pfpUrl: authData.user.pfpUrl || "/placeholder-user.jpg",
+          bio: authData.user.bio,
+          followerCount: authData.user.followerCount,
+          followingCount: authData.user.followingCount,
+          verifications: authData.user.verifications || [],
+          sessionToken: authData.sessionToken,
         }
 
-        // Fallback: Show instructions or redirect to Warpcast
-        throw new Error("Please open this app from within Warpcast for full functionality")
-      }
-    } catch (err) {
-      console.error("Authentication failed:", err)
-      setError(err instanceof Error ? err.message : "Authentication failed")
+        setUser(realUser)
+        setAuthType("real")
 
-      // Fallback to demo mode
-      await createDemoUser()
+        // Save auth data
+        const saveData = {
+          user: realUser,
+          sessionToken: authData.sessionToken,
+          expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          timestamp: Date.now(),
+        }
+        localStorage.setItem("farcaster-auth", JSON.stringify(saveData))
+
+        return
+      }
+
+      throw new Error("QuickAuth failed - no user data received")
+    } catch (err) {
+      console.error("❌ QuickAuth failed:", err)
+      setError("Authentication failed. Using demo mode for testing.")
+
+      // Stay in demo mode but show we tried real auth
+      console.log("🎭 Falling back to demo mode")
     } finally {
       setIsLoading(false)
     }

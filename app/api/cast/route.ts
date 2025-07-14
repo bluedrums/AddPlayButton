@@ -12,9 +12,9 @@ export async function POST(request: NextRequest) {
       hasWarpcastKey: !!process.env.WARPCAST_API_KEY,
     })
 
-    // Check if we have a real Warpcast API key
+    // Check if we have the WARPCAST_API_KEY environment variable
     if (!process.env.WARPCAST_API_KEY) {
-      console.log("🎭 No Warpcast API key - using demo mode")
+      console.log("🎭 No WARPCAST_API_KEY - using demo mode")
 
       // Simulate cast creation delay
       await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    console.log("🚀 Creating real cast with Warpcast API")
+    console.log("🚀 Creating real cast with WARPCAST_API_KEY")
 
     // Get user's session token from Authorization header
     const authHeader = request.headers.get("authorization")
@@ -53,6 +53,29 @@ export async function POST(request: NextRequest) {
 
     const token = authHeader.substring(7)
 
+    // For demo tokens, still use demo mode even with API key
+    if (token.startsWith("demo_token_")) {
+      console.log("🎭 Demo token detected - using demo mode")
+
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      const mockCastHash = `0x${Math.random().toString(16).substring(2, 18)}`
+
+      return NextResponse.json({
+        success: true,
+        cast: {
+          hash: mockCastHash,
+          author: {
+            fid: 12345,
+            username: "demo_user",
+          },
+          text: text,
+          timestamp: Date.now(),
+        },
+        warpcastUrl: `https://warpcast.com/demo_user/${mockCastHash.substring(0, 10)}`,
+        isDemo: true,
+      })
+    }
+
     // Prepare cast data for Warpcast API
     const castData: any = {
       text: text.trim(),
@@ -65,16 +88,17 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    console.log("📡 Sending cast to Warpcast:", {
+    console.log("📡 Sending cast to Warpcast API:", {
       textLength: castData.text.length,
       embedCount: castData.embeds?.length || 0,
+      apiKeyPrefix: process.env.WARPCAST_API_KEY?.substring(0, 8) + "...",
     })
 
-    // Create cast using Warpcast API
+    // Create cast using Warpcast API with the environment variable
     const response = await fetch("https://api.warpcast.com/v2/casts", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${process.env.WARPCAST_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(castData),
