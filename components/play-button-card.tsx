@@ -107,7 +107,7 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                 </div>
 
                 <div className="flex items-center gap-2 ml-4">
-                  {/* Play Button */}
+                  {/* Play Button - Primary Action */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -118,21 +118,18 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                     Play
                   </Button>
 
-                  {/* Create Cast Button - Always visible, but disabled if not authenticated */}
-                  <CastComposer
-                    playButton={playButton}
-                    trigger={
-                      <Button
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
-                        disabled={!isAuthenticated}
-                        title={!isAuthenticated ? "Sign in to create casts" : "Create a cast with this play button"}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Cast
-                      </Button>
-                    }
-                  />
+                  {/* Create Cast Button */}
+                  {isAuthenticated && (
+                    <CastComposer
+                      playButton={playButton}
+                      trigger={
+                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700">
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Cast
+                        </Button>
+                      }
+                    />
+                  )}
 
                   {/* More Actions Menu */}
                   <DropdownMenu open={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
@@ -210,16 +207,6 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                   </div>
                 </div>
               </div>
-
-              {/* Authentication Notice for Cast Button */}
-              {!isAuthenticated && (
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-gray-500">
-                    <MessageSquare className="w-4 h-4 inline mr-1" />
-                    Sign in to create casts with this play button
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </CardContent>

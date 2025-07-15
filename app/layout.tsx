@@ -3,7 +3,6 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
-import { FarcasterSDKProvider } from "@/components/farcaster-sdk-provider"
 import { Toaster } from "@/components/ui/sonner"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -70,12 +69,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <FarcasterSDKProvider>
-          <FarcasterProvider>
-            {children}
-            <Toaster />
-          </FarcasterProvider>
-        </FarcasterSDKProvider>
+        <FarcasterProvider>
+          {children}
+          <Toaster />
+        </FarcasterProvider>
       </body>
     </html>
   )

@@ -2,39 +2,37 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
-import { toast } from "sonner"
+import { sdk } from "@farcaster/miniapp-sdk"
 
-interface User {
+interface FarcasterUser {
   fid: number
   username: string
   displayName: string
-  pfpUrl?: string
+  pfpUrl: string
   bio?: string
-  followerCount: number
-  followingCount: number
-  verifications: string[]
+  followerCount?: number
+  followingCount?: number
+  verifications?: string[]
 }
 
 interface FarcasterContextType {
-  user: User | null
+  user: FarcasterUser | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
-  authType: "real" | "demo" | null
-  isSDKReady: boolean
   signIn: () => Promise<void>
   signOut: () => void
+  isSDKReady: boolean
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
   user: null,
   isAuthenticated: false,
-  isLoading: true,
+  isLoading: false,
   error: null,
-  authType: null,
-  isSDKReady: false,
   signIn: async () => {},
   signOut: () => {},
+  isSDKReady: false,
 })
 
 export function useFarcaster() {
@@ -42,114 +40,127 @@ export function useFarcaster() {
 }
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<FarcasterUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [authType, setAuthType] = useState<"real" | "demo" | null>(null)
   const [isSDKReady, setIsSDKReady] = useState(false)
 
   const isAuthenticated = !!user
 
-  // Load saved auth data
   useEffect(() => {
-    const loadSavedAuth = () => {
+    const initializeSDK = async () => {
       try {
-        const saved = localStorage.getItem("farcaster_auth")
-        if (saved) {
-          const authData = JSON.parse(saved)
+        // Initialize the SDK
+        await sdk.actions.ready()
+        setIsSDKReady(true)
 
-          // Check if auth data is still valid
-          if (authData.expiresAt && authData.expiresAt > Date.now()) {
-            setUser(authData.user)
-            setAuthType(authData.authType)
-            console.log("✅ Restored saved auth:", authData.user.username)
-            setIsLoading(false)
-            setIsSDKReady(true)
-            return
+        // Check if we're in a Farcaster context and get user data
+        try {
+          // Try to get user context from the SDK
+          const context = await sdk.context
+
+          if (context?.user) {
+            // User is already authenticated in the Mini App context
+            const userData: FarcasterUser = {
+              fid: context.user.fid,
+              username: context.user.username || `user${context.user.fid}`,
+              displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+              pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+              bio: context.user.bio,
+              followerCount: context.user.followerCount,
+              followingCount: context.user.followingCount,
+              verifications: context.user.verifications || [],
+            }
+
+            setUser(userData)
+            setError(null)
           } else {
-            // Clear expired auth
-            localStorage.removeItem("farcaster_auth")
+            // No user context available - user needs to authenticate
+            console.log("No user context available")
           }
+        } catch (contextError) {
+          // No user context available, which is normal for unauthenticated users
+          console.log("No user context:", contextError)
         }
-      } catch (error) {
-        console.error("Error loading saved auth:", error)
-        localStorage.removeItem("farcaster_auth")
+      } catch (err) {
+        console.error("SDK initialization error:", err)
+        setError("Failed to initialize Farcaster SDK")
+      } finally {
+        setIsLoading(false)
       }
-
-      // Try automatic authentication
-      attemptQuickAuth()
     }
 
-    loadSavedAuth()
+    initializeSDK()
   }, [])
 
-  const attemptQuickAuth = async () => {
+  const signIn = async () => {
+    setIsLoading(true)
+    setError(null)
+
     try {
-      console.log("🔄 Attempting QuickAuth...")
-      setIsLoading(true)
-      setError(null)
+      // For Mini Apps, authentication is typically handled by the parent frame
+      // We can try to trigger the authentication flow
 
-      const response = await fetch("/api/auth/quickauth", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+      // First, check if we can get user context after a brief delay
+      // (sometimes the context becomes available after user interaction)
+      await new Promise((resolve) => setTimeout(resolve, 500))
 
-      const data = await response.json()
+      const context = await sdk.context
 
-      if (data.success && data.user) {
-        setUser(data.user)
-        setAuthType(data.authType)
-
-        // Save auth data
-        const authData = {
-          user: data.user,
-          authType: data.authType,
-          expiresAt: data.expiresAt,
-        }
-        localStorage.setItem("farcaster_auth", JSON.stringify(authData))
-
-        if (data.authType === "real") {
-          toast.success("Successfully connected to Farcaster!")
-        } else {
-          toast.info("Demo mode activated - open from Warpcast for real authentication")
+      if (context?.user) {
+        const userData: FarcasterUser = {
+          fid: context.user.fid,
+          username: context.user.username || `user${context.user.fid}`,
+          displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+          pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+          bio: context.user.bio,
+          followerCount: context.user.followerCount,
+          followingCount: context.user.followingCount,
+          verifications: context.user.verifications || [],
         }
 
-        console.log("✅ QuickAuth successful:", data.user.username)
+        setUser(userData)
+        setError(null)
       } else {
-        throw new Error(data.error || "Authentication failed")
+        // If no context is available, create a demo user for testing
+        const demoUser: FarcasterUser = {
+          fid: 12345,
+          username: "demo_user",
+          displayName: "Demo User",
+          pfpUrl: "/placeholder-user.jpg",
+          bio: "Demo user for testing the Add Play Button app",
+          followerCount: 100,
+          followingCount: 50,
+          verifications: [],
+        }
+
+        setUser(demoUser)
+        setError(null)
+
+        // Show a message that this is demo mode
+        console.log("Using demo user - real authentication not available in this context")
       }
-    } catch (error) {
-      console.error("❌ QuickAuth failed:", error)
-      setError(error instanceof Error ? error.message : "Authentication failed")
+    } catch (err) {
+      console.error("Sign in error:", err)
+      setError("Authentication failed. Please try again.")
     } finally {
       setIsLoading(false)
-      setIsSDKReady(true)
     }
-  }
-
-  const signIn = async () => {
-    await attemptQuickAuth()
   }
 
   const signOut = () => {
     setUser(null)
-    setAuthType(null)
     setError(null)
-    localStorage.removeItem("farcaster_auth")
-    console.log("👋 Signed out")
   }
 
-  const value = {
+  const value: FarcasterContextType = {
     user,
     isAuthenticated,
     isLoading,
     error,
-    authType,
-    isSDKReady,
     signIn,
     signOut,
+    isSDKReady,
   }
 
   return <FarcasterContext.Provider value={value}>{children}</FarcasterContext.Provider>

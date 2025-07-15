@@ -9,25 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Play,
-  Music,
-  Video,
-  User,
-  AlertCircle,
-  Loader2,
-  Settings,
-  LogOut,
-  Info,
-  Upload,
-  X,
-  Key,
-  Globe,
-} from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
-import { SplashScreen } from "@/components/splash-screen"
 import { toast } from "sonner"
 
 interface PlayButton {
@@ -42,12 +27,10 @@ interface PlayButton {
 }
 
 export default function AddPlayButtonApp() {
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, authType, isSDKReady } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
 
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
 
-  const [showSplash, setShowSplash] = useState(true)
-  const [appReady, setAppReady] = useState(false)
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -59,16 +42,8 @@ export default function AddPlayButtonApp() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
 
-  // Handle splash screen ready
-  const handleSplashReady = () => {
-    setShowSplash(false)
-    setAppReady(true)
-  }
-
   // Load saved play buttons from localStorage
   useEffect(() => {
-    if (!appReady) return
-
     const saved = localStorage.getItem("playButtons")
     if (saved) {
       try {
@@ -81,7 +56,7 @@ export default function AddPlayButtonApp() {
         console.error("Error loading saved play buttons:", error)
       }
     }
-  }, [appReady])
+  }, [])
 
   const savePlayButtons = (buttons: PlayButton[]) => {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
@@ -350,7 +325,7 @@ export default function AddPlayButtonApp() {
   const handleSignIn = async () => {
     try {
       await signIn()
-      // Toast messages are now handled in the provider
+      toast.success("Successfully signed in!")
     } catch (error) {
       toast.error("Failed to sign in")
     }
@@ -361,18 +336,13 @@ export default function AddPlayButtonApp() {
     toast.success("Signed out successfully")
   }
 
-  // Show splash screen first
-  if (showSplash) {
-    return <SplashScreen onReady={handleSplashReady} />
-  }
-
-  // Show loading state while authentication is in progress
-  if (!appReady || isLoading) {
+  // Show loading state while SDK initializes
+  if (!isSDKReady || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Setting up your experience...</p>
+          <p className="text-gray-600">Loading Farcaster SDK...</p>
         </div>
       </div>
     )
@@ -403,34 +373,32 @@ export default function AddPlayButtonApp() {
                 <User className="w-5 h-5" />
                 Connect with Farcaster
               </CardTitle>
-              <CardDescription>Authentication will happen automatically when opened from Warpcast</CardDescription>
+              <CardDescription>
+                Get started with your Farcaster account to create and share play buttons
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col items-center space-y-4">
+              <div className="flex justify-center">
                 <Avatar className="w-16 h-16">
                   <AvatarFallback>
                     <User className="w-8 h-8" />
                   </AvatarFallback>
                 </Avatar>
-
-                <Button
-                  onClick={handleSignIn}
-                  disabled={isLoading}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <User className="w-4 h-4 mr-2" />
-                      Try Authentication
-                    </>
-                  )}
-                </Button>
               </div>
+
+              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <User className="w-4 h-4 mr-2" />
+                    Get Started
+                  </>
+                )}
+              </Button>
 
               {authError && (
                 <Alert variant="destructive">
@@ -442,9 +410,8 @@ export default function AddPlayButtonApp() {
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Automatic Auth:</strong> When opened from Warpcast, you'll be automatically signed in.
-                  <br />
-                  <strong>Demo Mode:</strong> You can still create and preview play buttons without authentication.
+                  This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo
+                  mode will be used.
                 </AlertDescription>
               </Alert>
 
@@ -455,23 +422,12 @@ export default function AddPlayButtonApp() {
 
               {showDebug && (
                 <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Key className="w-3 h-3" />
-                    <span>API Key: {process.env.WARPCAST_API_KEY ? "✅ Configured" : "❌ Missing"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Globe className="w-3 h-3" />
-                    <span>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</span>
-                  </div>
                   <div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div>
-                  <div>App Ready: {appReady ? "Yes" : "No"}</div>
                   <div>Loading: {isLoading ? "Yes" : "No"}</div>
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
-                  <div>Auth Type: {authType}</div>
+                  <div>User: {user ? user.username : "None"}</div>
+                  <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
                   <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
-                  <div>
-                    Referrer: {typeof window !== "undefined" ? document.referrer.substring(0, 30) + "..." : "N/A"}
-                  </div>
                 </div>
               )}
             </CardContent>
@@ -488,8 +444,8 @@ export default function AddPlayButtonApp() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <h2 className="text-xl font-semibold">{user.displayName}</h2>
-                    <Badge variant={authType === "real" ? "default" : "secondary"} className="text-xs">
-                      {authType === "real" ? "🔗 Connected" : "🎭 Demo Mode"}
+                    <Badge variant="default" className="text-xs">
+                      {user.fid === 12345 ? "Demo Mode" : "Connected"}
                     </Badge>
                   </div>
                   <p className="text-gray-600">@{user.username}</p>
@@ -498,14 +454,6 @@ export default function AddPlayButtonApp() {
                     <span>{user.followerCount?.toLocaleString()} followers</span>
                     <span>{user.followingCount?.toLocaleString()} following</span>
                   </div>
-                  {authType === "demo" && (
-                    <Alert className="mt-3">
-                      <Info className="h-4 w-4" />
-                      <AlertDescription className="text-sm">
-                        <strong>Demo Mode:</strong> Open from Warpcast to create real casts on your timeline.
-                      </AlertDescription>
-                    </Alert>
-                  )}
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />

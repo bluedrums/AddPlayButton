@@ -1,19 +1,20 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 
 interface FarcasterSDKContextType {
   isSDKLoaded: boolean
-  isReady: boolean
-  sdk: any
+  isInFrame: boolean
+  user: any | null
+  error: string | null
 }
 
 const FarcasterSDKContext = createContext<FarcasterSDKContextType>({
   isSDKLoaded: false,
-  isReady: false,
-  sdk: null,
+  isInFrame: false,
+  user: null,
+  error: null,
 })
 
 export function useFarcasterSDK() {
@@ -22,57 +23,71 @@ export function useFarcasterSDK() {
 
 export function FarcasterSDKProvider({ children }: { children: React.ReactNode }) {
   const [isSDKLoaded, setIsSDKLoaded] = useState(false)
-  const [isReady, setIsReady] = useState(false)
-  const [sdk, setSdk] = useState<any>(null)
+  const [isInFrame, setIsInFrame] = useState(false)
+  const [user, setUser] = useState(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log("🔧 FarcasterSDKProvider initializing...")
+    // Check if we're in a Farcaster frame
+    const checkFrameContext = () => {
+      try {
+        // Check if we're in an iframe
+        const inIframe = window.self !== window.top
+        setIsInFrame(inIframe)
 
-    // Check if SDK is already available
-    const checkSDK = () => {
-      if (typeof window !== "undefined") {
-        const farcasterSDK = (window as any).sdk || (window as any).farcaster
-        if (farcasterSDK) {
-          console.log("✅ Farcaster SDK found")
-          setSdk(farcasterSDK)
-          setIsSDKLoaded(true)
-          setIsReady(true)
-          return true
+        if (inIframe) {
+          // Send ready message to parent frame
+          window.parent.postMessage(
+            {
+              type: "frame_ready",
+              data: {
+                name: "Add Play Button",
+                version: "1.0.0",
+              },
+            },
+            "*",
+          )
+
+          // Listen for messages from parent
+          const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === "frame_user_data") {
+              setUser(event.data.user)
+            }
+          }
+
+          window.addEventListener("message", handleMessage)
+          return () => window.removeEventListener("message", handleMessage)
         }
+      } catch (err) {
+        console.error("Error checking frame context:", err)
+        setError("Failed to initialize frame context")
       }
-      return false
     }
 
-    // Try to find SDK immediately
-    if (checkSDK()) {
-      return
-    }
+    // Initialize SDK
+    const initSDK = async () => {
+      try {
+        // Simulate SDK loading
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        setIsSDKLoaded(true)
 
-    // If not found, wait for it to load
-    const checkInterval = setInterval(() => {
-      if (checkSDK()) {
-        clearInterval(checkInterval)
+        // Check frame context
+        checkFrameContext()
+      } catch (err) {
+        console.error("Error initializing Farcaster SDK:", err)
+        setError("Failed to initialize SDK")
+        setIsSDKLoaded(true) // Still mark as loaded to prevent infinite loading
       }
-    }, 100)
-
-    // Timeout after 5 seconds
-    const timeout = setTimeout(() => {
-      clearInterval(checkInterval)
-      console.log("⚠️ Farcaster SDK not found after 5 seconds, continuing without it")
-      setIsSDKLoaded(true)
-      setIsReady(true)
-    }, 5000)
-
-    return () => {
-      clearInterval(checkInterval)
-      clearTimeout(timeout)
     }
+
+    initSDK()
   }, [])
 
   const value = {
     isSDKLoaded,
-    isReady,
-    sdk,
+    isInFrame,
+    user,
+    error,
   }
 
   return <FarcasterSDKContext.Provider value={value}>{children}</FarcasterSDKContext.Provider>
