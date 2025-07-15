@@ -2,21 +2,21 @@
 
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
+import { toast } from "sonner"
 
-interface FarcasterUser {
+interface User {
   fid: number
   username: string
   displayName: string
-  pfpUrl: string
+  pfpUrl?: string
   bio?: string
   followerCount?: number
   followingCount?: number
   verifications?: string[]
-  sessionToken?: string
 }
 
 interface FarcasterContextType {
-  user: FarcasterUser | null
+  user: User | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
@@ -33,7 +33,7 @@ const FarcasterContext = createContext<FarcasterContextType>({
   error: null,
   signIn: async () => {},
   signOut: () => {},
-  isSDKReady: false,
+  isSDKReady: true,
   authType: "demo",
 })
 
@@ -42,172 +42,160 @@ export function useFarcaster() {
 }
 
 export function FarcasterProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<FarcasterUser | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [isSDKReady, setIsSDKReady] = useState(false)
+  const [isSDKReady, setIsSDKReady] = useState(true)
   const [authType, setAuthType] = useState<"real" | "demo">("demo")
 
   const isAuthenticated = !!user
 
+  // Auto-authenticate on mount
   useEffect(() => {
-    const initializeAuth = async () => {
+    const autoAuth = async () => {
+      console.log("🔄 Attempting auto-authentication...")
+      setIsLoading(true)
+
       try {
-        setIsSDKReady(true)
+        // Check for saved session
+        const savedUser = localStorage.getItem("farcaster_user")
+        const savedToken = localStorage.getItem("farcaster_token")
+        const savedExpiry = localStorage.getItem("farcaster_expiry")
 
-        // Check for existing auth in localStorage first
-        const savedAuth = localStorage.getItem("farcaster-auth")
-        if (savedAuth) {
-          try {
-            const authData = JSON.parse(savedAuth)
-            if (authData.user && authData.sessionToken && authData.expiresAt > Date.now()) {
-              console.log("🔐 Found valid saved auth session")
-              setUser(authData.user)
-              setAuthType(authData.authType || "real")
-              setError(null)
-              setIsLoading(false)
-              return
-            } else {
-              console.log("🔐 Saved auth expired, clearing...")
-              localStorage.removeItem("farcaster-auth")
-            }
-          } catch (e) {
-            console.error("Error parsing saved auth:", e)
-            localStorage.removeItem("farcaster-auth")
-          }
-        }
-
-        // Try automatic QuickAuth with real API first
-        console.log("🚀 Attempting automatic QuickAuth with real Warpcast API...")
-        try {
-          const quickAuthResult = await attemptQuickAuth()
-          if (quickAuthResult.success) {
-            console.log("✅ Automatic QuickAuth successful")
+        if (savedUser && savedToken && savedExpiry) {
+          const expiry = new Date(savedExpiry)
+          if (expiry > new Date()) {
+            const userData = JSON.parse(savedUser)
+            setUser(userData)
+            setAuthType(userData.isDemo ? "demo" : "real")
+            console.log("✅ Restored saved session:", userData.username)
             setIsLoading(false)
             return
+          } else {
+            // Clear expired session
+            localStorage.removeItem("farcaster_user")
+            localStorage.removeItem("farcaster_token")
+            localStorage.removeItem("farcaster_expiry")
           }
-        } catch (error) {
-          console.log("⚠️ Automatic QuickAuth failed:", error)
         }
 
-        // Fall back to demo mode
-        console.log("🎭 Starting with demo mode")
-        await createDemoUser()
+        // Try auto-authentication
+        const response = await fetch("/api/auth/quickauth", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "auto_auth",
+            domain: typeof window !== "undefined" ? window.location.hostname : "",
+            userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+            referrer: typeof document !== "undefined" ? document.referrer : "",
+          }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.success && data.user) {
+            setUser(data.user)
+            setAuthType(data.isDemo ? "demo" : "real")
+
+            // Save session
+            const expiry = new Date()
+            expiry.setHours(expiry.getHours() + 24) // 24 hour expiry
+
+            localStorage.setItem("farcaster_user", JSON.stringify(data.user))
+            localStorage.setItem("farcaster_token", data.sessionToken)
+            localStorage.setItem("farcaster_expiry", expiry.toISOString())
+
+            console.log("✅ Auto-authentication successful:", data.user.username, data.isDemo ? "(demo)" : "(real)")
+
+            if (data.isDemo) {
+              toast.success("Demo mode activated - open from Warpcast for real authentication")
+            } else {
+              toast.success("Successfully authenticated with Farcaster!")
+            }
+          }
+        } else {
+          console.log("❌ Auto-authentication failed:", response.status)
+        }
       } catch (error) {
-        console.error("Auth initialization error:", error)
-        await createDemoUser()
+        console.error("❌ Auto-authentication error:", error)
+        setError("Failed to authenticate automatically")
       } finally {
         setIsLoading(false)
       }
     }
 
-    initializeAuth()
+    autoAuth()
   }, [])
-
-  const attemptQuickAuth = async () => {
-    const authResponse = await fetch("/api/auth/quickauth", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        action: "auto_auth",
-        domain: typeof window !== "undefined" ? window.location.hostname : "localhost",
-        userAgent: typeof window !== "undefined" ? window.navigator.userAgent : "",
-        referrer: typeof window !== "undefined" ? document.referrer : "",
-      }),
-    })
-
-    if (!authResponse.ok) {
-      throw new Error(`QuickAuth request failed: ${authResponse.status}`)
-    }
-
-    const authData = await authResponse.json()
-
-    if (authData.success && authData.user) {
-      console.log("✅ QuickAuth successful:", authData.user.username, authData.isDemo ? "(demo)" : "(real)")
-
-      const authenticatedUser: FarcasterUser = {
-        fid: authData.user.fid,
-        username: authData.user.username,
-        displayName: authData.user.displayName,
-        pfpUrl: authData.user.pfpUrl || "/placeholder-user.jpg",
-        bio: authData.user.bio,
-        followerCount: authData.user.followerCount,
-        followingCount: authData.user.followingCount,
-        verifications: authData.user.verifications || [],
-        sessionToken: authData.sessionToken,
-      }
-
-      setUser(authenticatedUser)
-      setAuthType(authData.isDemo ? "demo" : "real")
-      setError(null)
-
-      // Save auth data
-      const saveData = {
-        user: authenticatedUser,
-        sessionToken: authData.sessionToken,
-        authType: authData.isDemo ? "demo" : "real",
-        expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-        timestamp: Date.now(),
-      }
-      localStorage.setItem("farcaster-auth", JSON.stringify(saveData))
-
-      return { success: true }
-    }
-
-    throw new Error("QuickAuth failed - no user data received")
-  }
-
-  const createDemoUser = async () => {
-    const demoUser: FarcasterUser = {
-      fid: 12345,
-      username: "demo_user",
-      displayName: "Demo User",
-      pfpUrl: "/placeholder-user.jpg",
-      bio: "Demo user for testing the Add Play Button app",
-      followerCount: 100,
-      followingCount: 50,
-      verifications: [],
-    }
-
-    setUser(demoUser)
-    setAuthType("demo")
-    setError(null)
-  }
 
   const signIn = async () => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const result = await attemptQuickAuth()
-      if (result.success) {
-        console.log("🎉 Manual sign-in successful")
-        return
-      }
-    } catch (err) {
-      console.error("❌ Manual QuickAuth failed:", err)
-      setError("Authentication failed. Using demo mode for testing.")
+      const response = await fetch("/api/auth/quickauth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "request_auth",
+          domain: typeof window !== "undefined" ? window.location.hostname : "",
+          userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
+          referrer: typeof document !== "undefined" ? document.referrer : "",
+        }),
+      })
 
-      // Stay in demo mode but show we tried real auth
-      console.log("🎭 Falling back to demo mode after manual attempt")
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.user) {
+          setUser(data.user)
+          setAuthType(data.isDemo ? "demo" : "real")
+
+          // Save session
+          const expiry = new Date()
+          expiry.setHours(expiry.getHours() + 24)
+
+          localStorage.setItem("farcaster_user", JSON.stringify(data.user))
+          localStorage.setItem("farcaster_token", data.sessionToken)
+          localStorage.setItem("farcaster_expiry", expiry.toISOString())
+
+          if (data.isDemo) {
+            toast.success("Demo mode activated")
+          } else {
+            toast.success("Successfully signed in with Farcaster!")
+          }
+        } else {
+          throw new Error(data.error || "Authentication failed")
+        }
+      } else {
+        throw new Error("Authentication request failed")
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sign in failed"
+      setError(message)
+      toast.error(message)
+      throw error
     } finally {
       setIsLoading(false)
     }
   }
 
   const signOut = () => {
-    localStorage.removeItem("farcaster-auth")
     setUser(null)
-    setAuthType("demo")
     setError(null)
+    setAuthType("demo")
 
-    // Create new demo user
-    createDemoUser()
+    // Clear saved session
+    localStorage.removeItem("farcaster_user")
+    localStorage.removeItem("farcaster_token")
+    localStorage.removeItem("farcaster_expiry")
+
+    console.log("👋 Signed out")
   }
 
-  const value: FarcasterContextType = {
+  const value = {
     user,
     isAuthenticated,
     isLoading,

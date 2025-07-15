@@ -31,112 +31,122 @@ export function FarcasterSDKProvider({ children }: { children: React.ReactNode }
   const [isReady, setIsReady] = useState(false)
 
   useEffect(() => {
-    // Check if we're in a Farcaster frame
-    const checkFrameContext = () => {
+    let readyCalled = false
+
+    const callReady = () => {
+      if (readyCalled) return
+      readyCalled = true
+
+      console.log("🎯 Calling SDK ready...")
+
+      // Method 1: Try Farcaster SDK
+      if (typeof window !== "undefined") {
+        try {
+          // Check for various SDK patterns
+          const sdk = (window as any).sdk || (window as any).farcaster || (window as any).parent?.sdk
+
+          if (sdk && sdk.actions && typeof sdk.actions.ready === "function") {
+            console.log("✅ Found Farcaster SDK, calling ready()")
+            sdk.actions.ready()
+            setIsReady(true)
+            return
+          }
+        } catch (e) {
+          console.log("❌ SDK ready() failed:", e)
+        }
+
+        // Method 2: Post message to parent
+        try {
+          if (window.parent && window.parent !== window) {
+            console.log("📡 Posting ready message to parent")
+            window.parent.postMessage(
+              {
+                type: "frame_ready",
+                source: "farcaster_frame",
+                data: {
+                  name: "Add Play Button",
+                  version: "1.0.0",
+                },
+              },
+              "*",
+            )
+          }
+        } catch (e) {
+          console.log("❌ Parent message failed:", e)
+        }
+
+        // Method 3: Try global ready function
+        try {
+          if ((window as any).frameReady && typeof (window as any).frameReady === "function") {
+            console.log("🔧 Calling global frameReady()")
+            ;(window as any).frameReady()
+          }
+        } catch (e) {
+          console.log("❌ Global frameReady failed:", e)
+        }
+      }
+
+      // Always mark as ready after attempts
+      setIsReady(true)
+      console.log("✅ Marked as ready")
+    }
+
+    const initializeSDK = () => {
       try {
         // Check if we're in an iframe
-        const inIframe = window.self !== window.top
+        const inIframe = typeof window !== "undefined" && window.self !== window.top
         setIsInFrame(inIframe)
 
-        if (inIframe) {
-          console.log("🖼️ Detected iframe context - setting up Farcaster SDK")
+        console.log("🖼️ Frame context:", {
+          inIframe,
+          hasParent: typeof window !== "undefined" && window.parent !== window,
+          userAgent: typeof navigator !== "undefined" ? navigator.userAgent.substring(0, 50) : "N/A",
+          referrer: typeof document !== "undefined" ? document.referrer.substring(0, 50) : "N/A",
+        })
 
-          // Initialize Farcaster SDK
-          const initializeSDK = () => {
-            // Check if Farcaster SDK is available
-            if (typeof window !== "undefined" && (window as any).sdk) {
-              const sdk = (window as any).sdk
-              console.log("✅ Farcaster SDK found, calling ready()")
+        // Call ready immediately
+        callReady()
 
-              // Call ready to dismiss splash screen
-              if (sdk.actions && sdk.actions.ready) {
-                sdk.actions.ready()
-                setIsReady(true)
-                console.log("🎉 SDK ready() called successfully")
-              }
+        // Also try after delays in case SDK loads asynchronously
+        setTimeout(callReady, 100)
+        setTimeout(callReady, 500)
+        setTimeout(callReady, 1000)
 
-              // Get user context if available
-              if (sdk.context && sdk.context.user) {
-                setUser(sdk.context.user)
-                console.log("👤 User context loaded:", sdk.context.user.username)
-              }
-
-              setIsSDKLoaded(true)
-            } else {
-              // Fallback: Send ready message to parent frame
-              console.log("📡 SDK not found, sending ready message to parent")
-              window.parent.postMessage(
-                {
-                  type: "frame_ready",
-                  data: {
-                    name: "Add Play Button",
-                    version: "1.0.0",
-                  },
-                },
-                "*",
-              )
-              setIsReady(true)
-              setIsSDKLoaded(true)
-            }
-          }
-
-          // Try to initialize immediately
-          initializeSDK()
-
-          // Also try after a short delay in case SDK loads asynchronously
-          setTimeout(initializeSDK, 100)
-          setTimeout(initializeSDK, 500)
-          setTimeout(initializeSDK, 1000)
-
-          // Listen for messages from parent
+        // Listen for messages from parent
+        if (typeof window !== "undefined") {
           const handleMessage = (event: MessageEvent) => {
-            console.log("📨 Received message:", event.data)
+            console.log("📨 Received message:", event.data?.type)
 
-            if (event.data.type === "frame_user_data") {
+            if (event.data?.type === "frame_user_data" && event.data?.user) {
               setUser(event.data.user)
-              console.log("👤 User data received from parent:", event.data.user)
+              console.log("👤 User data received:", event.data.user.username)
             }
 
-            if (event.data.type === "sdk_ready") {
-              setIsSDKLoaded(true)
+            if (event.data?.type === "sdk_ready") {
               setIsReady(true)
               console.log("✅ SDK ready confirmation received")
             }
           }
 
           window.addEventListener("message", handleMessage)
-          return () => window.removeEventListener("message", handleMessage)
-        } else {
-          // Not in iframe, mark as ready
-          console.log("🌐 Not in iframe, marking as ready")
-          setIsSDKLoaded(true)
-          setIsReady(true)
+
+          // Cleanup
+          return () => {
+            window.removeEventListener("message", handleMessage)
+          }
         }
-      } catch (err) {
-        console.error("Error checking frame context:", err)
-        setError("Failed to initialize frame context")
+
         setIsSDKLoaded(true)
-        setIsReady(true)
-      }
-    }
-
-    // Initialize SDK
-    const initSDK = async () => {
-      try {
-        // Small delay to ensure DOM is ready
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        // Check frame context
-        checkFrameContext()
       } catch (err) {
-        console.error("Error initializing Farcaster SDK:", err)
+        console.error("❌ SDK initialization error:", err)
         setError("Failed to initialize SDK")
         setIsSDKLoaded(true)
         setIsReady(true)
       }
     }
 
-    initSDK()
+    // Initialize immediately
+    initializeSDK()
   }, [])
 
   const value = {
