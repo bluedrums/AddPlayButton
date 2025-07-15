@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { useFarcaster } from "@/components/farcaster-provider"
-import { sdk } from "@farcaster/miniapp-sdk"
 
 interface CreateCastParams {
   text: string
@@ -29,12 +28,13 @@ interface CastResult {
   }
   warpcastUrl?: string
   error?: string
+  isDemo?: boolean
 }
 
 export function useFarcasterCast() {
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { isAuthenticated, user } = useFarcaster()
+  const { isAuthenticated, user, authType } = useFarcaster()
 
   const createCast = async (params: CreateCastParams): Promise<CastResult> => {
     if (!isAuthenticated || !user) {
@@ -45,76 +45,83 @@ export function useFarcasterCast() {
     setError(null)
 
     try {
-      // Try to use the SDK's casting functionality first
-      try {
-        // Check if we can use the SDK's cast creation
-        const castData = {
-          text: params.text,
-          embeds: params.embeds || [],
-        }
+      console.log("🎵 Creating cast:", {
+        textLength: params.text.length,
+        embedsCount: params.embeds?.length || 0,
+        platform: params.playButton?.platform,
+        userFid: user.fid,
+        authType,
+        hasSessionToken: !!user.sessionToken,
+      })
 
-        // Use SDK to create cast if available
-        if (sdk.actions && typeof sdk.actions.openUrl === "function") {
-          // For Mini Apps, we might need to use a different approach
-          // This would typically involve the parent frame handling the cast
+      // Prepare request data for fc:miniapp cast
+      const requestData = {
+        text: params.text,
+        embeds: [
+          // Add the original music URL
+          ...(params.embeds || []),
+          // Add the miniapp frame URL
+          {
+            url: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${params.playButton?.id}`,
+          },
+        ],
+        playButton: params.playButton,
+      }
 
-          // Send cast data to parent frame
-          if (window.parent !== window) {
-            window.parent.postMessage(
-              {
-                type: "create_cast",
-                data: castData,
-              },
-              "*",
-            )
+      // Get session token for real auth
+      let authToken = null
+      if (authType === "real" && user.sessionToken) {
+        authToken = user.sessionToken
+      } else {
+        // Try to get from localStorage as fallback
+        const savedAuth = localStorage.getItem("farcaster-auth")
+        if (savedAuth) {
+          try {
+            const authData = JSON.parse(savedAuth)
+            if (authData.sessionToken && authData.expiresAt > Date.now()) {
+              authToken = authData.sessionToken
+            }
+          } catch (e) {
+            console.log("No valid auth token found in storage")
           }
         }
-
-        // Simulate successful cast creation for demo
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        const mockCastHash = `0x${Math.random().toString(16).substring(2, 18)}`
-        const result: CastResult = {
-          success: true,
-          cast: {
-            hash: mockCastHash,
-            author: {
-              fid: user.fid,
-              username: user.username,
-            },
-            text: params.text,
-            timestamp: Date.now(),
-          },
-          warpcastUrl: `https://warpcast.com/${user.username}/${mockCastHash.substring(0, 10)}`,
-        }
-
-        return result
-      } catch (sdkError) {
-        console.log("SDK cast creation not available, using fallback")
-
-        // Fallback: simulate cast creation
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        const mockCastHash = `0x${Math.random().toString(16).substring(2, 18)}`
-        const result: CastResult = {
-          success: true,
-          cast: {
-            hash: mockCastHash,
-            author: {
-              fid: user.fid,
-              username: user.username,
-            },
-            text: params.text,
-            timestamp: Date.now(),
-          },
-          warpcastUrl: `https://warpcast.com/${user.username}/${mockCastHash.substring(0, 10)}`,
-        }
-
-        return result
       }
+
+      console.log("🔐 Auth status:", {
+        authType,
+        hasToken: !!authToken,
+        tokenPrefix: authToken ? authToken.substring(0, 10) + "..." : "none",
+      })
+
+      // Make API request to create cast
+      const response = await fetch("/api/cast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken && { Authorization: `Bearer ${authToken}` }),
+        },
+        body: JSON.stringify(requestData),
+      })
+
+      const result = await response.json()
+
+      console.log("📡 Cast API response:", {
+        success: result.success,
+        isDemo: result.isDemo,
+        hasWarpcastUrl: !!result.warpcastUrl,
+        error: result.error,
+        status: response.status,
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create cast")
+      }
+
+      return result
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to create cast"
       setError(errorMessage)
+      console.error("❌ Cast creation failed:", errorMessage)
       throw new Error(errorMessage)
     } finally {
       setIsCreating(false)
