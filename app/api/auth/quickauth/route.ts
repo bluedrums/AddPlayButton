@@ -2,112 +2,121 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🔐 QuickAuth API called")
+    const body = await request.json()
+    const { action, domain, userAgent, referrer } = body
 
-    // Get headers that might contain Farcaster context
-    const headers = request.headers
-    const userAgent = headers.get("user-agent") || ""
-    const referer = headers.get("referer") || ""
-    const farcasterFrame = headers.get("x-farcaster-frame")
-    const farcasterUserFid = headers.get("x-farcaster-user-fid")
-    const farcasterUserToken = headers.get("x-farcaster-user-token")
+    console.log("🔄 QuickAuth API called:", { action, domain, userAgent: userAgent?.substring(0, 50) })
 
-    console.log("📋 Request context:", {
-      userAgent: userAgent.substring(0, 50),
-      referer: referer.substring(0, 50),
-      farcasterFrame,
-      farcasterUserFid,
-      hasApiKey: !!process.env.WARPCAST_API_KEY,
+    // Check for Farcaster frame headers
+    const farcasterUserFid = request.headers.get("x-farcaster-user-fid")
+    const farcasterUserToken = request.headers.get("x-farcaster-user-token")
+    const farcasterFrameContext = request.headers.get("x-farcaster-frame")
+
+    console.log("📡 Frame headers:", {
+      fid: farcasterUserFid,
+      hasToken: !!farcasterUserToken,
+      frameContext: farcasterFrameContext,
     })
 
-    // Check if we have real Farcaster context
-    const hasRealContext = farcasterUserFid || referer.includes("warpcast.com") || userAgent.includes("Warpcast")
+    // Check if we have a real API key
+    const apiKey = process.env.WARPCAST_API_KEY
+    if (!apiKey) {
+      console.log("⚠️ No WARPCAST_API_KEY found, using demo mode")
+      return createDemoResponse()
+    }
 
-    if (hasRealContext && process.env.WARPCAST_API_KEY) {
-      console.log("🎯 Attempting real Farcaster authentication")
-
+    // Try to get real user data if we have frame context
+    if (farcasterUserFid && farcasterUserToken) {
       try {
-        // Try to get user info from Warpcast API
-        let userData = null
+        console.log("🔗 Attempting real Warpcast API call for FID:", farcasterUserFid)
 
-        if (farcasterUserFid) {
-          // Get user by FID
-          const userResponse = await fetch(`https://api.warpcast.com/v2/user?fid=${farcasterUserFid}`, {
-            headers: {
-              Authorization: `Bearer ${process.env.WARPCAST_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-          })
+        const userResponse = await fetch(`https://api.warpcast.com/v2/user?fid=${farcasterUserFid}`, {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+        })
 
-          if (userResponse.ok) {
-            const userResult = await userResponse.json()
-            userData = userResult.result?.user
-            console.log("✅ Got user data from FID:", userData?.username)
-          }
-        }
+        if (userResponse.ok) {
+          const userData = await userResponse.json()
+          console.log("✅ Real user data retrieved:", userData.result?.user?.username)
 
-        if (!userData) {
-          // Try to get current user with /me endpoint
-          const meResponse = await fetch("https://api.warpcast.com/v2/me", {
-            headers: {
-              Authorization: `Bearer ${process.env.WARPCAST_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-          })
-
-          if (meResponse.ok) {
-            const meResult = await meResponse.json()
-            userData = meResult.result?.user
-            console.log("✅ Got user data from /me:", userData?.username)
-          }
-        }
-
-        if (userData) {
-          const authData = {
+          return NextResponse.json({
+            success: true,
             user: {
-              fid: userData.fid,
-              username: userData.username,
-              displayName: userData.displayName || userData.username,
-              pfpUrl: userData.pfp?.url,
-              bio: userData.profile?.bio?.text,
-              followerCount: userData.followerCount || 0,
-              followingCount: userData.followingCount || 0,
-              verifications: userData.verifications || [],
+              fid: userData.result.user.fid,
+              username: userData.result.user.username,
+              displayName: userData.result.user.displayName,
+              pfpUrl: userData.result.user.pfp?.url,
+              bio: userData.result.user.profile?.bio?.text,
+              followerCount: userData.result.user.followerCount || 0,
+              followingCount: userData.result.user.followingCount || 0,
+              verifications: userData.result.user.verifications || [],
             },
             authType: "real",
+            sessionToken: farcasterUserToken,
             expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-          }
-
-          console.log("🎉 Real authentication successful")
-          return NextResponse.json({ success: true, ...authData })
+          })
         }
-      } catch (apiError) {
-        console.error("❌ Warpcast API error:", apiError)
+      } catch (error) {
+        console.error("❌ Real API call failed:", error)
       }
     }
 
-    // Fallback to demo mode
-    console.log("🎭 Falling back to demo mode")
-    const demoUser = {
+    // Check if request is coming from Warpcast based on referrer or user agent
+    const isFromWarpcast =
+      referrer?.includes("warpcast.com") ||
+      userAgent?.includes("Warpcast") ||
+      userAgent?.includes("farcaster") ||
+      domain?.includes("warpcast")
+
+    if (isFromWarpcast) {
+      console.log("🎭 Warpcast context detected, creating enhanced demo user")
+      return createEnhancedDemoResponse()
+    }
+
+    console.log("🎭 Creating standard demo response")
+    return createDemoResponse()
+  } catch (error) {
+    console.error("❌ QuickAuth API error:", error)
+    return createDemoResponse()
+  }
+}
+
+function createDemoResponse() {
+  return NextResponse.json({
+    success: true,
+    user: {
       fid: 12345,
       username: "demo_user",
       displayName: "Demo User",
       pfpUrl: "/placeholder-user.jpg",
-      bio: "This is a demo account for testing the Add Play Button mini app.",
-      followerCount: 1234,
-      followingCount: 567,
+      bio: "Demo user for testing the Add Play Button app",
+      followerCount: 100,
+      followingCount: 50,
       verifications: [],
-    }
+    },
+    authType: "demo",
+    sessionToken: "demo_token_" + Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  })
+}
 
-    const authData = {
-      user: demoUser,
-      authType: "demo",
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-    }
-
-    return NextResponse.json({ success: true, ...authData })
-  } catch (error) {
-    console.error("❌ QuickAuth error:", error)
-    return NextResponse.json({ success: false, error: "Authentication failed" }, { status: 500 })
-  }
+function createEnhancedDemoResponse() {
+  return NextResponse.json({
+    success: true,
+    user: {
+      fid: 54321,
+      username: "warpcast_demo",
+      displayName: "Warpcast Demo User",
+      pfpUrl: "/placeholder-user.jpg",
+      bio: "Enhanced demo user detected from Warpcast context",
+      followerCount: 500,
+      followingCount: 200,
+      verifications: ["demo.eth"],
+    },
+    authType: "demo",
+    sessionToken: "warpcast_demo_token_" + Date.now(),
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  })
 }
