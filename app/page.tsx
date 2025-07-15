@@ -25,9 +25,9 @@ import {
   Globe,
 } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
-import { useFarcasterSDK } from "@/components/farcaster-sdk-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
+import { SplashScreen } from "@/components/splash-screen"
 import { toast } from "sonner"
 
 interface PlayButton {
@@ -42,11 +42,12 @@ interface PlayButton {
 }
 
 export default function AddPlayButtonApp() {
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, authType } = useFarcaster()
-  const { isSDKLoaded, isReady } = useFarcasterSDK()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, authType, isSDKReady } = useFarcaster()
 
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
 
+  const [showSplash, setShowSplash] = useState(true)
+  const [appReady, setAppReady] = useState(false)
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -58,8 +59,16 @@ export default function AddPlayButtonApp() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
 
+  // Handle splash screen ready
+  const handleSplashReady = () => {
+    setShowSplash(false)
+    setAppReady(true)
+  }
+
   // Load saved play buttons from localStorage
   useEffect(() => {
+    if (!appReady) return
+
     const saved = localStorage.getItem("playButtons")
     if (saved) {
       try {
@@ -72,7 +81,7 @@ export default function AddPlayButtonApp() {
         console.error("Error loading saved play buttons:", error)
       }
     }
-  }, [])
+  }, [appReady])
 
   const savePlayButtons = (buttons: PlayButton[]) => {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
@@ -352,16 +361,18 @@ export default function AddPlayButtonApp() {
     toast.success("Signed out successfully")
   }
 
-  // Show loading state only if both SDK and auth are loading
-  if ((!isSDKLoaded || !isReady) && isLoading) {
+  // Show splash screen first
+  if (showSplash) {
+    return <SplashScreen onReady={handleSplashReady} />
+  }
+
+  // Show loading state while authentication is in progress
+  if (!appReady || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading Farcaster SDK...</p>
-          <p className="text-sm text-gray-500 mt-2">
-            SDK: {isSDKLoaded ? "✅" : "⏳"} | Ready: {isReady ? "✅" : "⏳"} | Auth: {isLoading ? "⏳" : "✅"}
-          </p>
+          <p className="text-gray-600">Setting up your experience...</p>
         </div>
       </div>
     )
@@ -452,9 +463,9 @@ export default function AddPlayButtonApp() {
                     <Globe className="w-3 h-3" />
                     <span>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</span>
                   </div>
-                  <div>SDK Loaded: {isSDKLoaded ? "Yes" : "No"}</div>
-                  <div>SDK Ready: {isReady ? "Yes" : "No"}</div>
-                  <div>Auth Loading: {isLoading ? "Yes" : "No"}</div>
+                  <div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div>
+                  <div>App Ready: {appReady ? "Yes" : "No"}</div>
+                  <div>Loading: {isLoading ? "Yes" : "No"}</div>
                   <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
                   <div>Auth Type: {authType}</div>
                   <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
