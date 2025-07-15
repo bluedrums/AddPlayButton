@@ -9,42 +9,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import {
-  Play,
-  Music,
-  Video,
-  User,
-  AlertCircle,
-  Loader2,
-  Settings,
-  LogOut,
-  Info,
-  Upload,
-  X,
-  Key,
-  Globe,
-} from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { Music, Play, ExternalLink, User, AlertCircle, Info } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
-import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
+import { useFarcasterSDK } from "@/components/farcaster-sdk-provider"
+import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
 import { PlayButtonCard } from "@/components/play-button-card"
+import { CastComposer } from "@/components/cast-composer"
 import { toast } from "sonner"
 
 interface PlayButton {
   id: string
   url: string
-  platform: string
   title: string
-  artist?: string
+  artist: string
+  platform: string
   embedUrl: string
-  coverImage?: string
-  createdAt: Date
+  thumbnailUrl: string
+  addedAt: Date
 }
 
 export default function AddPlayButtonApp() {
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, authType } = useFarcaster()
-
-  const { createPlayButtonCast, isCreating } = useFarcasterCast()
-
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, authType } = useFarcaster()
+  const { isSDKReady, isCreating } = useFarcasterSDK()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -55,6 +42,8 @@ export default function AddPlayButtonApp() {
   const [imageError, setImageError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayButton | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -63,7 +52,7 @@ export default function AddPlayButtonApp() {
       try {
         const parsed = JSON.parse(saved).map((pb: any) => ({
           ...pb,
-          createdAt: new Date(pb.createdAt),
+          addedAt: new Date(pb.addedAt),
         }))
         setPlayButtons(parsed)
       } catch (error) {
@@ -172,156 +161,99 @@ export default function AddPlayButtonApp() {
     }
   }
 
-  const detectPlatform = (url: string): { platform: string; embedUrl: string } | null => {
-    const cleanUrl = url.trim()
+  const extractMusicInfo = (url: string) => {
+    const spotifyMatch = url.match(/spotify\.com\/(track|album|playlist)\/([a-zA-Z0-9]+)/)
+    const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/)
+    const appleMusicMatch = url.match(/music\.apple\.com\/[a-z]{2}\/(?:album|song)\/[^/]+\/(\d+)/)
+    const soundcloudMatch = url.match(/soundcloud\.com\/([^/]+)\/([^/?]+)/)
 
-    // Spotify
-    if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
-      const trackMatch = cleanUrl.match(/track\/([a-zA-Z0-9]+)/)
-      const albumMatch = cleanUrl.match(/album\/([a-zA-Z0-9]+)/)
-      const playlistMatch = cleanUrl.match(/playlist\/([a-zA-Z0-9]+)/)
-
-      if (trackMatch) {
-        return {
-          platform: "Spotify",
-          embedUrl: `https://open.spotify.com/embed/track/${trackMatch[1]}`,
-        }
-      } else if (albumMatch) {
-        return {
-          platform: "Spotify",
-          embedUrl: `https://open.spotify.com/embed/album/${albumMatch[1]}`,
-        }
-      } else if (playlistMatch) {
-        return {
-          platform: "Spotify",
-          embedUrl: `https://open.spotify.com/embed/playlist/${playlistMatch[1]}`,
-        }
+    if (spotifyMatch) {
+      const [, type, id] = spotifyMatch
+      return {
+        platform: "Spotify",
+        embedUrl: `https://open.spotify.com/embed/${type}/${id}`,
+        thumbnailUrl: "/placeholder.svg?height=300&width=300&text=Spotify",
+        title: "Spotify Track",
+        artist: "Unknown Artist",
       }
     }
 
-    // Apple Music
-    if (cleanUrl.includes("music.apple.com") || cleanUrl.includes("apple.co")) {
+    if (youtubeMatch) {
+      const [, id] = youtubeMatch
+      return {
+        platform: "YouTube",
+        embedUrl: `https://www.youtube.com/embed/${id}`,
+        thumbnailUrl: `https://img.youtube.com/vi/${id}/maxresdefault.jpg`,
+        title: "YouTube Video",
+        artist: "Unknown Channel",
+      }
+    }
+
+    if (appleMusicMatch) {
       return {
         platform: "Apple Music",
-        embedUrl: cleanUrl.replace("music.apple.com", "embed.music.apple.com"),
+        embedUrl: url,
+        thumbnailUrl: "/placeholder.svg?height=300&width=300&text=Apple+Music",
+        title: "Apple Music Track",
+        artist: "Unknown Artist",
       }
     }
 
-    // YouTube
-    if (cleanUrl.includes("youtube.com") || cleanUrl.includes("youtu.be")) {
-      let videoId = ""
-
-      if (cleanUrl.includes("youtu.be/")) {
-        videoId = cleanUrl.split("youtu.be/")[1].split("?")[0]
-      } else if (cleanUrl.includes("youtube.com/watch")) {
-        const match = cleanUrl.match(/[?&]v=([^&]+)/)
-        if (match) videoId = match[1]
-      }
-
-      if (videoId) {
-        return {
-          platform: "YouTube",
-          embedUrl: `https://www.youtube.com/embed/${videoId}`,
-        }
-      }
-    }
-
-    // SoundCloud
-    if (cleanUrl.includes("soundcloud.com")) {
+    if (soundcloudMatch) {
       return {
         platform: "SoundCloud",
-        embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`,
+        embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}`,
+        thumbnailUrl: "/placeholder.svg?height=300&width=300&text=SoundCloud",
+        title: "SoundCloud Track",
+        artist: soundcloudMatch[1],
       }
     }
 
     return null
   }
 
-  const validateUrl = async (url: string) => {
-    setIsValidating(true)
-    setValidationError("")
-
-    try {
-      const detection = detectPlatform(url)
-      if (!detection) {
-        throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, or SoundCloud links.")
-      }
-
-      // Simulate API validation
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      return {
-        platform: detection.platform,
-        embedUrl: detection.embedUrl,
-        suggestedTitle: `Sample ${detection.platform} Track`,
-        artist: "Sample Artist",
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Validation failed"
-      setValidationError(message)
-      throw error
-    } finally {
-      setIsValidating(false)
-    }
-  }
-
   const handleAddPlayButton = async () => {
     if (!url.trim()) {
-      setValidationError("Please enter a valid URL")
+      toast.error("Please enter a music or video URL")
       return
     }
 
-    if (!title.trim()) {
-      setValidationError("Please enter a title")
-      return
-    }
-
-    if (imageError) {
-      setValidationError("Please fix the image error before proceeding")
-      return
-    }
+    setIsProcessing(true)
 
     try {
-      const validated = await validateUrl(url)
+      const musicInfo = extractMusicInfo(url)
+
+      if (!musicInfo) {
+        toast.error("Unsupported URL. Please use Spotify, YouTube, Apple Music, or SoundCloud links.")
+        return
+      }
 
       const newPlayButton: PlayButton = {
         id: Date.now().toString(),
         url: url.trim(),
-        platform: validated.platform,
-        title: title.trim(),
-        artist: validated.artist,
-        embedUrl: validated.embedUrl,
-        coverImage: coverImage || undefined,
-        createdAt: new Date(),
+        ...musicInfo,
+        addedAt: new Date(),
       }
 
-      const updatedButtons = [newPlayButton, ...playButtons]
-      setPlayButtons(updatedButtons)
-      savePlayButtons(updatedButtons)
+      setPlayButtons((prev) => [newPlayButton, ...prev])
       setUrl("")
-      setTitle("")
-      setCoverImage(null)
-      setCoverImageFile(null)
-      setValidationError("")
-      setImageError("")
 
-      // Reset the file input
-      const fileInput = document.getElementById("cover-image-input") as HTMLInputElement
-      if (fileInput) {
-        fileInput.value = ""
-      }
-
-      toast.success(`${validated.platform} play button added successfully!`)
+      toast.success(`${musicInfo.platform} play button added successfully!`)
     } catch (error) {
-      // Error already handled in validateUrl
+      console.error("Error adding play button:", error)
+      toast.error("Failed to add play button. Please try again.")
+    } finally {
+      setIsProcessing(false)
     }
   }
 
   const handleRemovePlayButton = (id: string) => {
-    const updatedButtons = playButtons.filter((pb) => pb.id !== id)
-    setPlayButtons(updatedButtons)
-    savePlayButtons(updatedButtons)
+    setPlayButtons((prev) => prev.filter((button) => button.id !== id))
     toast.success("Play button removed")
+  }
+
+  const handlePlayClick = (playButton: PlayButton) => {
+    setSelectedPlayer(playButton)
   }
 
   const handleCopyLink = async (playButton: PlayButton) => {
@@ -355,7 +287,7 @@ export default function AddPlayButtonApp() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Farcaster SDK...</p>
         </div>
       </div>
@@ -363,7 +295,7 @@ export default function AddPlayButtonApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -404,7 +336,7 @@ export default function AddPlayButtonApp() {
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Connecting...
                     </>
                   ) : (
@@ -433,18 +365,26 @@ export default function AddPlayButtonApp() {
               </Alert>
 
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full">
-                <Settings className="w-4 h-4 mr-2" />
-                Debug Info
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 bg-gray-300 rounded-full flex items-center justify-center">
+                    <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
+                  </div>
+                  Debug Info
+                </div>
               </Button>
 
               {showDebug && (
                 <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
                   <div className="flex items-center gap-2">
-                    <Key className="w-3 h-3" />
+                    <div className="h-4 w-4 bg-gray-300 rounded-full flex items-center justify-center">
+                      <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
+                    </div>
                     <span>API Key: {process.env.WARPCAST_API_KEY ? "✅ Configured" : "❌ Missing"}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Globe className="w-3 h-3" />
+                    <div className="h-4 w-4 bg-gray-300 rounded-full flex items-center justify-center">
+                      <div className="h-3 w-3 bg-purple-600 rounded-full"></div>
+                    </div>
                     <span>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</span>
                   </div>
                   <div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div>
@@ -491,8 +431,12 @@ export default function AddPlayButtonApp() {
                   )}
                 </div>
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 bg-gray-300 rounded-full flex items-center justify-center">
+                      <div className="h-3 w-3 bg-red-600 rounded-full"></div>
+                    </div>
+                    Sign Out
+                  </div>
                 </Button>
               </div>
             </CardContent>
@@ -503,7 +447,7 @@ export default function AddPlayButtonApp() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Music className="w-5 h-5" />
+              <Play className="h-5 w-5" />
               Add New Play Button
             </CardTitle>
             <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud</CardDescription>
@@ -525,133 +469,79 @@ export default function AddPlayButtonApp() {
             </div>
 
             {/* URL Input Field */}
-            <div className="space-y-2">
-              <label htmlFor="url-input" className="text-sm font-medium text-gray-700">
-                Music or Video URL <span className="text-red-500">*</span>
-              </label>
+            <div className="flex gap-2">
               <Input
-                id="url-input"
                 placeholder="https://open.spotify.com/track/..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                className="w-full"
-                disabled={isValidating}
-                onKeyDown={(e) => e.key === "Enter" && handleAddPlayButton()}
+                onKeyPress={(e) => e.key === "Enter" && handleAddPlayButton()}
+                className="flex-1"
               />
+              <Button onClick={handleAddPlayButton} disabled={isProcessing || !url.trim()}>
+                {isProcessing ? "Adding..." : "Add"}
+              </Button>
             </div>
 
-            {/* Cover Image Upload */}
-            <div className="space-y-2">
-              <label htmlFor="cover-image-input" className="text-sm font-medium text-gray-700">
-                Cover Image <span className="text-gray-500">(optional)</span>
-              </label>
-              <div className="space-y-3">
-                {!coverImage ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    <input
-                      id="cover-image-input"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={isValidating}
-                    />
-                    <label htmlFor="cover-image-input" className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="w-8 h-8 text-gray-400" />
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium text-purple-600 hover:text-purple-500">Click to upload</span> or
-                        drag and drop
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        3:2 aspect ratio • 600x400px to 3000x2000px • Max 10MB
-                      </div>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="aspect-[3/2] w-full max-w-md mx-auto rounded-lg overflow-hidden border">
-                      <img
-                        src={coverImage || "/placeholder.svg"}
-                        alt="Cover preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={handleRemoveImage}
-                      className="absolute top-2 right-2"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
-
-                {imageError && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{imageError}</AlertDescription>
-                  </Alert>
-                )}
-              </div>
+            <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+              <Badge variant="outline">Spotify</Badge>
+              <Badge variant="outline">YouTube</Badge>
+              <Badge variant="outline">Apple Music</Badge>
+              <Badge variant="outline">SoundCloud</Badge>
             </div>
-
-            {/* Add Button */}
-            <Button
-              onClick={handleAddPlayButton}
-              disabled={isValidating || !url.trim() || !title.trim() || !!imageError}
-              className="w-full bg-purple-600 hover:bg-purple-700"
-            >
-              {isValidating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Validating...
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Add Play Button
-                </>
-              )}
-            </Button>
-
-            {validationError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{validationError}</AlertDescription>
-              </Alert>
-            )}
           </CardContent>
         </Card>
 
         {/* Play Buttons List */}
         {playButtons.length > 0 && (
           <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <Video className="w-5 h-5" />
-              Your Play Buttons ({playButtons.length})
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Your Play Buttons</h2>
+              <Badge variant="secondary">{playButtons.length}</Badge>
+            </div>
 
-            {playButtons.map((playButton) => (
-              <PlayButtonCard
-                key={playButton.id}
-                playButton={playButton}
-                onRemove={handleRemovePlayButton}
-                onCopyLink={handleCopyLink}
-                copiedId={copiedId}
-              />
-            ))}
+            <div className="space-y-3">
+              {playButtons.map((playButton) => (
+                <PlayButtonCard
+                  key={playButton.id}
+                  playButton={playButton}
+                  onPlay={() => handlePlayClick(playButton)}
+                  onRemove={() => handleRemovePlayButton(playButton.id)}
+                />
+              ))}
+            </div>
           </div>
         )}
 
+        {/* Cast Composer */}
+        {playButtons.length > 0 && (
+          <>
+            <Separator className="my-8" />
+            <CastComposer playButtons={playButtons} />
+          </>
+        )}
+
+        {/* Empty State */}
         {playButtons.length === 0 && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Music className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No play buttons yet</h3>
-              <p className="text-gray-600">Add your first music or video link to get started!</p>
+          <Card className="text-center py-12">
+            <CardContent>
+              <Music className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No play buttons yet</h3>
+              <p className="text-gray-500 mb-4">Add your first music or video link to get started</p>
+              <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                <ExternalLink className="h-4 w-4" />
+                <span>Supports Spotify, YouTube, Apple Music & SoundCloud</span>
+              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Embedded Player Modal */}
+        {selectedPlayer && (
+          <EmbeddedPlayerModal
+            playButton={selectedPlayer}
+            isOpen={!!selectedPlayer}
+            onClose={() => setSelectedPlayer(null)}
+          />
         )}
       </div>
     </div>
