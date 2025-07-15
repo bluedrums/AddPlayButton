@@ -93,8 +93,37 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg truncate">{playButton.title}</h3>
-                  {playButton.artist && <p className="text-gray-600 truncate">{playButton.artist}</p>}
-                  <div className="flex items-center gap-2 mt-2">
+                  {playButton.artist && <p className="text-gray-600 truncate mb-3">{playButton.artist}</p>}
+
+                  {/* Play and Cast buttons directly under title/artist */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setShowPlayerModal(true)}
+                      className="bg-white hover:bg-gray-50"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Play
+                    </Button>
+
+                    <CastComposer
+                      playButton={playButton}
+                      trigger={
+                        <Button
+                          size="sm"
+                          className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
+                          disabled={!isAuthenticated}
+                          title={!isAuthenticated ? "Sign in to create casts" : "Create a cast with this play button"}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Cast
+                        </Button>
+                      }
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <Badge variant="outline">{playButton.platform}</Badge>
                     {playButton.coverImage && (
                       <Badge variant="secondary" className="text-xs">
@@ -106,35 +135,8 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 ml-4">
-                  {/* Play Button - Primary Action */}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShowPlayerModal(true)}
-                    className="bg-white hover:bg-gray-50"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Play
-                  </Button>
-
-                  {/* Create Cast Button - Always visible, but disabled if not authenticated */}
-                  <CastComposer
-                    playButton={playButton}
-                    trigger={
-                      <Button
-                        size="sm"
-                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
-                        disabled={!isAuthenticated}
-                        title={!isAuthenticated ? "Sign in to create casts" : "Create a cast with this play button"}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Cast
-                      </Button>
-                    }
-                  />
-
-                  {/* More Actions Menu */}
+                {/* More Actions Menu - stays in top right */}
+                <div className="ml-4">
                   <DropdownMenu open={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
@@ -210,20 +212,20 @@ export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: P
                   </div>
                 </div>
               </div>
+
+              {/* Authentication Notice for Cast Button */}
+              {!isAuthenticated && (
+                <div className="mt-3 text-center">
+                  <p className="text-sm text-gray-500">
+                    <MessageSquare className="w-4 h-4 inline mr-1" />
+                    Sign in to create casts with this play button
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Authentication Notice for Cast Button */}
-      {!isAuthenticated && (
-        <div className="mt-3 text-center">
-          <p className="text-sm text-gray-500">
-            <MessageSquare className="w-4 h-4 inline mr-1" />
-            Sign in to create casts with this play button
-          </p>
-        </div>
-      )}
 
       {/* Embedded Player Modal */}
       <EmbeddedPlayerModal isOpen={showPlayerModal} onClose={() => setShowPlayerModal(false)} playButton={playButton} />

@@ -4,15 +4,23 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { MessageSquare, ExternalLink, Loader2, CheckCircle, AlertCircle } from "lucide-react"
+import { Loader2, ExternalLink, AlertCircle, CheckCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { useFarcaster } from "@/components/farcaster-provider"
-import { toast } from "sonner"
 
 interface PlayButton {
   id: string
@@ -22,6 +30,7 @@ interface PlayButton {
   artist?: string
   embedUrl: string
   coverImage?: string
+  createdAt: Date
 }
 
 interface CastComposerProps {
@@ -30,215 +39,156 @@ interface CastComposerProps {
 }
 
 export function CastComposer({ playButton, trigger }: CastComposerProps) {
+  const { user } = useFarcaster()
   const [isOpen, setIsOpen] = useState(false)
-  const [castText, setCastText] = useState("")
-  const [castResult, setCastResult] = useState<any>(null)
-  const { createPlayButtonCast, isCreating, error, clearError } = useFarcasterCast()
-  const { user, isAuthenticated } = useFarcaster()
+  const [castText, setCastText] = useState(
+    `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}\n\nCheck out this ${playButton.platform} track!`,
+  )
 
-  // Generate default cast text
-  const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`
+  const { createCast, isLoading, error, success } = useFarcasterCast()
 
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open)
-    if (open) {
-      setCastText(defaultText)
-      setCastResult(null)
-      clearError()
-    }
-  }
+  const handleSubmit = async () => {
+    if (!user) return
 
-  const handleCreateCast = async () => {
-    if (!isAuthenticated) {
-      toast.error("Please sign in to create casts")
-      return
-    }
+    const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`
 
-    try {
-      const result = await createPlayButtonCast(playButton, castText || defaultText)
-      setCastResult(result)
+    const success = await createCast({
+      text: castText,
+      embeds: [
+        {
+          url: playButton.url,
+        },
+        {
+          url: miniappUrl,
+        },
+      ],
+    })
 
-      if (result.success) {
-        toast.success("Cast created successfully!")
-      }
-    } catch (err) {
-      console.error("Failed to create cast:", err)
-      toast.error("Failed to create cast")
+    if (success) {
+      setTimeout(() => {
+        setIsOpen(false)
+        setCastText(
+          `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}\n\nCheck out this ${playButton.platform} track!`,
+        )
+      }, 2000)
     }
   }
 
   const characterCount = castText.length
-  const isOverLimit = characterCount > 320
+  const maxCharacters = 320
+  const isOverLimit = characterCount > maxCharacters
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="w-5 h-5" />
-            Create Cast
-          </DialogTitle>
+          <DialogTitle>Create Cast</DialogTitle>
+          <DialogDescription>Share this play button with your Farcaster followers</DialogDescription>
         </DialogHeader>
 
-        {!castResult ? (
-          <div className="space-y-4">
-            {/* User Info */}
-            {user && (
-              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                <img
-                  src={user.pfpUrl || "/placeholder-user.jpg"}
-                  alt={user.displayName}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div>
-                  <p className="font-medium">{user.displayName}</p>
-                  <p className="text-sm text-gray-600">@{user.username}</p>
-                </div>
-              </div>
-            )}
-
-            {/* Cast Text Input */}
-            <div className="space-y-2">
+        <div className="space-y-4">
+          {/* Cast Text Input */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
               <label htmlFor="cast-text" className="text-sm font-medium">
                 Cast Text
               </label>
-              <Textarea
-                id="cast-text"
-                value={castText}
-                onChange={(e) => setCastText(e.target.value)}
-                placeholder={defaultText}
-                className="min-h-[100px] resize-none"
-                maxLength={320}
-              />
-              <div className="flex justify-between items-center text-sm">
-                <span className={`${isOverLimit ? "text-red-500" : "text-gray-500"}`}>
-                  {characterCount}/320 characters
-                </span>
-                {isOverLimit && <span className="text-red-500">Character limit exceeded</span>}
-              </div>
+              <span className={`text-sm ${isOverLimit ? "text-red-500" : "text-gray-500"}`}>
+                {characterCount}/{maxCharacters}
+              </span>
             </div>
+            <Textarea
+              id="cast-text"
+              value={castText}
+              onChange={(e) => setCastText(e.target.value)}
+              placeholder="What do you want to say about this track?"
+              className="min-h-[100px] resize-none"
+              disabled={isLoading}
+            />
+            {isOverLimit && (
+              <p className="text-sm text-red-500">
+                Cast text is too long. Please reduce by {characterCount - maxCharacters} characters.
+              </p>
+            )}
+          </div>
 
-            {/* Play Button Preview */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Embedded Content</label>
-              <Card className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    {playButton.coverImage && (
-                      <img
-                        src={playButton.coverImage || "/placeholder.svg"}
-                        alt={playButton.title}
-                        className="w-16 h-16 rounded object-cover flex-shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{playButton.title}</h4>
-                      {playButton.artist && <p className="text-sm text-gray-600 truncate">{playButton.artist}</p>}
-                      <div className="flex items-center gap-2 mt-1">
+          {/* Preview Card */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Preview</label>
+            <Card className="border-2 border-dashed">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-purple-600 font-semibold text-sm">
+                      {user?.displayName?.charAt(0) || user?.username?.charAt(0) || "U"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="font-semibold text-sm">{user?.displayName || user?.username || "You"}</span>
+                      <span className="text-gray-500 text-sm">@{user?.username || "username"}</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap break-words">{castText}</p>
+
+                    <Separator className="my-3" />
+
+                    {/* Embedded Content Preview */}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                        <ExternalLink className="w-4 h-4 text-gray-500" />
+                        <span className="text-sm text-gray-600 truncate">{playButton.url}</span>
                         <Badge variant="outline" className="text-xs">
                           {playButton.platform}
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => window.open(playButton.url, "_blank")}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          Open
-                        </Button>
+                      </div>
+                      <div className="flex items-center gap-2 p-2 bg-purple-50 rounded">
+                        <div className="w-4 h-4 bg-purple-600 rounded-sm flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">▶</span>
+                        </div>
+                        <span className="text-sm text-purple-700">Interactive Play Button</span>
+                        <Badge variant="secondary" className="text-xs">
+                          Mini App
+                        </Badge>
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Error Display */}
-            {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
-            )}
-
-            <Separator />
-
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isCreating}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateCast}
-                disabled={isCreating || isOverLimit || !castText.trim()}
-                className="bg-purple-600 hover:bg-purple-700"
-              >
-                {isCreating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Cast...
-                  </>
-                ) : (
-                  <>
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Create Cast
-                  </>
-                )}
-              </Button>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        ) : (
-          /* Success/Result State */
-          <div className="space-y-4">
-            {castResult.success ? (
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <CheckCircle className="w-16 h-16 text-green-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-green-700">Cast Created Successfully!</h3>
-                  <p className="text-sm text-gray-600 mt-1">Your cast has been posted to your Farcaster timeline</p>
-                </div>
 
-                {castResult.warpcastUrl && (
-                  <Button
-                    variant="outline"
-                    onClick={() => window.open(castResult.warpcastUrl, "_blank")}
-                    className="w-full"
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Warpcast
-                  </Button>
-                )}
+          {/* Status Messages */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-                <Button onClick={() => setIsOpen(false)} className="w-full">
-                  Done
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center space-y-4">
-                <div className="flex justify-center">
-                  <AlertCircle className="w-16 h-16 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-red-700">Cast Failed</h3>
-                  <p className="text-sm text-gray-600 mt-1">{castResult.error || "Unknown error occurred"}</p>
-                </div>
+          {success && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Cast created successfully! It should appear in your timeline shortly.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
 
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setCastResult(null)} className="flex-1">
-                    Try Again
-                  </Button>
-                  <Button onClick={() => setIsOpen(false)} className="flex-1">
-                    Close
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading || isOverLimit || !castText.trim()}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            {isLoading ? "Creating Cast..." : "Create Cast"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
