@@ -18,7 +18,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { MessageSquare, ExternalLink, Loader2, CheckCircle, AlertCircle, Info, Play } from "lucide-react"
+import { MessageSquare, ExternalLink, Loader2, CheckCircle, AlertCircle, Info, Play, Settings } from "lucide-react"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
@@ -42,8 +42,8 @@ interface CastComposerProps {
 export function CastComposer({ playButton, trigger }: CastComposerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [castText, setCastText] = useState("")
-  const [castResult, setCastResult] = useState<any>(null)
-  const { createPlayButtonCast, isCreating, error, clearError } = useFarcasterCast()
+  const [showDebugInfo, setShowDebugInfo] = useState(false)
+  const { createPlayButtonCast, isCreating, error, lastResponse, clearError } = useFarcasterCast()
   const { user, isAuthenticated } = useFarcaster()
 
   // Generate default cast text
@@ -53,8 +53,8 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
     setIsOpen(open)
     if (open) {
       setCastText(defaultText)
-      setCastResult(null)
       clearError()
+      setShowDebugInfo(false)
     }
   }
 
@@ -66,7 +66,6 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
 
     try {
       const result = await createPlayButtonCast(playButton, castText || defaultText)
-      setCastResult(result)
 
       if (result.success) {
         if (result.isDemo) {
@@ -78,6 +77,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
     } catch (err) {
       console.error("Failed to create cast:", err)
       toast.error("Failed to create cast")
+      setShowDebugInfo(true) // Show debug info on error
     }
   }
 
@@ -92,13 +92,21 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
           <DialogTitle className="flex items-center gap-2 text-lg">
             <MessageSquare className="w-5 h-5" />
             Create Cast
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDebugInfo(!showDebugInfo)}
+              className="ml-auto h-6 w-6 p-0"
+            >
+              <Settings className="w-3 h-3" />
+            </Button>
           </DialogTitle>
           <DialogDescription className="text-sm">
             Share this play button with your Farcaster followers
           </DialogDescription>
         </DialogHeader>
 
-        {!castResult ? (
+        {!lastResponse?.success ? (
           <div className="space-y-4">
             {/* User Info - Compact */}
             {user && (
@@ -187,11 +195,33 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
               </ScrollArea>
             </div>
 
-            {/* Error Display */}
+            {/* Error Display with Debug Info */}
             {error && (
               <Alert variant="destructive" className="py-2">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription className="text-sm">{error}</AlertDescription>
+                <AlertDescription className="text-sm">
+                  <div className="font-medium mb-1">Authentication failed</div>
+                  <div className="text-xs opacity-90">
+                    Your WARPCAST_API_KEY may be invalid or expired. Check the debug panel for more details.
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Debug Information */}
+            {showDebugInfo && lastResponse && (
+              <Alert className="py-2">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <div className="font-medium mb-1">Debug Information:</div>
+                  <div className="space-y-1 font-mono">
+                    <div>Status: {lastResponse.success ? "Success" : "Failed"}</div>
+                    <div>Error: {lastResponse.error || "None"}</div>
+                    {lastResponse.details && (
+                      <div>Details: {JSON.stringify(lastResponse.details, null, 2).substring(0, 200)}...</div>
+                    )}
+                  </div>
+                </AlertDescription>
               </Alert>
             )}
 
@@ -231,60 +261,37 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
             </div>
           </div>
         ) : (
-          /* Success/Result State */
+          /* Success State */
           <div className="space-y-4 text-center">
-            {castResult.success ? (
-              <>
-                <div className="flex justify-center">
-                  <CheckCircle className="w-12 h-12 text-green-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-green-700">
-                    {castResult.isDemo ? "Demo Cast Created!" : "Cast Published!"}
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {castResult.isDemo
-                      ? "Demo cast created (not published to timeline)"
-                      : "Your cast has been posted to Farcaster"}
-                  </p>
-                </div>
+            <div className="flex justify-center">
+              <CheckCircle className="w-12 h-12 text-green-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-700">
+                {lastResponse.isDemo ? "Demo Cast Created!" : "Cast Published!"}
+              </h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {lastResponse.isDemo
+                  ? "Demo cast created (not published to timeline)"
+                  : "Your cast has been posted to Farcaster"}
+              </p>
+            </div>
 
-                <div className="flex gap-2">
-                  {castResult.warpcastUrl && !castResult.isDemo && (
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(castResult.warpcastUrl, "_blank")}
-                      className="flex-1"
-                    >
-                      <ExternalLink className="w-4 h-4 mr-2" />
-                      View
-                    </Button>
-                  )}
-                  <Button onClick={() => setIsOpen(false)} className="flex-1">
-                    Done
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-center">
-                  <AlertCircle className="w-12 h-12 text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-red-700">Cast Failed</h3>
-                  <p className="text-sm text-gray-600 mt-1">{castResult.error || "Unknown error occurred"}</p>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setCastResult(null)} className="flex-1">
-                    Try Again
-                  </Button>
-                  <Button onClick={() => setIsOpen(false)} className="flex-1">
-                    Close
-                  </Button>
-                </div>
-              </>
-            )}
+            <div className="flex gap-2">
+              {lastResponse.warpcastUrl && !lastResponse.isDemo && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(lastResponse.warpcastUrl, "_blank")}
+                  className="flex-1"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View
+                </Button>
+              )}
+              <Button onClick={() => setIsOpen(false)} className="flex-1">
+                Done
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
