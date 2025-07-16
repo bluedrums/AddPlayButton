@@ -1,67 +1,73 @@
 "use client"
 
 import { useState } from "react"
-import { useFarcaster } from "@/components/farcaster-provider"
 
-interface CastEmbed {
-  url: string
+interface CastData {
+  text: string
+  embeds?: Array<{ url: string }>
+  parentUrl?: string
 }
 
-interface CreateCastParams {
-  text: string
-  embeds?: CastEmbed[]
+interface PlayButton {
+  id: string
+  url: string
+  platform: string
+  title: string
+  artist?: string
+  embedUrl: string
+  coverImage?: string
 }
 
 export function useFarcasterCast() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-  const { user } = useFarcaster()
 
-  const createCast = async ({ text, embeds }: CreateCastParams): Promise<boolean> => {
-    if (!user) {
-      setError("User not authenticated")
-      return false
-    }
+  const clearError = () => setError(null)
 
-    setIsLoading(true)
+  const createPlayButtonCast = async (playButton: PlayButton, text: string) => {
+    setIsCreating(true)
     setError(null)
-    setSuccess(false)
 
     try {
+      // Create miniapp URL for this specific play button
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`
+
+      const castData: CastData = {
+        text,
+        embeds: [
+          { url: playButton.url }, // Original music URL
+          { url: miniappUrl }, // Miniapp frame URL
+        ],
+      }
+
       const response = await fetch("/api/cast", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          text,
-          embeds: embeds || [],
-          userId: user.fid,
-        }),
+        body: JSON.stringify(castData),
       })
 
-      const data = await response.json()
+      const result = await response.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create cast")
+      if (!result.success) {
+        throw new Error(result.error || "Failed to create cast")
       }
 
-      setSuccess(true)
-      return true
+      return result
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred"
       setError(errorMessage)
-      return false
+      throw err
     } finally {
-      setIsLoading(false)
+      setIsCreating(false)
     }
   }
 
   return {
-    createCast,
-    isLoading,
+    createPlayButtonCast,
+    isCreating,
     error,
-    success,
+    clearError,
   }
 }

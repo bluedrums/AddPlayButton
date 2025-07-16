@@ -2,19 +2,13 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Copy, Check, ExternalLink, Trash2, MessageSquare, MoreHorizontal, Share, ImageIcon, Play } from "lucide-react"
-import { CastComposer } from "@/components/cast-composer"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { CastComposer } from "@/components/cast-composer"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
 
@@ -31,204 +25,143 @@ interface PlayButton {
 
 interface PlayButtonCardProps {
   playButton: PlayButton
-  onRemove: (id: string) => void
-  onCopyLink: (playButton: PlayButton) => void
-  copiedId: string | null
+  onRemove?: (id: string) => void
 }
 
-export function PlayButtonCard({ playButton, onRemove, onCopyLink, copiedId }: PlayButtonCardProps) {
+export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
+  const [showPlayer, setShowPlayer] = useState(false)
   const { isAuthenticated } = useFarcaster()
-  const [isShareMenuOpen, setIsShareMenuOpen] = useState(false)
-  const [showPlayerModal, setShowPlayerModal] = useState(false)
 
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${playButton.title} - ${playButton.platform}`,
-          text: `Check out this ${playButton.platform} track: ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`,
-          url: playButton.url,
-        })
-      } catch (error) {
-        // User cancelled or error occurred
-        console.log("Share cancelled or failed:", error)
-      }
-    } else {
-      // Fallback to copying link
-      onCopyLink(playButton)
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(playButton.url)
+    toast.success("Link copied to clipboard!")
+  }
+
+  const handleRemove = () => {
+    if (onRemove) {
+      onRemove(playButton.id)
+      toast.success("Play button removed")
     }
   }
 
-  const handleCopyEmbedCode = async () => {
-    const embedCode = `<iframe src="${playButton.embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>`
-
-    try {
-      await navigator.clipboard.writeText(embedCode)
-      toast.success("Embed code copied to clipboard")
-    } catch (error) {
-      console.error("Failed to copy embed code:", error)
-      toast.error("Failed to copy embed code")
-    }
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date)
   }
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-        <CardContent className="p-0">
-          <div className="flex">
-            {/* Cover Image */}
-            {playButton.coverImage && (
-              <div className="w-48 flex-shrink-0">
-                <div className="aspect-[3/2] w-full">
-                  <img
-                    src={playButton.coverImage || "/placeholder.svg"}
-                    alt={`${playButton.title} cover`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-            )}
+      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
+              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1">{playButton.artist}</p>}
 
-            <div className="flex-1 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg truncate">{playButton.title}</h3>
-                  {playButton.artist && <p className="text-gray-600 truncate mb-3">{playButton.artist}</p>}
+              {/* Play and Cast buttons directly under title/artist */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  onClick={() => setShowPlayer(true)}
+                  className="bg-green-600 hover:bg-green-700 flex-1"
+                  size="sm"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Play
+                </Button>
 
-                  {/* Play and Cast buttons directly under title/artist */}
-                  <div className="flex items-center gap-2 mb-3">
+                <CastComposer
+                  playButton={playButton}
+                  trigger={
                     <Button
-                      size="sm"
                       variant="outline"
-                      onClick={() => setShowPlayerModal(true)}
-                      className="bg-white hover:bg-gray-50"
+                      className="flex-1 bg-transparent"
+                      size="sm"
+                      disabled={!isAuthenticated}
+                      title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
                     >
-                      <Play className="w-4 h-4 mr-2" />
-                      Play
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Cast
                     </Button>
-
-                    <CastComposer
-                      playButton={playButton}
-                      trigger={
-                        <Button
-                          size="sm"
-                          className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400"
-                          disabled={!isAuthenticated}
-                          title={!isAuthenticated ? "Sign in to create casts" : "Create a cast with this play button"}
-                        >
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Cast
-                        </Button>
-                      }
-                    />
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{playButton.platform}</Badge>
-                    {playButton.coverImage && (
-                      <Badge variant="secondary" className="text-xs">
-                        <ImageIcon className="w-3 h-3 mr-1" />
-                        Custom Cover
-                      </Badge>
-                    )}
-                    <span className="text-sm text-gray-500">{playButton.createdAt.toLocaleDateString()}</span>
-                  </div>
-                </div>
-
-                {/* More Actions Menu - stays in top right */}
-                <div className="ml-4">
-                  <DropdownMenu open={isShareMenuOpen} onOpenChange={setIsShareMenuOpen}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => onCopyLink(playButton)}>
-                        {copiedId === playButton.id ? (
-                          <>
-                            <Check className="w-4 h-4 mr-2" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-4 h-4 mr-2" />
-                            Copy Link
-                          </>
-                        )}
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem onClick={handleCopyEmbedCode}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Embed Code
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open Original
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem onClick={handleShare}>
-                        <Share className="w-4 h-4 mr-2" />
-                        Share
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        onClick={() => onRemove(playButton.id)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-
-              <Separator className="mb-4" />
-
-              {/* Embedded Player Preview */}
-              <div
-                className="aspect-video bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:bg-gray-200 transition-colors relative group"
-                onClick={() => setShowPlayerModal(true)}
-              >
-                <iframe
-                  src={playButton.embedUrl}
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  className="w-full h-full pointer-events-none"
-                  title={`${playButton.title} - ${playButton.platform}`}
+                  }
                 />
-
-                {/* Play Overlay */}
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center">
-                    <Play className="w-8 h-8 text-gray-800 ml-1" />
-                  </div>
-                </div>
               </div>
+            </div>
 
-              {/* Authentication Notice for Cast Button */}
-              {!isAuthenticated && (
-                <div className="mt-3 text-center">
-                  <p className="text-sm text-gray-500">
-                    <MessageSquare className="w-4 h-4 inline mr-1" />
-                    Sign in to create casts with this play button
-                  </p>
+            {/* More actions menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open Original
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyLink}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Link
+                </DropdownMenuItem>
+                {onRemove && (
+                  <DropdownMenuItem onClick={handleRemove} className="text-red-600">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Remove
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          {/* Badges and metadata */}
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <Badge variant="outline" className="text-xs">
+              {playButton.platform}
+            </Badge>
+            {playButton.coverImage && (
+              <Badge variant="secondary" className="text-xs">
+                <ImageIcon className="w-3 h-3 mr-1" />
+                Cover
+              </Badge>
+            )}
+            <div className="flex items-center text-xs text-gray-500 ml-auto">
+              <Calendar className="w-3 h-3 mr-1" />
+              {formatDate(playButton.createdAt)}
+            </div>
+          </div>
+
+          <Separator className="mb-3" />
+
+          {/* Embedded player preview */}
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              {playButton.coverImage ? (
+                <img
+                  src={playButton.coverImage || "/placeholder.svg"}
+                  alt={`${playButton.title} cover`}
+                  className="w-12 h-12 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
+                  <Music className="w-6 h-6 text-purple-600" />
                 </div>
               )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">Embedded {playButton.platform} Player</p>
+                <p className="text-xs text-gray-600">Click Play to preview in modal</p>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Embedded Player Modal */}
-      <EmbeddedPlayerModal isOpen={showPlayerModal} onClose={() => setShowPlayerModal(false)} playButton={playButton} />
+      <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={playButton} />
     </>
   )
 }
