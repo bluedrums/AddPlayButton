@@ -78,63 +78,43 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Prepare cast data for Warpcast API
+    // Prepare cast data - Use the correct Warpcast API format
     const castData = {
       text: text.trim(),
       embeds: embeds?.map((embed: any) => ({ url: embed.url })) || [],
+      parent: null, // No parent for top-level casts
     }
 
-    console.log("📡 Sending to Warpcast API:", {
+    console.log("📡 Preparing Warpcast API request:", {
       textLength: castData.text.length,
       embedCount: castData.embeds.length,
-      apiUrl: "https://api.warpcast.com/v2/casts",
-      authMethod: "Bearer token",
       keyType: apiKey.startsWith("MK-") ? "Merkle" : "Warpcast Secret",
     })
 
-    // Determine the correct authentication method based on key type
-    let authHeaders: Record<string, string>
+    // Use the correct Warpcast API endpoint and authentication
+    // Based on Warpcast API docs, the correct endpoint is /v2/casts
+    const apiUrl = "https://api.warpcast.com/v2/casts"
 
-    if (apiKey.startsWith("MK-")) {
-      // Merkle API keys use Bearer authentication
-      authHeaders = {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "User-Agent": "AddPlayButton-MiniApp/1.0",
-      }
-    } else if (apiKey.startsWith("wc_secret_")) {
-      // Warpcast secret keys might use different authentication
-      // Try both Bearer and direct token approaches
-      authHeaders = {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "User-Agent": "AddPlayButton-MiniApp/1.0",
-        "X-API-Key": apiKey, // Alternative header
-      }
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unsupported API key type",
-          details: {
-            keyPrefix: apiKey.substring(0, 15),
-            supportedTypes: ["MK-", "wc_secret_"],
-          },
-        },
-        { status: 400 },
-      )
+    const requestHeaders = {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      "User-Agent": "AddPlayButton-MiniApp/1.0",
     }
 
-    console.log("🔑 Auth headers prepared:", {
-      hasAuthorization: !!authHeaders.Authorization,
-      hasXApiKey: !!authHeaders["X-API-Key"],
-      authPrefix: authHeaders.Authorization?.substring(0, 20),
+    console.log("🔑 Request headers:", {
+      hasAuthorization: !!requestHeaders.Authorization,
+      authPrefix: requestHeaders.Authorization.substring(0, 20),
+      contentType: requestHeaders["Content-Type"],
+      userAgent: requestHeaders["User-Agent"],
     })
 
+    console.log("📤 Sending request to:", apiUrl)
+    console.log("📤 Request body:", JSON.stringify(castData, null, 2))
+
     // Make request to Warpcast API
-    const response = await fetch("https://api.warpcast.com/v2/casts", {
+    const response = await fetch(apiUrl, {
       method: "POST",
-      headers: authHeaders,
+      headers: requestHeaders,
       body: JSON.stringify(castData),
     })
 
@@ -146,176 +126,219 @@ export async function POST(request: NextRequest) {
       ok: response.ok,
       contentType: response.headers.get("content-type"),
       responseLength: responseText.length,
-      responsePreview: responseText.substring(0, 200),
+      responsePreview: responseText.substring(0, 300),
       allHeaders: Object.fromEntries(response.headers.entries()),
     })
 
+    // If we get 401, try alternative approaches
+    if (response.status === 401) {
+      console.log("🔄 Got 401, trying alternative authentication methods...")
+
+      // Try with PUT method (some APIs use PUT for creates)
+      const putResponse = await fetch(apiUrl, {
+        method: "PUT",
+        headers: requestHeaders,
+        body: JSON.stringify(castData),
+      })
+
+      const putResponseText = await putResponse.text()
+      console.log("🔄 PUT method response:", {
+        status: putResponse.status,
+        ok: putResponse.ok,
+        responsePreview: putResponseText.substring(0, 200),
+      })
+
+      if (putResponse.ok) {
+        // PUT method worked
+        let result
+        try {
+          result = JSON.parse(putResponseText)
+        } catch (parseError) {
+          console.error("❌ Failed to parse PUT response:", parseError)
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Invalid response from Warpcast API",
+              details: {
+                issue: "Response was not valid JSON",
+                responsePreview: putResponseText.substring(0, 200),
+                method: "PUT",
+              },
+            },
+            { status: 500 },
+          )
+        }
+
+        console.log("✅ Cast created with PUT method:", result)
+
+        return NextResponse.json({
+          success: true,
+          cast: result.result?.cast || result.cast,
+          warpcastUrl: result.result?.cast?.hash
+            ? `https://warpcast.com/~/conversations/${result.result.cast.hash}`
+            : null,
+          isDemo: false,
+          message: "Cast created successfully (PUT method)",
+        })
+      }
+
+      // Try with different API endpoint
+      const altApiUrl = "https://api.warpcast.com/v1/casts"
+      console.log("🔄 Trying alternative endpoint:", altApiUrl)
+
+      const altResponse = await fetch(altApiUrl, {
+        method: "POST",
+        headers: requestHeaders,
+        body: JSON.stringify(castData),
+      })
+
+      const altResponseText = await altResponse.text()
+      console.log("🔄 Alternative endpoint response:", {
+        status: altResponse.status,
+        ok: altResponse.ok,
+        responsePreview: altResponseText.substring(0, 200),
+      })
+
+      if (altResponse.ok) {
+        // Alternative endpoint worked
+        let result
+        try {
+          result = JSON.parse(altResponseText)
+        } catch (parseError) {
+          console.error("❌ Failed to parse alternative response:", parseError)
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Invalid response from Warpcast API",
+              details: {
+                issue: "Response was not valid JSON",
+                responsePreview: altResponseText.substring(0, 200),
+                endpoint: "v1",
+              },
+            },
+            { status: 500 },
+          )
+        }
+
+        console.log("✅ Cast created with alternative endpoint:", result)
+
+        return NextResponse.json({
+          success: true,
+          cast: result.result?.cast || result.cast,
+          warpcastUrl: result.result?.cast?.hash
+            ? `https://warpcast.com/~/conversations/${result.result.cast.hash}`
+            : null,
+          isDemo: false,
+          message: "Cast created successfully (v1 endpoint)",
+        })
+      }
+
+      // Try with API key in different header format
+      const altHeaders = {
+        "Content-Type": "application/json",
+        "User-Agent": "AddPlayButton-MiniApp/1.0",
+        "X-API-Key": apiKey,
+      }
+
+      console.log("🔄 Trying X-API-Key header format...")
+
+      const headerResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: altHeaders,
+        body: JSON.stringify(castData),
+      })
+
+      const headerResponseText = await headerResponse.text()
+      console.log("🔄 X-API-Key header response:", {
+        status: headerResponse.status,
+        ok: headerResponse.ok,
+        responsePreview: headerResponseText.substring(0, 200),
+      })
+
+      if (headerResponse.ok) {
+        // X-API-Key header worked
+        let result
+        try {
+          result = JSON.parse(headerResponseText)
+        } catch (parseError) {
+          console.error("❌ Failed to parse header response:", parseError)
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Invalid response from Warpcast API",
+              details: {
+                issue: "Response was not valid JSON",
+                responsePreview: headerResponseText.substring(0, 200),
+                authMethod: "X-API-Key",
+              },
+            },
+            { status: 500 },
+          )
+        }
+
+        console.log("✅ Cast created with X-API-Key header:", result)
+
+        return NextResponse.json({
+          success: true,
+          cast: result.result?.cast || result.cast,
+          warpcastUrl: result.result?.cast?.hash
+            ? `https://warpcast.com/~/conversations/${result.result.cast.hash}`
+            : null,
+          isDemo: false,
+          message: "Cast created successfully (X-API-Key header)",
+        })
+      }
+    }
+
     if (!response.ok) {
-      console.error("❌ Warpcast API error details:", {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        responseBody: responseText,
-        requestData: castData,
-        authHeaders: {
-          ...authHeaders,
-          Authorization: authHeaders.Authorization?.substring(0, 20) + "...",
-          "X-API-Key": authHeaders["X-API-Key"]?.substring(0, 20) + "...",
+      console.error("❌ All authentication methods failed:", {
+        originalStatus: response.status,
+        originalResponse: responseText.substring(0, 500),
+        apiKey: {
+          length: apiKey.length,
+          prefix: apiKey.substring(0, 15),
+          type: apiKey.startsWith("MK-") ? "Merkle" : "Warpcast Secret",
         },
       })
 
-      // Try alternative authentication method if Bearer failed
-      if (response.status === 401 && apiKey.startsWith("wc_secret_")) {
-        console.log("🔄 Trying alternative authentication method...")
-
-        const altAuthHeaders = {
-          "Content-Type": "application/json",
-          "User-Agent": "AddPlayButton-MiniApp/1.0",
-          "X-Farcaster-Auth": apiKey, // Alternative auth header
-        }
-
-        const altResponse = await fetch("https://api.warpcast.com/v2/casts", {
-          method: "POST",
-          headers: altAuthHeaders,
-          body: JSON.stringify(castData),
-        })
-
-        const altResponseText = await altResponse.text()
-
-        console.log("🔄 Alternative auth response:", {
-          status: altResponse.status,
-          statusText: altResponse.statusText,
-          ok: altResponse.ok,
-          responsePreview: altResponseText.substring(0, 200),
-        })
-
-        if (altResponse.ok) {
-          // Alternative method worked
-          let result
-          try {
-            result = JSON.parse(altResponseText)
-          } catch (parseError) {
-            console.error("❌ Failed to parse alternative response:", parseError)
-            return NextResponse.json(
-              {
-                success: false,
-                error: "Invalid response from Warpcast API",
-                details: {
-                  issue: "Response was not valid JSON",
-                  responsePreview: altResponseText.substring(0, 200),
-                  parseError: parseError instanceof Error ? parseError.message : "Unknown parse error",
-                },
-              },
-              { status: 500 },
-            )
-          }
-
-          console.log("✅ Cast created with alternative auth:", {
-            hash: result.result?.cast?.hash?.substring(0, 10),
-            author: result.result?.cast?.author?.username,
-          })
-
-          let warpcastUrl = null
-          if (result.result?.cast?.hash && result.result?.cast?.author?.username) {
-            warpcastUrl = `https://warpcast.com/${result.result.cast.author.username}/${result.result.cast.hash.substring(0, 10)}`
-          }
-
-          return NextResponse.json({
-            success: true,
-            cast: result.result.cast,
-            warpcastUrl,
-            isDemo: false,
-            message: "Cast created successfully (alternative auth)",
-          })
-        }
+      // Parse the error response to get more details
+      let parsedError
+      try {
+        parsedError = JSON.parse(responseText)
+      } catch (e) {
+        parsedError = { message: responseText }
       }
 
-      // Handle specific error cases with detailed debugging
-      let errorMessage = "Failed to create cast"
-      let errorDetails: any = {
+      const errorMessage = "Authentication failed"
+      const errorDetails: any = {
         statusCode: response.status,
         statusText: response.statusText,
         responseBody: responseText,
-      }
-
-      if (response.status === 401) {
-        errorMessage = "Authentication failed"
-
-        // Parse the error response to get more details
-        let parsedError
-        try {
-          parsedError = JSON.parse(responseText)
-        } catch (e) {
-          parsedError = { message: responseText }
-        }
-
-        errorDetails = {
-          ...errorDetails,
-          issue: "Invalid or expired API key",
-          warpcastError: parsedError,
-          suggestions: [
-            "Verify your WARPCAST_API_KEY is correct and complete",
-            "Check if the API key has expired or been revoked",
-            "Ensure the key has proper permissions for casting",
-            "Try regenerating the API key from Warpcast developer dashboard",
-            "Check if your account is in good standing",
-            "Verify the API key is for the correct environment (dev/prod)",
-          ],
-          apiKeyInfo: {
-            length: apiKey.length,
-            prefix: apiKey.substring(0, 15),
-            type: apiKey.startsWith("MK-") ? "Merkle" : "Warpcast Secret",
-            format: isValidFormat ? "valid" : "invalid",
-          },
-          debugInfo: {
-            endpoint: "https://api.warpcast.com/v2/casts",
-            method: "POST",
-            authMethod: apiKey.startsWith("MK-") ? "Bearer (Merkle)" : "Bearer (Warpcast Secret)",
-            requestHeaders: Object.keys(authHeaders),
-            responseHeaders: Object.fromEntries(response.headers.entries()),
-          },
-        }
-      } else if (response.status === 400) {
-        let parsedError
-        try {
-          parsedError = JSON.parse(responseText)
-        } catch (e) {
-          parsedError = { message: responseText }
-        }
-
-        errorMessage = "Invalid cast data"
-        errorDetails = {
-          ...errorDetails,
-          issue: parsedError.message || "Bad request format",
-          validationErrors: parsedError.errors || [],
-          requestData: castData,
-          suggestions: [
-            "Check cast text length (max 320 characters)",
-            "Verify embed URLs are valid and accessible",
-            "Ensure all required fields are present",
-            "Check for invalid characters in the text",
-          ],
-        }
-      } else if (response.status === 429) {
-        errorMessage = "Rate limit exceeded"
-        errorDetails = {
-          ...errorDetails,
-          issue: "Too many requests",
-          retryAfter: response.headers.get("retry-after"),
-          suggestions: ["Wait before trying again", "Implement exponential backoff", "Check your API usage limits"],
-        }
-      } else if (response.status === 403) {
-        errorMessage = "Forbidden"
-        errorDetails = {
-          ...errorDetails,
-          issue: "API key lacks required permissions",
-          suggestions: [
-            "Check API key permissions in Warpcast dashboard",
-            "Ensure the key can create casts",
-            "Verify account status and limits",
-            "Check if casting is enabled for your account",
-          ],
-        }
+        warpcastError: parsedError,
+        issue: "API key was rejected by Warpcast API",
+        suggestions: [
+          "🔑 Verify your WARPCAST_API_KEY is correct and complete",
+          "⏰ Check if the API key has expired or been revoked",
+          "🔒 Ensure the key has proper permissions for casting",
+          "🔄 Try regenerating the API key from Warpcast developer dashboard",
+          "👤 Check if your Warpcast account is in good standing",
+          "🌍 Verify the API key is for the correct environment",
+          "📋 Make sure you copied the entire key without truncation",
+          "🚫 Check if there are any account restrictions or rate limits",
+        ],
+        apiKeyInfo: {
+          length: apiKey.length,
+          prefix: apiKey.substring(0, 15),
+          type: apiKey.startsWith("MK-") ? "Merkle" : "Warpcast Secret",
+          format: isValidFormat ? "valid" : "invalid",
+        },
+        debugInfo: {
+          endpoint: apiUrl,
+          method: "POST",
+          requestHeaders: Object.keys(requestHeaders),
+          responseHeaders: Object.fromEntries(response.headers.entries()),
+          triedAlternatives: true,
+        },
       }
 
       return NextResponse.json(
@@ -360,13 +383,13 @@ export async function POST(request: NextRequest) {
 
     // Generate Warpcast URL
     let warpcastUrl = null
-    if (result.result?.cast?.hash && result.result?.cast?.author?.username) {
-      warpcastUrl = `https://warpcast.com/${result.result.cast.author.username}/${result.result.cast.hash.substring(0, 10)}`
+    if (result.result?.cast?.hash) {
+      warpcastUrl = `https://warpcast.com/~/conversations/${result.result.cast.hash}`
     }
 
     return NextResponse.json({
       success: true,
-      cast: result.result.cast,
+      cast: result.result?.cast || result.cast,
       warpcastUrl,
       isDemo: false,
       message: "Cast created successfully",
@@ -389,7 +412,7 @@ export async function POST(request: NextRequest) {
         ...errorDetails,
         name: error.name,
         message: error.message,
-        stack: error.stack?.split("\n").slice(0, 5), // First 5 lines of stack trace
+        stack: error.stack?.split("\n").slice(0, 5),
       }
     }
 

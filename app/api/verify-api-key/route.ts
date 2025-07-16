@@ -99,118 +99,96 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Test API key by making requests to different endpoints
+    // Test API key with multiple endpoints and methods
     console.log("🧪 Testing API key with Warpcast API...")
 
-    const testEndpoints = [
+    const testConfigurations = [
       {
-        name: "User Info",
+        name: "User Info (v2)",
         url: "https://api.warpcast.com/v2/me",
         method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": "AddPlayButton-MiniApp/1.0",
+        },
       },
       {
-        name: "User Verification",
-        url: "https://api.warpcast.com/v2/verifications",
+        name: "User Info (v1)",
+        url: "https://api.warpcast.com/v1/me",
         method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": "AddPlayButton-MiniApp/1.0",
+        },
+      },
+      {
+        name: "User Info (X-API-Key)",
+        url: "https://api.warpcast.com/v2/me",
+        method: "GET",
+        headers: {
+          "X-API-Key": apiKey,
+          "Content-Type": "application/json",
+          "User-Agent": "AddPlayButton-MiniApp/1.0",
+        },
+      },
+      {
+        name: "Casts Endpoint Test",
+        url: "https://api.warpcast.com/v2/casts",
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "User-Agent": "AddPlayButton-MiniApp/1.0",
+        },
       },
     ]
 
     const testResults = []
 
-    for (const endpoint of testEndpoints) {
+    for (const config of testConfigurations) {
       try {
-        // Try different authentication methods
-        const authMethods = [
-          {
-            name: "Bearer Token",
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "User-Agent": "AddPlayButton-MiniApp/1.0",
-            },
-          },
-        ]
+        console.log(`🧪 Testing ${config.name}...`)
 
-        // Add alternative methods for wc_secret_ keys
-        if (apiKey.startsWith("wc_secret_")) {
-          authMethods.push(
-            {
-              name: "X-API-Key Header",
-              headers: {
-                "X-API-Key": apiKey,
-                "Content-Type": "application/json",
-                "User-Agent": "AddPlayButton-MiniApp/1.0",
-              },
-            },
-            {
-              name: "X-Farcaster-Auth Header",
-              headers: {
-                "X-Farcaster-Auth": apiKey,
-                "Content-Type": "application/json",
-                "User-Agent": "AddPlayButton-MiniApp/1.0",
-              },
-            },
-          )
-        }
+        const testResponse = await fetch(config.url, {
+          method: config.method,
+          headers: config.headers,
+        })
 
-        let successfulMethod = null
-        let lastError = null
+        const testResult = await testResponse.text()
 
-        for (const authMethod of authMethods) {
-          try {
-            const testResponse = await fetch(endpoint.url, {
-              method: endpoint.method,
-              headers: authMethod.headers,
-            })
+        console.log(`🧪 ${config.name} result:`, {
+          status: testResponse.status,
+          ok: testResponse.ok,
+          statusText: testResponse.statusText,
+          responsePreview: testResult.substring(0, 200),
+          headers: Object.fromEntries(testResponse.headers.entries()),
+        })
 
-            const testResult = await testResponse.text()
-
-            console.log(`🧪 ${endpoint.name} test (${authMethod.name}):`, {
-              status: testResponse.status,
-              ok: testResponse.ok,
-              statusText: testResponse.statusText,
-              responsePreview: testResult.substring(0, 200),
-            })
-
-            if (testResponse.ok) {
-              successfulMethod = authMethod.name
-              testResults.push({
-                endpoint: endpoint.name,
-                success: true,
-                status: testResponse.status,
-                authMethod: authMethod.name,
-                responsePreview: testResult.substring(0, 100),
-              })
-              break // Success, no need to try other auth methods
-            } else {
-              lastError = {
-                status: testResponse.status,
-                statusText: testResponse.statusText,
-                authMethod: authMethod.name,
-                responsePreview: testResult.substring(0, 100),
-              }
-            }
-          } catch (methodError) {
-            lastError = {
-              authMethod: authMethod.name,
-              error: methodError instanceof Error ? methodError.message : "Unknown error",
-            }
-          }
-        }
-
-        if (!successfulMethod) {
-          testResults.push({
-            endpoint: endpoint.name,
-            success: false,
-            error: lastError,
-          })
-        }
-      } catch (endpointError) {
-        console.error(`🧪 ${endpoint.name} test error:`, endpointError)
         testResults.push({
-          endpoint: endpoint.name,
+          name: config.name,
+          url: config.url,
+          method: config.method,
+          success: testResponse.ok,
+          status: testResponse.status,
+          statusText: testResponse.statusText,
+          responsePreview: testResult.substring(0, 100),
+          authMethod: config.headers.Authorization ? "Bearer" : "X-API-Key",
+        })
+
+        // If this test passed, we can stop here for basic validation
+        if (testResponse.ok && config.name === "User Info (v2)") {
+          break
+        }
+      } catch (testError) {
+        console.error(`🧪 ${config.name} error:`, testError)
+        testResults.push({
+          name: config.name,
+          url: config.url,
+          method: config.method,
           success: false,
-          error: endpointError instanceof Error ? endpointError.message : "Unknown error",
+          error: testError instanceof Error ? testError.message : "Unknown error",
         })
       }
     }
@@ -219,29 +197,40 @@ export async function GET(request: NextRequest) {
     const successfulTests = testResults.filter((result) => result.success)
     const failedTests = testResults.filter((result) => !result.success)
 
+    console.log("🧪 Test summary:", {
+      total: testResults.length,
+      successful: successfulTests.length,
+      failed: failedTests.length,
+      successfulTests: successfulTests.map((t) => t.name),
+      failedTests: failedTests.map((t) => t.name),
+    })
+
     if (successfulTests.length === 0) {
       // All tests failed
-      const authErrors = failedTests.filter((test) => test.error?.status === 401)
+      const authErrors = failedTests.filter((test) => test.status === 401)
 
       if (authErrors.length > 0) {
         return NextResponse.json({
           success: false,
           error: "API key authentication failed",
-          details: "The API key was rejected by Warpcast API",
+          details: "The API key was rejected by all Warpcast API endpoints",
           recommendations: [
-            "Verify the API key is correct and hasn't been revoked",
-            "Check if the API key has expired",
-            "Try regenerating the API key from Warpcast developer dashboard",
-            "Ensure the key has the required permissions",
-            "Check if your Warpcast account is in good standing",
-            "Verify you're using the correct API key for your environment",
+            "🔑 Verify the API key is correct and complete",
+            "⏰ Check if the API key has expired or been revoked",
+            "🔄 Try regenerating the API key from Warpcast developer dashboard",
+            "👤 Ensure your Warpcast account is in good standing",
+            "🔒 Verify the key has the required permissions",
+            "🌍 Check if you're using the correct API key for your environment",
+            "📋 Make sure there are no extra spaces or characters in the key",
+            "🚫 Check for any account restrictions or suspensions",
           ],
           debugInfo: {
             keyType,
             keyLength: apiKey.length,
             keyPrefix: apiKey.substring(0, 15),
             testResults,
-            testedEndpoints: testEndpoints.map((e) => e.name),
+            authErrors: authErrors.length,
+            testedEndpoints: testConfigurations.map((c) => c.name),
           },
         })
       }
@@ -249,9 +238,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: "API key test failed",
-        details: "All test endpoints failed",
+        details: "All test endpoints failed (not authentication related)",
         recommendations: [
-          "Check Warpcast API status",
+          "Check Warpcast API status at https://status.warpcast.com",
           "Verify your network connection",
           "Try again in a few minutes",
           "Check if there are any service outages",
@@ -259,12 +248,15 @@ export async function GET(request: NextRequest) {
         debugInfo: {
           keyType,
           testResults,
-          testedEndpoints: testEndpoints.map((e) => e.name),
+          testedEndpoints: testConfigurations.map((c) => c.name),
         },
       })
     }
 
     // At least one test passed
+    const workingMethods = [...new Set(successfulTests.map((t) => t.authMethod))]
+    const workingEndpoints = successfulTests.map((t) => t.name)
+
     return NextResponse.json({
       success: true,
       message: "API key is valid and working",
@@ -276,13 +268,20 @@ export async function GET(request: NextRequest) {
         isValidFormat: true,
         apiTestsPassed: successfulTests.length,
         apiTestsFailed: failedTests.length,
-        workingAuthMethods: [...new Set(successfulTests.map((t) => t.authMethod))],
+        workingAuthMethods: workingMethods,
+        workingEndpoints: workingEndpoints,
       },
       debugInfo: {
         testResults,
-        testedEndpoints: testEndpoints.map((e) => e.name),
+        testedEndpoints: testConfigurations.map((c) => c.name),
         successfulTests: successfulTests.length,
         failedTests: failedTests.length,
+        summary: {
+          totalTests: testResults.length,
+          passedTests: successfulTests.length,
+          failedTests: failedTests.length,
+          authenticationWorks: successfulTests.length > 0,
+        },
       },
     })
   } catch (error) {
