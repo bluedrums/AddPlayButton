@@ -69,7 +69,7 @@ export function useFarcasterCast() {
 
     try {
       const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""} on ${playButton.platform}`
-      const castText = customText || defaultText
+      const castText = customText || formatCastText(params.embedType || 'unknown', params.title || 'Untitled');
 
       // Create miniapp URL for this specific play button
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`
