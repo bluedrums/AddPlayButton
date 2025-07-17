@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { formatCastText, validateCastData } from "@/lib/farcaster"
-import { NeynarAPIClient, Configuration, isApiErrorResponse, CastParamType } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration, isApiErrorResponse } from "@neynar/nodejs-sdk";
 import { CastParamType } from "@neynar/nodejs-sdk/build/api";
 
 const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
