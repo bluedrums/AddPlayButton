@@ -1,0 +1,167 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
+import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
+import { CastComposer } from "@/components/cast-composer"
+import { useFarcaster } from "@/components/farcaster-provider"
+import { toast } from "sonner"
+
+interface PlayButton {
+  id: string
+  url: string
+  platform: string
+  title: string
+  artist?: string
+  embedUrl: string
+  coverImage?: string
+  createdAt: Date
+}
+
+interface PlayButtonCardProps {
+  playButton: PlayButton
+  onRemove?: (id: string) => void
+}
+
+export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
+  const [showPlayer, setShowPlayer] = useState(false)
+  const { isAuthenticated } = useFarcaster()
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(playButton.url)
+    toast.success("Link copied to clipboard!")
+  }
+
+  const handleRemove = () => {
+    if (onRemove) {
+      onRemove(playButton.id)
+      toast.success("Play button removed")
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(date)
+  }
+
+  return (
+    <>
+      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
+              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1">{playButton.artist}</p>}
+
+              {/* Play and Cast buttons directly under title/artist */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  onClick={() => setShowPlayer(true)}
+                  className="bg-green-600 hover:bg-green-700 flex-1"
+                  size="sm"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Play
+                </Button>
+
+                <CastComposer
+                  playButton={playButton}
+                  trigger={
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      size="sm"
+                      disabled={!isAuthenticated}
+                      title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Cast
+                    </Button>
+                  }
+                />
+              </div>
+            </div>
+
+            {/* More actions menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open Original
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleCopyLink}>
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Link
+                </DropdownMenuItem>
+                {onRemove && (
+                  <DropdownMenuItem onClick={handleRemove} className="text-red-600">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Remove
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0">
+          {/* Badges and metadata */}
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <Badge variant="outline" className="text-xs">
+              {playButton.platform}
+            </Badge>
+            {playButton.coverImage && (
+              <Badge variant="secondary" className="text-xs">
+                <ImageIcon className="w-3 h-3 mr-1" />
+                Cover
+              </Badge>
+            )}
+            <div className="flex items-center text-xs text-gray-500 ml-auto">
+              <Calendar className="w-3 h-3 mr-1" />
+              {formatDate(playButton.createdAt)}
+            </div>
+          </div>
+
+          <Separator className="mb-3" />
+
+          {/* Embedded player preview */}
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center gap-3">
+              {playButton.coverImage ? (
+                <img
+                  src={playButton.coverImage || "/placeholder.svg"}
+                  alt={`${playButton.title} cover`}
+                  className="w-12 h-12 rounded object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
+                  <Music className="w-6 h-6 text-purple-600" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">Embedded {playButton.platform} Player</p>
+                <p className="text-xs text-gray-600">Click Play to preview in modal</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Embedded Player Modal */}
+      <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={playButton} />
+    </>
+  )
+}

@@ -1,124 +1,260 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Settings, ChevronDown, ChevronUp, Copy, AlertTriangle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Info,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Key,
+  Server,
+  Globe,
+  User,
+  Smartphone,
+} from "lucide-react"
+import { useFarcaster } from "@/components/farcaster-provider"
+
+interface ApiKeyVerification {
+  success: boolean
+  error?: string
+  details?: string | any
+  recommendations?: string[]
+  message?: string
+}
 
 export function DebugPanel() {
   const [isOpen, setIsOpen] = useState(false)
+  const [apiKeyStatus, setApiKeyStatus] = useState<ApiKeyVerification | null>(null)
+  const [isVerifying, setIsVerifying] = useState(false)
+  const { user, isAuthenticated } = useFarcaster()
 
-  const debugInfo = {
-    environment: process.env.NODE_ENV,
-    forceRealAuth: process.env.NEXT_PUBLIC_FORCE_REAL_AUTH,
-    appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN,
-    appUrl: process.env.NEXT_PUBLIC_APP_URL,
-    hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
-    origin: typeof window !== "undefined" ? window.location.origin : "N/A",
-    userAgent: typeof window !== "undefined" ? navigator.userAgent.substring(0, 50) + "..." : "N/A",
-    timestamp: new Date().toISOString(),
-    popupBlocked: "Unknown - Check manually",
-  }
-
-  const copyDebugInfo = () => {
-    const debugText = Object.entries(debugInfo)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join("\n")
-
-    navigator.clipboard
-      .writeText(debugText)
-      .then(() => {
-        alert("Debug info copied to clipboard!")
-      })
-      .catch(() => {
-        console.log("Debug info:", debugText)
-        alert("Debug info logged to console")
-      })
-  }
-
-  const testPopup = () => {
+  const verifyApiKey = async () => {
+    setIsVerifying(true)
     try {
-      const popup = window.open("about:blank", "_blank", "width=400,height=600")
-      if (popup) {
-        popup.close()
-        alert("✅ Popups are working! The Auth Kit should be able to open authentication windows.")
-      } else {
-        alert("❌ Popup blocked! Please allow popups for this site and try again.")
-      }
+      const response = await fetch("/api/verify-api-key")
+      const result = await response.json()
+      setApiKeyStatus(result)
     } catch (error) {
-      alert("❌ Popup test failed: " + error)
+      setApiKeyStatus({
+        success: false,
+        error: "Failed to verify API key",
+        details: "Network error or server unavailable",
+      })
+    } finally {
+      setIsVerifying(false)
     }
   }
 
+  useEffect(() => {
+    if (isOpen && !apiKeyStatus) {
+      verifyApiKey()
+    }
+  }, [isOpen])
+
+  const getStatusIcon = (status: ApiKeyVerification | null) => {
+    if (!status) return <AlertTriangle className="w-5 h-5 text-yellow-500" />
+    if (status.success) return <CheckCircle className="w-5 h-5 text-green-500" />
+    return <XCircle className="w-5 h-5 text-red-500" />
+  }
+
+  const getStatusColor = (status: ApiKeyVerification | null) => {
+    if (!status) return "yellow"
+    return status.success ? "green" : "red"
+  }
+
   return (
-    <Card className="mt-4">
-      <CardHeader className="pb-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center justify-between w-full p-0"
-        >
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            <span className="text-sm font-medium">Debug Info</span>
-          </div>
-          {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="fixed bottom-4 right-4 z-50 shadow-lg bg-transparent">
+          <Info className="w-4 h-4 mr-2" />
+          Debug Info
         </Button>
-      </CardHeader>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Server className="w-5 h-5" />
+            Debug Information
+          </DialogTitle>
+          <DialogDescription>System status and configuration details</DialogDescription>
+        </DialogHeader>
 
-      {isOpen && (
-        <CardContent className="pt-0">
-          <div className="space-y-2 text-xs">
-            {Object.entries(debugInfo).map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center">
-                <span className="text-gray-600 capitalize">{key.replace(/([A-Z])/g, " $1")}:</span>
-                <Badge variant="outline" className="text-xs max-w-[200px] truncate">
-                  {value || "undefined"}
-                </Badge>
-              </div>
-            ))}
+        <ScrollArea className="max-h-[70vh]">
+          <div className="space-y-6">
+            {/* API Key Status */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-base">
+                  <div className="flex items-center gap-2">
+                    <Key className="w-4 h-4" />
+                    Warpcast API Key
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={verifyApiKey} disabled={isVerifying}>
+                    {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(apiKeyStatus)}
+                  <Badge variant={getStatusColor(apiKeyStatus) === "green" ? "default" : "destructive"}>
+                    {apiKeyStatus?.success ? "Valid" : "Invalid"}
+                  </Badge>
+                  {apiKeyStatus?.message && <span className="text-sm text-gray-600">{apiKeyStatus.message}</span>}
+                </div>
+
+                {apiKeyStatus?.error && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      <strong>{apiKeyStatus.error}</strong>
+                      {apiKeyStatus.details && <div className="mt-1 text-sm">{apiKeyStatus.details}</div>}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {apiKeyStatus?.details && typeof apiKeyStatus.details === "object" && (
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Type:</span> {apiKeyStatus.details.keyType}
+                    </div>
+                    <div>
+                      <span className="font-medium">Length:</span> {apiKeyStatus.details.keyLength}
+                    </div>
+                    <div>
+                      <span className="font-medium">Prefix:</span> {apiKeyStatus.details.keyPrefix}
+                    </div>
+                    <div>
+                      <span className="font-medium">Format:</span> {apiKeyStatus.details.isValidFormat ? "✓" : "✗"}
+                    </div>
+                  </div>
+                )}
+
+                {apiKeyStatus?.recommendations && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-sm">Recommendations:</h4>
+                    <ul className="text-sm space-y-1 text-gray-600">
+                      {apiKeyStatus.recommendations.map((rec, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">•</span>
+                          {rec}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Authentication Status */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="w-4 h-4" />
+                  Authentication Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center gap-2">
+                  {isAuthenticated ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500" />
+                  )}
+                  <Badge variant={isAuthenticated ? "default" : "secondary"}>
+                    {isAuthenticated ? "Authenticated" : "Not Authenticated"}
+                  </Badge>
+                </div>
+
+                {user && (
+                  <div className="grid grid-cols-1 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium">Display Name:</span> {user.displayName}
+                    </div>
+                    <div>
+                      <span className="font-medium">Username:</span> @{user.username}
+                    </div>
+                    <div>
+                      <span className="font-medium">FID:</span> {user.fid}
+                    </div>
+                    {user.fid === 12345 && (
+                      <Badge variant="outline" className="w-fit">
+                        Demo Mode
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Environment Info */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Globe className="w-4 h-4" />
+                  Environment
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="grid grid-cols-1 gap-2">
+                  <div>
+                    <span className="font-medium">App URL:</span>{" "}
+                    {process.env.NEXT_PUBLIC_APP_URL || window.location.origin}
+                  </div>
+                  <div>
+                    <span className="font-medium">Domain:</span>{" "}
+                    {process.env.NEXT_PUBLIC_APP_DOMAIN || window.location.hostname}
+                  </div>
+                  <div>
+                    <span className="font-medium">User Agent:</span>{" "}
+                    <span className="text-xs break-all">{navigator.userAgent}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Frame Context */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Smartphone className="w-4 h-4" />
+                  Frame Context
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="font-medium">In Frame:</span> {window.parent !== window ? "Yes" : "No"}
+                  </div>
+                  <div>
+                    <span className="font-medium">Screen Width:</span> {window.screen.width}px
+                  </div>
+                  <div>
+                    <span className="font-medium">Window Width:</span> {window.innerWidth}px
+                  </div>
+                  <div>
+                    <span className="font-medium">Window Height:</span> {window.innerHeight}px
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-
-          <div className="mt-4 flex gap-2 flex-wrap">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copyDebugInfo}
-              className="flex items-center gap-1 bg-transparent"
-            >
-              <Copy className="h-3 w-3" />
-              Copy Debug Info
-            </Button>
-
-            <Button variant="outline" size="sm" onClick={testPopup} className="flex items-center gap-1 bg-transparent">
-              <AlertTriangle className="h-3 w-3" />
-              Test Popups
-            </Button>
-          </div>
-
-          <div className="mt-4 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-            <p className="font-medium mb-1 text-yellow-800">Troubleshooting Steps:</p>
-            <ul className="text-yellow-700 space-y-1">
-              <li>1. Click "Test Popups" to check if popups are blocked</li>
-              <li>2. Try in an incognito/private window</li>
-              <li>3. Disable browser extensions temporarily</li>
-              <li>4. Check if your domain matches exactly in Vercel env vars</li>
-            </ul>
-          </div>
-
-          <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-            <p className="font-medium mb-1">Expected for Real Auth:</p>
-            <ul className="text-gray-600 space-y-1">
-              <li>• NEXT_PUBLIC_FORCE_REAL_AUTH = "true"</li>
-              <li>• NEXT_PUBLIC_APP_DOMAIN = www.addplaybutton.xyz</li>
-              <li>• NEXT_PUBLIC_APP_URL = https://www.addplaybutton.xyz</li>
-              <li>• WARPCAST_API_KEY = wck_...</li>
-            </ul>
-          </div>
-        </CardContent>
-      )}
-    </Card>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,8 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { formatCastText, validateCastData } from "@/lib/farcaster"
-import { NeynarAPIClient, isApiErrorResponse } from "@neynar/nodejs-sdk";
+import { NeynarAPIClient, Configuration, isApiErrorResponse } from "@neynar/nodejs-sdk";
+import { CastParamType } from "@neynar/nodejs-sdk/build/api";
 
-const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY!);
+const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
+const client = new NeynarAPIClient(config);
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,12 +33,17 @@ export async function POST(request: NextRequest) {
 
     // Submit cast using Neynar
     try {
-      const { hash } = await client.publishCast(signerUuid, castData.text, {
+      const response = await client.publishCast({
+        signerUuid,
+        text: castData.text,
         embeds: castData.embeds
       });
+      const hash = response.cast.hash;
 
-      // Fetch cast details to get author info (optional, since Neynar might not return full details)
-      const castDetails = await client.lookUpCastByHash(hash);
+      const castDetails = await client.lookupCastByHashOrUrl({
+        identifier: hash,
+        type: CastParamType.Hash
+      });
 
       return NextResponse.json({
         success: true,

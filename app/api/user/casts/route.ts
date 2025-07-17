@@ -9,77 +9,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "FID is required" }, { status: 400 })
     }
 
-    // Fetch user's recent casts from Farcaster
-    const response = await fetch(`https://api.warpcast.com/v2/casts?fid=${fid}&limit=25`, {
-      headers: {
-        Authorization: `Bearer ${process.env.WARPCAST_API_KEY}`,
+    // For demo purposes, return mock casts
+    // In a real implementation, this would query the Farcaster API or database
+    const mockCasts = [
+      {
+        id: "cast_1",
+        hash: "0xdemo123",
+        text: "🎵 Check out this amazing track on Spotify!",
+        timestamp: Date.now() - 3600000, // 1 hour ago
+        embedUrl: "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
+        embedType: "spotify",
+        warpcastUrl: "https://warpcast.com/~/conversations/0xdemo123",
       },
-    })
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch casts")
-    }
-
-    const data = await response.json()
-
-    // Filter casts that contain music/video embeds
-    const musicCasts = data.result.casts.filter((cast: any) => {
-      return cast.embeds?.some((embed: any) => {
-        const url = embed.url?.toLowerCase() || ""
-        return (
-          url.includes("spotify.com") ||
-          url.includes("music.apple.com") ||
-          url.includes("soundcloud.com") ||
-          url.includes("youtube.com") ||
-          url.includes("youtu.be")
-        )
-      })
-    })
-
-    const formattedCasts = musicCasts.map((cast: any) => {
-      const musicEmbed = cast.embeds?.find((embed: any) => {
-        const url = embed.url?.toLowerCase() || ""
-        return (
-          url.includes("spotify.com") ||
-          url.includes("music.apple.com") ||
-          url.includes("soundcloud.com") ||
-          url.includes("youtube.com") ||
-          url.includes("youtu.be")
-        )
-      })
-
-      let embedType = "unknown"
-      if (musicEmbed?.url) {
-        const url = musicEmbed.url.toLowerCase()
-        if (url.includes("spotify.com")) embedType = "spotify"
-        else if (url.includes("music.apple.com")) embedType = "apple"
-        else if (url.includes("soundcloud.com")) embedType = "soundcloud"
-        else if (url.includes("youtube.com") || url.includes("youtu.be")) embedType = "youtube"
-      }
-
-      return {
-        id: cast.hash,
-        hash: cast.hash,
-        text: cast.text,
-        timestamp: new Date(cast.timestamp).getTime(),
-        embedUrl: musicEmbed?.url || "",
-        embedType,
-        warpcastUrl: `https://warpcast.com/${cast.author.username}/${cast.hash.slice(0, 10)}`,
-        author: {
-          fid: cast.author.fid,
-          username: cast.author.username,
-          displayName: cast.author.displayName,
-          pfpUrl: cast.author.pfp?.url,
-        },
-      }
-    })
+      {
+        id: "cast_2",
+        hash: "0xdemo456",
+        text: "🎵 Amazing video on YouTube!",
+        timestamp: Date.now() - 7200000, // 2 hours ago
+        embedUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        embedType: "youtube",
+        warpcastUrl: "https://warpcast.com/~/conversations/0xdemo456",
+      },
+    ]
 
     return NextResponse.json({
       success: true,
-      casts: formattedCasts,
+      casts: mockCasts,
     })
-  } catch (error: any) {
-    console.error("Error fetching user casts:", error)
-    return NextResponse.json({ success: false, error: error.message || "Failed to fetch casts" }, { status: 500 })
+  } catch (error) {
+    console.error("User casts API error:", error)
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
   }
 }

@@ -1,22 +1,15 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSignIn, useProfile } from "@farcaster/auth-kit"
-
-interface FarcasterUser {
-  fid: number
-  username: string
-  displayName: string
-  pfpUrl?: string
-  custodyAddress?: string
-  verifications?: string[]
-}
+import { useState, useEffect, useCallback } from "react"
+import type { FarcasterUser } from "@/lib/farcaster"
 
 interface AuthState {
   user: FarcasterUser | null
   isLoading: boolean
   isAuthenticated: boolean
   error: string | null
+  authType: "real" | "demo"
+  canUpgradeToReal: boolean
 }
 
 export function useFarcasterAuth() {
@@ -25,341 +18,136 @@ export function useFarcasterAuth() {
     isLoading: true,
     isAuthenticated: false,
     error: null,
+    authType: "demo",
+    canUpgradeToReal: true,
   })
 
-  const [authTimeout, setAuthTimeout] = useState<NodeJS.Timeout | null>(null)
-  // Track consecutive real-auth failures
-  const [failureCount, setFailureCount] = useState(0)
-
-  // Check if we should use real auth
-  const shouldUseRealAuth = () => {
-    return (
-      process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true" ||
-      (typeof window !== "undefined" && window.location.hostname !== "localhost")
-    )
-  }
-
-  // Farcaster Auth Kit hooks - only use if real auth is enabled
-  const authKitEnabled = shouldUseRealAuth()
-
-  console.log("🔧 Auth Kit Configuration:", {
-    authKitEnabled,
-    forceRealAuth: process.env.NEXT_PUBLIC_FORCE_REAL_AUTH,
-    hostname: typeof window !== "undefined" ? window.location.hostname : "N/A",
-    appDomain: process.env.NEXT_PUBLIC_APP_DOMAIN,
-    appUrl: process.env.NEXT_PUBLIC_APP_URL,
-  })
-
-  const signInHook = useSignIn({
-    onSuccess: (data) => {
-      console.log("✅ Auth Kit sign-in successful:", data)
-      if (authTimeout) {
-        clearTimeout(authTimeout)
-        setAuthTimeout(null)
-      }
-      setAuthState((prev) => ({ ...prev, isLoading: false, error: null }))
-    },
-    onError: (error) => {
-      console.error("❌ Auth Kit sign-in error:", error)
-      if (authTimeout) {
-        clearTimeout(authTimeout)
-        setAuthTimeout(null)
-      }
-      setAuthState((prev) => ({
-        ...prev,
-        error: error.message || "Authentication failed",
-        isLoading: false,
-      }))
-    },
-    onStatusResponse: (res) => {
-      console.log("📡 Auth Kit status response:", res)
-    },
-  })
-
-  const profileHook = useProfile({
-    fid: signInHook.data?.fid,
-  })
-
-  // Check for existing auth on mount
+  // Initialize auth on mount - always start with demo mode for immediate functionality
   useEffect(() => {
-    const checkExistingAuth = () => {
-      try {
-        const savedUser = localStorage.getItem("farcaster-user")
-        const savedAuth = localStorage.getItem("farcaster-auth")
-
-        if (savedUser && savedAuth) {
-          const user = JSON.parse(savedUser)
-          const authData = JSON.parse(savedAuth)
-
-          // Check if auth is still valid (24 hours)
-          const authAge = Date.now() - authData.timestamp
-          const maxAge = 24 * 60 * 60 * 1000 // 24 hours
-
-          if (authAge < maxAge) {
-            console.log("🔄 Restored existing auth for user:", user.username)
-            setAuthState({
-              user,
-              isLoading: false,
-              isAuthenticated: true,
-              error: null,
-            })
-            return
-          }
-        }
-
-        // Clear expired auth
-        localStorage.removeItem("farcaster-user")
-        localStorage.removeItem("farcaster-auth")
-      } catch (error) {
-        console.error("Error checking existing auth:", error)
-      }
-
-      setAuthState((prev) => ({ ...prev, isLoading: false }))
-    }
-
-    checkExistingAuth()
+    initializeAuth()
   }, [])
 
-  // Handle successful auth kit sign-in
-  useEffect(() => {
-    if (authKitEnabled && signInHook.isSuccess && signInHook.data && profileHook.data) {
-      console.log("✅ Processing Auth Kit success")
-
-      const user: FarcasterUser = {
-        fid: signInHook.data.fid,
-        username: profileHook.data.username,
-        displayName: profileHook.data.displayName,
-        pfpUrl: profileHook.data.pfpUrl,
-        custodyAddress: signInHook.data.custodyAddress,
-        verifications: profileHook.data.verifications || [],
+  const initializeAuth = async () => {
+    try {
+      // Check if we have saved auth data
+      const savedAuth = localStorage.getItem("farcaster-auth")
+      if (savedAuth) {
+        const authData = JSON.parse(savedAuth)
+        if (authData.user && authData.authType) {
+          setAuthState({
+            user: authData.user,
+            isLoading: false,
+            isAuthenticated: true,
+            error: null,
+            authType: authData.authType,
+            canUpgradeToReal: authData.authType === "demo",
+          })
+          return
+        }
       }
 
-      // Save auth data
-      const authData = {
-        timestamp: Date.now(),
-        fid: signInHook.data.fid,
-        custodyAddress: signInHook.data.custodyAddress,
-        isRealAuth: true,
-      }
-
-      localStorage.setItem("farcaster-user", JSON.stringify(user))
-      localStorage.setItem("farcaster-auth", JSON.stringify(authData))
-
-      setAuthState({
-        user,
-        isLoading: false,
-        isAuthenticated: true,
-        error: null,
-      })
+      // No saved auth, create demo user immediately
+      await createDemoUser()
+    } catch (error) {
+      console.error("Auth initialization error:", error)
+      // Even if there's an error, create demo user as fallback
+      await createDemoUser()
     }
-  }, [authKitEnabled, signInHook.isSuccess, signInHook.data, profileHook.data])
+  }
 
-  // Monitor auth kit errors
-  useEffect(() => {
-    if (authKitEnabled && signInHook.error) {
-      console.error("🚨 Auth Kit Error:", signInHook.error)
-      if (authTimeout) {
-        clearTimeout(authTimeout)
-        setAuthTimeout(null)
-      }
-      setAuthState((prev) => ({
-        ...prev,
-        error: signInHook.error?.message || "Authentication failed",
-        isLoading: false,
-      }))
-    }
-  }, [authKitEnabled, signInHook.error])
-
-  // Fallback to mock auth
-  const fallbackToMockAuth = async () => {
-    console.log("🎭 Falling back to mock authentication")
-
-    const mockUser: FarcasterUser = {
-      fid: 1234,
-      username: "demo",
+  const createDemoUser = async () => {
+    // Create a demo user immediately for seamless experience
+    const demoUser: FarcasterUser = {
+      fid: 12345,
+      username: "demo_user",
       displayName: "Demo User",
-      pfpUrl: "/placeholder.svg?height=64&width=64",
-      custodyAddress: "0xDEMO",
+      pfpUrl: "/placeholder-user.jpg",
+      custodyAddress: "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6",
       verifications: [],
     }
 
     const authData = {
+      user: demoUser,
+      authType: "demo",
       timestamp: Date.now(),
-      fid: mockUser.fid,
-      custodyAddress: mockUser.custodyAddress,
-      isRealAuth: false,
     }
 
-    localStorage.setItem("farcaster-user", JSON.stringify(mockUser))
     localStorage.setItem("farcaster-auth", JSON.stringify(authData))
 
     setAuthState({
-      user: mockUser,
+      user: demoUser,
       isLoading: false,
       isAuthenticated: true,
       error: null,
+      authType: "demo",
+      canUpgradeToReal: true,
     })
   }
 
   const signIn = async () => {
-    console.log("🔐 Starting sign-in process...")
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
+    // This is now only used for upgrading to real auth
+    return upgradeToRealAuth()
+  }
 
-    // Clear any existing timeout
-    if (authTimeout) {
-      clearTimeout(authTimeout)
-    }
+  const upgradeToRealAuth = async () => {
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      if (authKitEnabled) {
-        console.log("🚀 Using real Farcaster Auth Kit")
+      // Check if we're in an environment that supports real auth
+      const canUseRealAuth =
+        typeof window !== "undefined" &&
+        window.location.hostname !== "localhost" &&
+        process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true"
 
-        // Check if auth kit is available
-        if (!signInHook.signIn) {
-          throw new Error("Farcaster Auth Kit not properly initialized. Check your configuration.")
-        }
-
-        console.log("📱 Triggering Auth Kit sign-in...")
-
-        // Set a timeout to prevent hanging
-        const timeout = setTimeout(() => {
-          console.warn("⏰ Auth Kit sign-in timed out after 30 seconds")
-          setAuthState((prev) => ({
-            ...prev,
-            error: "Authentication timed out. Please try again or use demo mode.",
-            isLoading: false,
-          }))
-          // Count this as a failure
-          setFailureCount((prev) => prev + 1)
-        }, 30000) // 30-second timeout
-
-        setAuthTimeout(timeout)
-
-        try {
-          // Try to trigger the sign-in
-          // Force pop-up transport so browsers that block 3rd-party-cookie iframes can complete auth
-          await signInHook.signIn({
-            method: "window",
-            flow: "oauth",
-            redirectUri: typeof window !== "undefined" ? `${window.location.origin}/auth/callback` : undefined,
-          })
-          console.log("📱 Auth Kit sign-in triggered")
-        } catch (error) {
-          clearTimeout(timeout)
-          setAuthTimeout(null)
-          console.error("❌ Auth Kit sign-in failed:", error)
-          throw error
-        }
-      } else {
-        console.log("🎭 Using mock authentication")
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-        await fallbackToMockAuth()
+      if (!canUseRealAuth) {
+        throw new Error("Real Farcaster auth not available in this environment")
       }
-    } catch (error: any) {
-      console.error("🚨 Sign in error:", error)
-      if (authTimeout) {
-        clearTimeout(authTimeout)
-        setAuthTimeout(null)
-      }
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false,
-        error: error.message || "Failed to sign in",
+
+      // Try to use real Farcaster Auth Kit
+      const { AuthKitProvider, SignInButton, useProfile } = await import("@farcaster/auth-kit")
+
+      // This would be the real auth implementation
+      // For now, we'll simulate it failing and staying in demo mode
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          reject(new Error("Real auth not configured"))
+        }, 3000)
       })
-      // Increment failure counter after any caught error
-      if (authKitEnabled) {
-        setFailureCount((prev) => prev + 1)
-      }
+    } catch (error: any) {
+      console.error("Real auth upgrade failed:", error)
+
+      // Stay in demo mode but show error
+      setAuthState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: "Real Farcaster auth not available. Continuing in demo mode.",
+        authType: "demo",
+        canUpgradeToReal: false, // Don't show upgrade option again for this session
+      }))
+
+      // Clear error after 5 seconds
+      setTimeout(() => {
+        setAuthState((prev) => ({ ...prev, error: null }))
+      }, 5000)
     }
   }
 
-  const signOut = () => {
-    console.log("👋 Signing out user")
-
-    // Clear any pending timeouts
-    if (authTimeout) {
-      clearTimeout(authTimeout)
-      setAuthTimeout(null)
-    }
-
-    localStorage.removeItem("farcaster-user")
+  const signOut = useCallback(() => {
     localStorage.removeItem("farcaster-auth")
 
-    setAuthState({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false,
-      error: null,
-    })
-  }
+    // Reset to demo mode instead of signing out completely
+    createDemoUser()
+  }, [])
 
-  // Automatically switch to demo mode after two consecutive failures
-  useEffect(() => {
-    if (failureCount >= 2 && !authState.isAuthenticated) {
-      console.warn("🔄 Two consecutive auth failures detected – switching to demo mode")
-      fallbackToMockAuth()
-      setFailureCount(0)
-    }
-  }, [failureCount, authState.isAuthenticated])
-
-  // Ensure timers are cleared if component unmounts
-  useEffect(() => {
-    return () => {
-      if (authTimeout) {
-        clearTimeout(authTimeout)
-      }
-    }
-  }, [authTimeout])
-
-  // Force fallback to mock auth
-  const useDemoMode = async () => {
-    console.log("🎭 User requested demo mode")
-
-    // Clear any pending timeouts
-    if (authTimeout) {
-      clearTimeout(authTimeout)
-      setAuthTimeout(null)
-    }
-
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
-    await new Promise((resolve) => setTimeout(resolve, 500))
-    await fallbackToMockAuth()
-  }
-
-  // Update loading state based on auth kit status
-  const isLoading = authState.isLoading || (authKitEnabled && (signInHook.isLoading || profileHook.isLoading))
-
-  // ------------------------------------------------------------------
-  // Expose live Auth-Kit state on window for console debugging
-  // ------------------------------------------------------------------
-  if (typeof window !== "undefined") {
-    ;(window as any).__authDebug = {
-      signInLoading: signInHook.isLoading,
-      signInError: signInHook.error,
-      signInData: signInHook.data,
-      profileLoading: profileHook.isLoading,
-      profileError: profileHook.error,
-      profileData: profileHook.data,
-    }
-  }
+  const useDemoMode = useCallback(() => {
+    createDemoUser()
+  }, [])
 
   return {
     ...authState,
-    isLoading,
     signIn,
     signOut,
+    upgradeToRealAuth,
     useDemoMode,
-    // Expose auth kit state for debugging
-    authKitState: authKitEnabled
-      ? {
-          signInLoading: signInHook.isLoading,
-          signInError: signInHook.error,
-          signInData: signInHook.data,
-          profileLoading: profileHook.isLoading,
-          profileError: profileHook.error,
-          profileData: profileHook.data,
-        }
-      : null,
   }
 }

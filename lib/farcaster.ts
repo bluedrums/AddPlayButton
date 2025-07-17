@@ -32,6 +32,7 @@ export interface CastResponse {
     }
     text: string
     timestamp: number
+    warpcastUrl?: string
   }
   error?: string
 }
