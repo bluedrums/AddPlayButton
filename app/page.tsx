@@ -120,6 +120,78 @@ export default function FarcasterMiniApp() {
   const [showDebugInfo, setShowDebugInfo] = useState(false)
   const [authAttempts, setAuthAttempts] = useState(0)
 
+  // Signer management states
+  const [signerState, setSignerState] = useState<{
+    uuid: string | null;
+    status: "pending" | "approved" | null;
+    approvalUrl: string | null;
+  }>({
+    uuid: null,
+    status: null,
+    approvalUrl: null,
+  });
+
+  // Load stored signer on mount
+  useEffect(() => {
+    const storedUuid = localStorage.getItem("farcaster-signer-uuid");
+    if (storedUuid) {
+      setSignerState((prev) => ({ ...prev, uuid: storedUuid }));
+      checkSignerStatus(storedUuid);
+    }
+  }, []);
+
+  // When authenticated, ensure signer exists
+  useEffect(() => {
+    if (isAuthenticated && user && !signerState.uuid) {
+      createSigner();
+    }
+  }, [isAuthenticated, user]);
+
+  const createSigner = async () => {
+    try {
+      const response = await fetch("/api/signer", { method: "POST" });
+      const data = await response.json();
+      if (data.success) {
+        setSignerState({
+          uuid: data.signer_uuid,
+          status: data.status,
+          approvalUrl: data.approval_url,
+        });
+        localStorage.setItem("farcaster-signer-uuid", data.signer_uuid);
+        // Start polling status
+        pollSignerStatus(data.signer_uuid);
+      }
+    } catch (error) {
+      console.error("Failed to create signer:", error);
+    }
+  };
+
+  const checkSignerStatus = async (uuid: string) => {
+    try {
+      const response = await fetch(`/api/signer?signer_uuid=${uuid}`);
+      const data = await response.json();
+      if (data.success) {
+        setSignerState((prev) => ({ ...prev, status: data.status }));
+        if (data.status === "approved") {
+          // Signer ready
+          console.log("Signer approved!");
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check signer status:", error);
+    }
+  };
+
+  const pollSignerStatus = (uuid: string) => {
+    const interval = setInterval(() => {
+      checkSignerStatus(uuid);
+      if (signerState.status === "approved") {
+        clearInterval(interval);
+      }
+    }, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  };
+
   // Check if we're using real auth
   const isUsingRealAuth = () => {
     const savedAuth = localStorage.getItem("farcaster-auth")
@@ -280,6 +352,7 @@ export default function FarcasterMiniApp() {
         embedType,
         title,
         customText,
+        signerUuid: signerState.uuid,  // Pass signerUuid
       })
 
       // Show success message with Warpcast link
@@ -548,9 +621,15 @@ export default function FarcasterMiniApp() {
     }) as T
   }
 
+  // Update handleSubmit to pass signerUuid
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!linkToPlay.trim() || !isValidUrl || !embedType || !user) return
+    if (!linkToPlay.trim() || !isValidUrl || !embedType || !user || !signerState.uuid || signerState.status !== "approved") {
+      if (!signerState.uuid || signerState.status !== "approved") {
+        alert("Please approve the signer first.");
+      }
+      return;
+    }
 
     clearError()
 
@@ -566,6 +645,7 @@ export default function FarcasterMiniApp() {
           embedType,
           title,
           customText,
+          signerUuid: signerState.uuid,  // Pass signerUuid
         })
 
         alert(
@@ -670,6 +750,15 @@ export default function FarcasterMiniApp() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{authError || castError}</AlertDescription>
                   </Alert>
+                )}
+
+                {isAuthenticated && signerState.status === "pending" && signerState.approvalUrl && (
+                  <div className="signer-approval">
+                    <p>Please approve the signer to enable casting:</p>
+                    <a href={signerState.approvalUrl} target="_blank" rel="noopener noreferrer">
+                      <Button>Approve Signer in Warpcast</Button>
+                    </a>
+                  </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">

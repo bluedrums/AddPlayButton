@@ -15,6 +15,7 @@ interface CreateCastParams {
   embedType: "spotify" | "apple" | "soundcloud" | "youtube"
   title?: string
   customText?: string
+  signerUuid: string  // Add this
 }
 
 export function useFarcasterCast() {
@@ -41,7 +42,7 @@ export function useFarcasterCast() {
           embedUrl: params.embedUrl,
           embedType: params.embedType,
           title: params.title,
-          signerUuid: "mock_signer", // In production, this would be a real signer
+          signerUuid: params.signerUuid,  // Use provided signerUuid
         }),
       })
 

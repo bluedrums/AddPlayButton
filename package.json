@@ -12,6 +12,7 @@
     "@farcaster/auth-kit": "latest",
     "@farcaster/miniapp-sdk": "latest",
     "@hookform/resolvers": "^3.9.1",
+    "@neynar/nodejs-sdk": "^3.26.0",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",

@@ -1,5 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { formatCastText, validateCastData } from "@/lib/farcaster"
+import { NeynarAPIClient, isApiErrorResponse } from "@neynar/nodejs-sdk";
+
+const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY!);
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,40 +29,35 @@ export async function POST(request: NextRequest) {
       embedsDeprecated: embeds,
     }
 
-    // Use Warpcast API for casting
-    const response = await fetch("https://api.warpcast.com/v2/casts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.WARPCAST_API_KEY}`,
-      },
-      body: JSON.stringify({
-        text: castData.text,
-        embeds: castData.embeds,
-        parent: null, // Top-level cast
-      }),
-    })
+    // Submit cast using Neynar
+    try {
+      const { hash } = await client.publishCast(signerUuid, castData.text, {
+        embeds: castData.embeds
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || "Failed to create cast")
+      // Fetch cast details to get author info (optional, since Neynar might not return full details)
+      const castDetails = await client.lookUpCastByHash(hash);
+
+      return NextResponse.json({
+        success: true,
+        cast: {
+          hash,
+          author: {
+            fid: castDetails.cast.author.fid,
+            username: castDetails.cast.author.username,
+          },
+          text: castDetails.cast.text,
+          timestamp: castDetails.cast.timestamp,
+          warpcastUrl: `https://warpcast.com/${castDetails.cast.author.username}/${hash.slice(0, 10)}`,
+        },
+      });
+    } catch (err) {
+      if (isApiErrorResponse(err)) {
+        throw new Error(err.response.data.message);
+      }
+      throw err;
     }
 
-    const result = await response.json()
-
-    return NextResponse.json({
-      success: true,
-      cast: {
-        hash: result.result.cast.hash,
-        author: {
-          fid: result.result.cast.author.fid,
-          username: result.result.cast.author.username,
-        },
-        text: result.result.cast.text,
-        timestamp: result.result.cast.timestamp,
-        warpcastUrl: `https://warpcast.com/${result.result.cast.author.username}/${result.result.cast.hash.slice(0, 10)}`,
-      },
-    })
   } catch (error: any) {
     console.error("Cast creation error:", error)
     return NextResponse.json({ success: false, error: error.message || "Failed to create cast" }, { status: 500 })
