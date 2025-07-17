@@ -8,8 +8,9 @@ const client = new NeynarAPIClient(config);
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Received cast request body:", await request.json());
-    const { fid, text, embedUrl, embedType, title, signerUuid } = await request.json()
+    const body = await request.json();
+    console.log("Received cast request body:", body);
+    const { fid, text, embedUrl, embedType, title, signerUuid } = body;
 
     if (!fid) console.error("Missing fid");
     if (!embedUrl) console.error("Missing embedUrl");
