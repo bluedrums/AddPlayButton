@@ -82,10 +82,11 @@ export default function AddPlayButtonApp() {
   }, [isAuthenticated, user, signerUuid]);
 
   useEffect(() => {
-    let interval;
+    let interval: NodeJS.Timeout | undefined;
     if (signerStatus === 'pending' && signerUuid) {
       interval = setInterval(async () => {
         try {
+          if (!signerUuid) return;
           const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`);
           const data = await response.json();
           if (data.success && data.status === 'approved') {

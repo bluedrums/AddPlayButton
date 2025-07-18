@@ -10,7 +10,7 @@ export async function POST() {
     return NextResponse.json({
       success: true,
       signer_uuid: signer.signer_uuid,
-      approval_url: signer.approval_url,
+      approval_url: signer.signer_approval_url,
       status: signer.status
     });
   } catch (error) {
