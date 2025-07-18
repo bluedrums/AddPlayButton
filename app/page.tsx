@@ -41,6 +41,9 @@ export default function AddPlayButtonApp() {
   const [imageError, setImageError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
+  const [signerUuid, setSignerUuid] = useState<string | null>(null);
+  const [signerStatus, setSignerStatus] = useState<'pending' | 'approved' | null>(null);
+  const [signerApprovalUrl, setSignerApprovalUrl] = useState<string | null>(null);
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -281,9 +284,16 @@ export default function AddPlayButtonApp() {
         createdAt: new Date(),
       }
 
+      const jsonData = JSON.stringify(newPlayButton);
+      const castResponse = await fetch('/api/cast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: jsonData, signerUuid }),
+      });
+      if (!castResponse.ok) throw new Error('Failed to store in Farcaster');
+
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
-      savePlayButtons(updatedButtons)
       setUrl("")
       setTitle("")
       setCoverImage(null)
@@ -297,10 +307,20 @@ export default function AddPlayButtonApp() {
     }
   }
 
-  const handleRemovePlayButton = (id: string) => {
+  const handleRemovePlayButton = async (id: string) => {
+    const playButtonToDelete = playButtons.find(pb => pb.id === id);
+    if (!playButtonToDelete) return;
+
+    const jsonData = JSON.stringify({ deleted: id });
+    const castResponse = await fetch('/api/cast', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: jsonData, signerUuid }),
+    });
+    if (!castResponse.ok) throw new Error('Failed to delete play button');
+
     const updatedButtons = playButtons.filter((pb) => pb.id !== id)
     setPlayButtons(updatedButtons)
-    savePlayButtons(updatedButtons)
     toast.success("Play button removed")
   }
 
