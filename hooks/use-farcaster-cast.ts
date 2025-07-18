@@ -21,13 +21,8 @@ interface CastResponse {
   success: boolean
   cast?: {
     hash: string
-    text: string
-    embeds: CastEmbed[]
-    author: {
-      fid: number
-      username: string
-    }
-    timestamp: number
+    text?: string
+    embeds?: string[]
   }
   warpcastUrl?: string
   isDemo?: boolean
@@ -79,15 +74,27 @@ export function useFarcasterCast() {
       const signerUuid = localStorage.getItem("farcaster-signer-uuid")
       if (!signerUuid) throw new Error("Signer not approved")
 
-      const embeds = [{ url: playButton.url }, { url: miniappUrl }];
+      // Farcaster SDK expects embeds as an array of URLs (strings), not objects
+      const embeds: [string, string] = [playButton.url, miniappUrl];
       const result = await sdk.actions.composeCast({ text: castText, embeds });
 
       if (result.cast) {
-        const data: CastResponse = { success: true, cast: result.cast };
+        const data: CastResponse = { 
+          success: true, 
+          cast: {
+            hash: result.cast.hash,
+            text: castText,
+            embeds: embeds
+          }
+        };
         setLastResponse(data);
         return data;
       } else {
-        throw new Error('Cast composition canceled');
+        const errorMsg = 'Cast composition canceled by user';
+        setError(errorMsg);
+        const data: CastResponse = { success: false, error: errorMsg };
+        setLastResponse(data);
+        return data;
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
