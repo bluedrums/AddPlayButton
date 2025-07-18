@@ -71,9 +71,6 @@ export function useFarcasterCast() {
       // Create miniapp URL for this specific play button
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`;
 
-      const signerUuid = localStorage.getItem("farcaster-signer-uuid")
-      if (!signerUuid) throw new Error("Signer not approved")
-
       // Farcaster SDK expects embeds as an array of URLs (strings), not objects
       const embeds: [string, string] = [playButton.url, miniappUrl];
       const result = await sdk.actions.composeCast({ text: castText, embeds });
