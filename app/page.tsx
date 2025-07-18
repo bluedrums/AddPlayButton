@@ -61,6 +61,45 @@ export default function AddPlayButtonApp() {
     }
   }, [])
 
+  useEffect(() => {
+    if (isAuthenticated && user && !signerUuid) {
+      const createSigner = async () => {
+        try {
+          const response = await fetch('/api/signer', { method: 'POST' });
+          const data = await response.json();
+          if (data.success) {
+            setSignerUuid(data.signer_uuid);
+            setSignerStatus(data.status);
+            setSignerApprovalUrl(data.approval_url);
+          }
+        } catch (error) {
+          console.error('Failed to create signer:', error);
+          toast.error('Failed to initialize signer');
+        }
+      };
+      createSigner();
+    }
+  }, [isAuthenticated, user, signerUuid]);
+
+  useEffect(() => {
+    let interval;
+    if (signerStatus === 'pending' && signerUuid) {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`);
+          const data = await response.json();
+          if (data.success && data.status === 'approved') {
+            setSignerStatus('approved');
+            toast.success('Signer approved!');
+          }
+        } catch (error) {
+          console.error('Signer polling error:', error);
+        }
+      }, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [signerStatus, signerUuid]);
+
   const savePlayButtons = (buttons: PlayButton[]) => {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
   }
@@ -268,6 +307,10 @@ export default function AddPlayButtonApp() {
     if (imageError) {
       setValidationError("Please fix the image error before proceeding")
       return
+    }
+
+    if (!signerUuid || signerStatus !== 'approved') {
+      throw new Error('Signer not ready');
     }
 
     try {
@@ -478,6 +521,20 @@ export default function AddPlayButtonApp() {
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {isAuthenticated && signerStatus === 'pending' && (
+          <Alert className="mb-4">
+            <AlertDescription>
+              Please approve the signer to enable casting:
+              <Button 
+                variant="link" 
+                onClick={() => window.open(signerApprovalUrl, '_blank')}
+              >
+                Approve Signer
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Add Play Button Form */}
