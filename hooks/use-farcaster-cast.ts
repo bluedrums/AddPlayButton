@@ -75,11 +75,25 @@ export function useFarcasterCast() {
       // Create miniapp URL for this specific play button
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`;
 
-      // Build intent URL instead of calling API
-      const intentUrl = `https://farcaster.xyz/~/inbox/create/${user.fid}?text=${encodeURIComponent(castText)}`
-      window.open(intentUrl, "_blank")
+      const signerUuid = localStorage.getItem("farcaster-signer-uuid")
+      if (!signerUuid) throw new Error("Signer not approved")
 
-      const data: CastResponse = { success: true, warpcastUrl: intentUrl }
+      const payload: CreateCastPayload = {
+        signerUuid,
+        text: castText,
+        embeds: [
+          { url: playButton.url },
+          { url: miniappUrl }
+        ]
+      }
+
+      const res = await fetch("/api/cast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+
+      const data: CastResponse = await res.json()
       setLastResponse(data)
       return data
     } catch (err) {

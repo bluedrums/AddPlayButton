@@ -74,6 +74,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Cast creation error:", error)
-    return NextResponse.json({ success: false, error: error.message || "Failed to create cast" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || "Cast failed – check signer approval or network logs." }, { status: 500 })
   }
 }
