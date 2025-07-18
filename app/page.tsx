@@ -52,7 +52,7 @@ export default function AddPlayButtonApp() {
           createdAt: new Date(pb.createdAt),
         }))
         setPlayButtons(parsed)
-      } catch (error) {
+    } catch (error) {
         console.error("Error loading saved play buttons:", error)
       }
     }
@@ -195,16 +195,16 @@ export default function AddPlayButtonApp() {
 
     // YouTube
     if (cleanUrl.includes("youtube.com") || cleanUrl.includes("youtu.be")) {
-      let videoId = ""
+          let videoId = ""
 
       if (cleanUrl.includes("youtu.be/")) {
         videoId = cleanUrl.split("youtu.be/")[1].split("?")[0]
       } else if (cleanUrl.includes("youtube.com/watch")) {
         const match = cleanUrl.match(/[?&]v=([^&]+)/)
         if (match) videoId = match[1]
-      }
+          }
 
-      if (videoId) {
+          if (videoId) {
         return {
           platform: "YouTube",
           embedUrl: `https://www.youtube.com/embed/${videoId}`,
@@ -320,10 +320,10 @@ export default function AddPlayButtonApp() {
     try {
       await signIn()
       toast.success("Successfully signed in!")
-    } catch (error) {
+      } catch (error) {
       toast.error("Failed to sign in")
+      }
     }
-  }
 
   const handleSignOut = () => {
     signOut()
@@ -337,7 +337,7 @@ export default function AddPlayButtonApp() {
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
           <p className="text-gray-600">Loading Farcaster SDK...</p>
-        </div>
+                </div>
       </div>
     )
   }
@@ -350,14 +350,14 @@ export default function AddPlayButtonApp() {
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
               <Play className="w-6 h-6 text-white" />
-            </div>
+                    </div>
             <h1 className="text-3xl font-bold text-gray-900">Add Play Button</h1>
-          </div>
+                  </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Transform your music and video links into interactive play buttons for Farcaster. Support for Spotify, Apple
             Music, YouTube, and SoundCloud.
           </p>
-        </div>
+                </div>
 
         {/* Authentication Section */}
         {!isAuthenticated ? (
@@ -372,27 +372,27 @@ export default function AddPlayButtonApp() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex justify-center">
+                <div className="flex justify-center">
                 <Avatar className="w-16 h-16">
                   <AvatarFallback>
                     <User className="w-8 h-8" />
                   </AvatarFallback>
                 </Avatar>
-              </div>
+                </div>
 
               <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Connecting...
-                  </>
-                ) : (
-                  <>
+                      </>
+                    ) : (
+                      <>
                     <User className="w-4 h-4 mr-2" />
                     Get Started
-                  </>
-                )}
-              </Button>
+                      </>
+                    )}
+                  </Button>
 
               {authError && (
                 <Alert variant="destructive">
@@ -412,7 +412,7 @@ export default function AddPlayButtonApp() {
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full">
                 <Settings className="w-4 h-4 mr-2" />
                 Debug Info
-              </Button>
+                    </Button>
 
               {showDebug && (
                 <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
@@ -422,8 +422,8 @@ export default function AddPlayButtonApp() {
                   <div>User: {user ? user.username : "None"}</div>
                   <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
                   <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
-                </div>
-              )}
+                  </div>
+                )}
             </CardContent>
           </Card>
         ) : (
@@ -440,8 +440,8 @@ export default function AddPlayButtonApp() {
                     <h2 className="text-xl font-semibold">{user?.displayName}</h2>
                     <Badge variant="default" className="text-xs">
                       {user?.fid === 12345 ? "Demo Mode" : "Connected"}
-                    </Badge>
-                  </div>
+                  </Badge>
+                </div>
                   <p className="text-gray-600">@{user?.username}</p>
                   {user?.bio && <p className="text-sm text-gray-500 mt-1">{user?.bio}</p>}
                   <div className="flex gap-4 mt-2 text-sm text-gray-500">
@@ -481,7 +481,7 @@ export default function AddPlayButtonApp() {
                 className="w-full"
                 disabled={isValidating}
               />
-            </div>
+                </div>
 
             {/* URL Input Field */}
             <div className="space-y-2">
@@ -497,10 +497,10 @@ export default function AddPlayButtonApp() {
                 disabled={isValidating}
                 onKeyDown={(e) => e.key === "Enter" && handleAddPlayButton()}
               />
-            </div>
+              </div>
 
             {/* Cover Image Upload */}
-            <div className="space-y-2">
+                  <div className="space-y-2">
               <label htmlFor="cover-image-input" className="text-sm font-medium text-gray-700">
                 Cover Image <span className="text-gray-500">(optional)</span>
               </label>
@@ -551,12 +551,12 @@ export default function AddPlayButtonApp() {
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>{imageError}</AlertDescription>
                   </Alert>
-                )}
-              </div>
+                      )}
+                    </div>
             </div>
 
             {/* Add Button */}
-            <Button
+                    <Button
               onClick={handleAddPlayButton}
               disabled={isValidating || !url.trim() || !title.trim() || !!imageError}
               className="w-full bg-purple-600 hover:bg-purple-700"
@@ -565,14 +565,14 @@ export default function AddPlayButtonApp() {
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Validating...
-                </>
-              ) : (
-                <>
+                        </>
+                      ) : (
+                        <>
                   <Play className="w-4 h-4 mr-2" />
                   Add Play Button
-                </>
-              )}
-            </Button>
+                        </>
+                      )}
+                    </Button>
 
             {validationError && (
               <Alert variant="destructive">
@@ -585,7 +585,7 @@ export default function AddPlayButtonApp() {
 
         {/* Play Buttons List */}
         {playButtons.length > 0 && (
-          <div className="space-y-4">
+                <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
               <Video className="w-5 h-5" />
               Your Play Buttons ({playButtons.length})
@@ -598,7 +598,7 @@ export default function AddPlayButtonApp() {
                 onRemove={handleRemovePlayButton}
               />
             ))}
-          </div>
+                  </div>
         )}
 
         {playButtons.length === 0 && (
