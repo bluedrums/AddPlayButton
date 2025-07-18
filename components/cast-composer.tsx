@@ -44,7 +44,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
   const [castText, setCastText] = useState("")
   const [showDebugInfo, setShowDebugInfo] = useState(false)
   const { createPlayButtonCast, isCreating, error, lastResponse, clearError } = useFarcasterCast()
-  const { user, isAuthenticated } = useFarcaster()
+  const { user, isAuthenticated, signIn } = useFarcaster()
 
   // Generate default cast text
   const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`
@@ -60,15 +60,17 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
 
   const handleCreateCast = async () => {
     if (!isAuthenticated) {
-      toast.error("Please sign in to create casts")
-      return
+      await signIn();
+      return;
     }
 
     try {
       const result = await createPlayButtonCast(playButton, castText || defaultText);
-      if (result.success) {
+      if (result.cast) {
         toast.success('Cast published!');
         setIsOpen(false);
+      } else {
+        toast.info('Cast canceled');
       }
     } catch (err) {
       console.error("Failed to create cast:", err)
