@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { NeynarAPIClient } from '@neynar/nodejs-sdk';
-const client = new NeynarAPIClient(process.env.NEYNAR_API_KEY!);
+import { Configuration, NeynarAPIClient } from '@neynar/nodejs-sdk';
+const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
+const client = new NeynarAPIClient(config);
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,8 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: "FID is required" }, { status: 400 })
     }
 
-    const casts = await client.fetchCastsForUser(fid, { viewerFid: fid, limit: 100 });
-    return NextResponse.json({ success: true, casts: casts.casts.map(c => ({ text: c.text })) });
+    const castsResponse = await client.fetchCastsForUser({ fid: Number(fid), viewerFid: Number(fid), limit: 100 });
+    return NextResponse.json({ success: true, casts: castsResponse.casts.map(c => ({ text: c.text })) });
 
   } catch (error) {
     console.error("User casts API error:", error)
