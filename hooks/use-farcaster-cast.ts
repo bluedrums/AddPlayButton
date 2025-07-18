@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useFarcaster } from "@/components/farcaster-provider"
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface CastEmbed {
   url: string
@@ -78,24 +79,16 @@ export function useFarcasterCast() {
       const signerUuid = localStorage.getItem("farcaster-signer-uuid")
       if (!signerUuid) throw new Error("Signer not approved")
 
-      const payload: CreateCastPayload = {
-        signerUuid,
-        text: castText,
-        embeds: [
-          { url: playButton.url },
-          { url: miniappUrl }
-        ]
+      const embeds = [{ url: playButton.url }, { url: miniappUrl }];
+      const result = await sdk.actions.composeCast({ text: castText, embeds });
+
+      if (result.cast) {
+        const data: CastResponse = { success: true, cast: result.cast };
+        setLastResponse(data);
+        return data;
+      } else {
+        throw new Error('Cast composition canceled');
       }
-
-      const res = await fetch("/api/cast", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      })
-
-      const data: CastResponse = await res.json()
-      setLastResponse(data)
-      return data
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred"
       console.error("❌ Cast creation failed:", {

@@ -65,14 +65,10 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
     }
 
     try {
-      const result = await createPlayButtonCast(playButton, castText || defaultText)
-
+      const result = await createPlayButtonCast(playButton, castText || defaultText);
       if (result.success) {
-        if (result.isDemo) {
-          toast.success("Demo cast created! (Real casting requires API key)")
-        } else {
-          toast.success("Cast created successfully!")
-        }
+        toast.success('Cast published!');
+        setIsOpen(false);
       }
     } catch (err) {
       console.error("Failed to create cast:", err)
@@ -202,7 +198,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
                 <AlertDescription className="text-sm">
                   <div className="font-medium mb-1">Authentication failed</div>
                   <div className="text-xs opacity-90">
-                    Your WARPCAST_API_KEY may be invalid or expired. Check the debug panel for more details.
+                    Cast failed – try again or check console.
                   </div>
                 </AlertDescription>
               </Alert>
