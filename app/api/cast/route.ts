@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { formatCastText, validateCastData } from "@/lib/farcaster"
 import { NeynarAPIClient, Configuration, isApiErrorResponse } from "@neynar/nodejs-sdk";
-import { CastParamType } from "@neynar/nodejs-sdk/build/api";
+// Remove CastParamType import, as it does not exist in the SDK
 
 const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
 const client = new NeynarAPIClient(config);
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
       const castDetails = await client.lookupCastByHashOrUrl({
         identifier: hash,
-        type: CastParamType.Hash
+        type: "hash"
       });
 
       return NextResponse.json({

@@ -596,8 +596,6 @@ export default function AddPlayButtonApp() {
                 key={playButton.id}
                 playButton={playButton}
                 onRemove={handleRemovePlayButton}
-                onCopyLink={handleCopyLink}
-                copiedId={copiedId}
               />
             ))}
           </div>

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const status = await client.lookupSigner(signerUuid);
+    const status = await client.lookupSigner({ signerUuid });
     return NextResponse.json({
       success: true,
       status: status.status,

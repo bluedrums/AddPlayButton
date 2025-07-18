@@ -101,7 +101,7 @@ export function DebugPanel() {
                 <CardTitle className="flex items-center justify-between text-base">
                   <div className="flex items-center gap-2">
                     <Key className="w-4 h-4" />
-                    Warpcast API Key
+                    Neynar API Key
                   </div>
                   <Button variant="ghost" size="sm" onClick={verifyApiKey} disabled={isVerifying}>
                     {isVerifying ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
