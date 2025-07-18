@@ -449,6 +449,8 @@ export default function AddPlayButtonApp() {
                     <span>{user?.followingCount?.toLocaleString()} following</span>
                   </div>
                 </div>
+              </div>
+              <div className="flex justify-center mt-4">
                 <Button variant="outline" size="sm" onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
