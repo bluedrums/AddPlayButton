@@ -2,30 +2,6 @@ import type React from "react"
 import type { Metadata } from "next";
 import { fetchPlayButton } from "@/lib/fetch-playbutton";
 import { Suspense } from 'react';
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
-import { useFarcaster } from "@/components/farcaster-provider"
-import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
-import { PlayButtonCard } from "@/components/play-button-card"
-import { toast } from "sonner"
-import { useSearchParams } from 'next/navigation';
-
-interface PlayButton {
-  id: string
-  url: string
-  platform: string
-  title: string
-  artist?: string
-  embedUrl: string
-  coverImage?: string
-  createdAt: Date
-}
 
 export async function generateMetadata({ searchParams }: { searchParams: { [key: string]: string | undefined } }): Promise<Metadata> {
   const fidStr = searchParams.fid;
@@ -60,8 +36,32 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
   };
 }
 
-// Client component
 'use client';
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
+import { useFarcaster } from "@/components/farcaster-provider"
+import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
+import { PlayButtonCard } from "@/components/play-button-card"
+import { toast } from "sonner"
+import { useSearchParams } from 'next/navigation';
+
+interface PlayButton {
+  id: string
+  url: string
+  platform: string
+  title: string
+  artist?: string
+  embedUrl: string
+  coverImage?: string
+  createdAt: Date
+}
 
 function AddPlayButtonApp() {
   const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
