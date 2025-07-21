@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { fetchPlayButton } from "@/lib/fetch-playbutton";
 import ClientPage from './ClientPage';
+import { Suspense } from 'react';
 
 export async function generateMetadata({ searchParams }: { searchParams: { [key: string]: string | undefined } }): Promise<Metadata> {
   const fidStr = searchParams.fid;
@@ -36,5 +37,9 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
 }
 
 export default function Page() {
-  return <ClientPage />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ClientPage />
+    </Suspense>
+  );
 }
