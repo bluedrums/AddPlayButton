@@ -3,6 +3,8 @@ import { Configuration, NeynarAPIClient } from '@neynar/nodejs-sdk';
 const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
 const client = new NeynarAPIClient(config);
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
