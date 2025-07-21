@@ -1,6 +1,8 @@
 "use client"
 
 import type React from "react"
+import type { Metadata } from "next";
+import { fetchPlayButton } from "@/lib/fetch-playbutton";
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -14,6 +16,7 @@ import { useFarcaster } from "@/components/farcaster-provider"
 import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
+import { useSearchParams } from 'next/navigation';
 
 interface PlayButton {
   id: string
@@ -24,6 +27,39 @@ interface PlayButton {
   embedUrl: string
   coverImage?: string
   createdAt: Date
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: { [key: string]: string | undefined } }): Promise<Metadata> {
+  const fidStr = searchParams.fid;
+  const playButtonId = searchParams.playButton;
+  if (fidStr && playButtonId) {
+    const fid = Number(fidStr);
+    if (!isNaN(fid)) {
+      const playButtonData = await fetchPlayButton(fid, playButtonId);
+      if (playButtonData) {
+        const miniAppJson = JSON.stringify({
+          name: playButtonData.title,
+          version: "1.0.0",
+          iconUrl: "https://addplaybutton.xyz/icon-512x512.png",
+          imageUrl: playButtonData.coverImage || "https://addplaybutton.xyz/og-image.png",
+          buttonTitle: "Play",
+          homeUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${playButtonId}`,
+        });
+        return {
+          title: playButtonData.title,
+          description: `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`,
+          other: {
+            "fc:miniapp": miniAppJson,
+            "fc:frame": miniAppJson,
+          },
+        };
+      }
+    }
+  }
+  return {
+    title: "Add Play Button - Farcaster Mini App",
+    description: "Transform your music and video links into interactive play buttons for Farcaster",
+  };
 }
 
 export default function AddPlayButtonApp() {
@@ -44,6 +80,7 @@ export default function AddPlayButtonApp() {
   const [signerUuid, setSignerUuid] = useState<string | null>(null);
   const [signerStatus, setSignerStatus] = useState<'pending' | 'approved' | null>(null);
   const [signerApprovalUrl, setSignerApprovalUrl] = useState<string | null>(null);
+  const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -100,6 +137,21 @@ export default function AddPlayButtonApp() {
     }
     return () => clearInterval(interval);
   }, [signerStatus, signerUuid]);
+
+  useEffect(() => {
+    const params = useSearchParams();
+    const fid = params?.get('fid');
+    const playButtonId = params?.get('playButton');
+    if (fid && playButtonId) {
+      fetch(`/api/playbutton?fid=${fid}&playButton=${playButtonId}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to fetch');
+          return res.json();
+        })
+        .then(data => setSharedPlayButton({...data, createdAt: new Date(data.createdAt)}))
+        .catch(() => toast.error('Failed to load shared play button'));
+    }
+  }, []);
 
   const savePlayButtons = (buttons: PlayButton[]) => {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
@@ -406,6 +458,17 @@ export default function AddPlayButtonApp() {
     )
   }
 
+  if (sharedPlayButton) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <h1 className="text-2xl font-bold mb-4 text-center">Shared Play Button</h1>
+          <PlayButtonCard playButton={sharedPlayButton} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -530,7 +593,7 @@ export default function AddPlayButtonApp() {
               Please approve the signer to enable casting:
               <Button 
                 variant="link" 
-                onClick={() => window.open(signerApprovalUrl, '_blank')}
+                onClick={() => window.open(signerApprovalUrl || '', '_blank')}
               >
                 Approve Signer
               </Button>

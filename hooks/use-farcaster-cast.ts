@@ -69,7 +69,7 @@ export function useFarcasterCast() {
       const castText = customText || defaultText;
 
       // Create miniapp URL for this specific play button
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?playButton=${playButton.id}`;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
 
       // Farcaster SDK expects embeds as an array of URLs (strings), not objects
       const embeds: [string, string] = [playButton.url, miniappUrl];
