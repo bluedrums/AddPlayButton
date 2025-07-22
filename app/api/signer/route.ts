@@ -6,19 +6,20 @@ export const dynamic = 'force-dynamic';
 export async function POST() {
   try {
     if (!process.env.NEYNAR_API_KEY) {
-      return NextResponse.json({ error: 'Missing NEYNAR_API_KEY' }, { status: 500 });
+      console.error('Missing NEYNAR_API_KEY');
+      return NextResponse.json({ error: 'Server configuration error: Missing API key' }, { status: 500 });
     }
 
     const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY });
     const client = new NeynarAPIClient(config);
 
-    // approval_url does not exist on type 'Signer', so we omit it
     const { signer_uuid, public_key, status } = await client.createSigner();
 
+    console.log('Signer created:', { signer_uuid, status });
     return NextResponse.json({ success: true, signer_uuid, public_key, status });
   } catch (error) {
-    console.error('Signer creation error:', error);
-    return NextResponse.json({ error: 'Failed to create signer' }, { status: 500 });
+    console.error('Detailed signer creation error:', error);
+    return NextResponse.json({ error: 'Failed to create signer: ' + (error instanceof Error ? error.message : 'Unknown error') }, { status: 500 });
   }
 }
 
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (!process.env.NEYNAR_API_KEY) {
-      return NextResponse.json({ error: 'Missing NEYNAR_API_KEY' }, { status: 500 });
+      console.error('Missing NEYNAR_API_KEY');
+      return NextResponse.json({ error: 'Server configuration error: Missing API key' }, { status: 500 });
     }
 
     const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY });
@@ -41,9 +43,10 @@ export async function GET(request: NextRequest) {
     const signer = signers && signers.length > 0 ? signers[0] : null;
     const status = signer ? signer.status : null;
 
+    console.log('Signer status check:', { signer_uuid, status });
     return NextResponse.json({ success: true, status });
   } catch (error) {
-    console.error('Signer status error:', error);
-    return NextResponse.json({ error: 'Failed to fetch signer status' }, { status: 500 });
+    console.error('Detailed signer status error:', error);
+    return NextResponse.json({ error: 'Failed to fetch signer status: ' + (error instanceof Error ? error.message : 'Unknown error') }, { status: 500 });
   }
 } 

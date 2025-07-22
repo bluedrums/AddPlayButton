@@ -65,15 +65,24 @@ export default function ClientPage() {
       const createSigner = async () => {
         try {
           const response = await fetch('/api/signer', { method: 'POST' });
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to create signer');
+          }
           const data = await response.json();
           if (data.success) {
             setSignerUuid(data.signer_uuid);
             setSignerStatus(data.status);
             setSignerApprovalUrl(data.approval_url);
+            // Auto-open approval URL for better UX
+            if (data.approval_url && data.status === 'pending') {
+              window.open(data.approval_url, '_blank');
+              toast.info('Opening signer approval page... Please approve in your wallet.');
+            }
           }
         } catch (error) {
           console.error('Failed to create signer:', error);
-          toast.error('Failed to initialize signer');
+          toast.error(error instanceof Error ? error.message : 'Failed to initialize signer. Please try signing in again.');
         }
       };
       createSigner();
@@ -85,8 +94,8 @@ export default function ClientPage() {
     if (signerStatus === 'pending' && signerUuid) {
       interval = setInterval(async () => {
         try {
-          if (!signerUuid) return;
           const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`);
+          if (!response.ok) throw new Error('Failed to check signer status');
           const data = await response.json();
           if (data.success && data.status === 'approved') {
             setSignerStatus('approved');
@@ -94,6 +103,7 @@ export default function ClientPage() {
           }
         } catch (error) {
           console.error('Signer polling error:', error);
+          toast.warning('Failed to check signer status. Retrying...');
         }
       }, 5000);
     }
