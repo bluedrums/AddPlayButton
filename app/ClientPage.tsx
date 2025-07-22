@@ -239,7 +239,10 @@ export default function ClientPage() {
     if (!url.trim()) { setValidationError("Please enter a valid URL"); return }
     if (!title.trim()) { setValidationError("Please enter a title"); return }
     if (imageError) { setValidationError("Please fix the image error before proceeding"); return }
-    if (!signerUuid || signerStatus !== 'approved') throw new Error('Signer not ready');
+    if (!signerUuid || signerStatus !== 'approved') {
+      toast.error('Signer not ready. Please approve the signer first.');
+      return;
+    }
     try {
       const validated = await validateUrl(url)
       const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
@@ -250,7 +253,10 @@ export default function ClientPage() {
       setPlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       toast.success(`${validated.platform} play button added successfully!`)
-    } catch (error) {}
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to add play button';
+      toast.error(message);
+    }
   }
 
   const handleRemovePlayButton = async (id: string) => {
