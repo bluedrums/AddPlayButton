@@ -58,35 +58,6 @@ export default function ClientPage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const createSigner = async () => {
-        try {
-          const response = await fetch('/api/signer', { method: 'POST' });
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to create signer');
-          }
-          const data = await response.json();
-          if (data.success) {
-            // setSignerUuid(data.signer_uuid); // Removed
-            // setSignerStatus(data.status); // Removed
-            // setSignerApprovalUrl(data.approval_url); // Removed
-            // Auto-open approval URL for better UX
-            if (data.approval_url && data.status === 'pending') {
-              window.open(data.approval_url, '_blank');
-              toast.info('Opening signer approval page... Please approve in your wallet.');
-            }
-          }
-        } catch (error) {
-          console.error('Failed to create signer:', error);
-          toast.error(error instanceof Error ? error.message : 'Failed to initialize signer. Please try signing in again.');
-        }
-      };
-      createSigner();
-    }
-  }, [isAuthenticated, user]);
-
-  useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
     // if (signerStatus === 'pending' && signerUuid) { // Removed
     //   interval = setInterval(async () => { // Removed
