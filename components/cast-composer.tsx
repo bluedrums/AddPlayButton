@@ -71,7 +71,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
         ? castText
         : `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`;
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
-      const embeds = [playButton.url, miniappUrl];
+      const embeds = [miniappUrl];
       // Fix: Pass correct arguments to createPlayButtonCast
       const result = await createPlayButtonCast({
         id: playButton.id,

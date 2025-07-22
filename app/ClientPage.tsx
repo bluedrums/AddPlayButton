@@ -13,6 +13,8 @@ import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
+import { sdk } from '@farcaster/miniapp-sdk';
+import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 
 interface PlayButton {
   id: string
@@ -40,6 +42,7 @@ export default function ClientPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
+  const [showPlayer, setShowPlayer] = useState(Boolean(sharedPlayButton));
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -220,13 +223,21 @@ export default function ClientPage() {
     try {
       const validated = await validateUrl(url)
       const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
-      // Save locally without backend cast
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
-      toast.success(`${validated.platform} play button added! Now cast it.`)
-      // Optionally trigger composeCast here or let user click Cast button
+      toast.success(`${validated.platform} play button added! Composing cast...`)
+      // Immediately compose cast
+      const defaultText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
+      const embeds: [string] = [miniappUrl];
+      const result = await sdk.actions.composeCast({ text: defaultText, embeds });
+      if (result.cast) {
+        toast.success('Cast published!');
+      } else {
+        toast.info('Cast canceled');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add play button';
       toast.error(message);
@@ -269,7 +280,17 @@ export default function ClientPage() {
 
   if (!isSDKReady || isLoading) return <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center"><div className="text-center"><Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" /><p className="text-gray-600">Loading Farcaster SDK...</p></div></div>
 
-  if (sharedPlayButton) return <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4"><div className="max-w-md w-full"><h1 className="text-2xl font-bold mb-4 text-center">Shared Play Button</h1><PlayButtonCard playButton={sharedPlayButton} /></div></div>
+  if (sharedPlayButton) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <h1 className="text-2xl font-bold mb-4 text-center">Shared Play Button</h1>
+          <PlayButtonCard playButton={sharedPlayButton} />
+          <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={sharedPlayButton} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
