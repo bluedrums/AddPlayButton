@@ -63,9 +63,12 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
       await signIn();
       return;
     }
-
     try {
-      const result = await createPlayButtonCast(playButton, castText || defaultText);
+      const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`;
+      const castText = castText || defaultText;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
+      const embeds = [playButton.url, miniappUrl];
+      const result = await sdk.actions.composeCast({ text: castText, embeds });
       if (result.cast) {
         toast.success('Cast published!');
         setIsOpen(false);
@@ -75,7 +78,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
     } catch (err) {
       console.error("Failed to create cast:", err)
       toast.error("Failed to create cast")
-      setShowDebugInfo(true) // Show debug info on error
+      setShowDebugInfo(true)
     }
   }
 

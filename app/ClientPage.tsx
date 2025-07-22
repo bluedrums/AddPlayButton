@@ -39,9 +39,6 @@ export default function ClientPage() {
   const [imageError, setImageError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
-  const [signerUuid, setSignerUuid] = useState<string | null>(null);
-  const [signerStatus, setSignerStatus] = useState<'pending' | 'approved' | null>(null);
-  const [signerApprovalUrl, setSignerApprovalUrl] = useState<string | null>(null);
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
 
   // Load saved play buttons from localStorage
@@ -249,20 +246,16 @@ export default function ClientPage() {
     if (!url.trim()) { setValidationError("Please enter a valid URL"); return }
     if (!title.trim()) { setValidationError("Please enter a title"); return }
     if (imageError) { setValidationError("Please fix the image error before proceeding"); return }
-    if (!signerUuid || signerStatus !== 'approved') {
-      toast.error('Signer not ready. Please approve the signer first.');
-      return;
-    }
     try {
       const validated = await validateUrl(url)
       const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
-      const jsonData = JSON.stringify(newPlayButton);
-      const castResponse = await fetch('/api/cast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: jsonData, signerUuid }) });
-      if (!castResponse.ok) throw new Error('Failed to store in Farcaster');
+      // Save locally without backend cast
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
+      savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
-      toast.success(`${validated.platform} play button added successfully!`)
+      toast.success(`${validated.platform} play button added! Now cast it.`)
+      // Optionally trigger composeCast here or let user click Cast button
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add play button';
       toast.error(message);
