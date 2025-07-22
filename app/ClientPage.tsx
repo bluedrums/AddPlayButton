@@ -58,7 +58,7 @@ export default function ClientPage() {
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated && user && !signerUuid) {
+    if (isAuthenticated && user) {
       const createSigner = async () => {
         try {
           const response = await fetch('/api/signer', { method: 'POST' });
@@ -68,9 +68,9 @@ export default function ClientPage() {
           }
           const data = await response.json();
           if (data.success) {
-            setSignerUuid(data.signer_uuid);
-            setSignerStatus(data.status);
-            setSignerApprovalUrl(data.approval_url);
+            // setSignerUuid(data.signer_uuid); // Removed
+            // setSignerStatus(data.status); // Removed
+            // setSignerApprovalUrl(data.approval_url); // Removed
             // Auto-open approval URL for better UX
             if (data.approval_url && data.status === 'pending') {
               window.open(data.approval_url, '_blank');
@@ -84,28 +84,28 @@ export default function ClientPage() {
       };
       createSigner();
     }
-  }, [isAuthenticated, user, signerUuid]);
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    if (signerStatus === 'pending' && signerUuid) {
-      interval = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`);
-          if (!response.ok) throw new Error('Failed to check signer status');
-          const data = await response.json();
-          if (data.success && data.status === 'approved') {
-            setSignerStatus('approved');
-            toast.success('Signer approved!');
-          }
-        } catch (error) {
-          console.error('Signer polling error:', error);
-          toast.warning('Failed to check signer status. Retrying...');
-        }
-      }, 5000);
-    }
+    // if (signerStatus === 'pending' && signerUuid) { // Removed
+    //   interval = setInterval(async () => { // Removed
+    //     try { // Removed
+    //       const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`); // Removed
+    //       if (!response.ok) throw new Error('Failed to check signer status'); // Removed
+    //       const data = await response.json(); // Removed
+    //       if (data.success && data.status === 'approved') { // Removed
+    //         setSignerStatus('approved'); // Removed
+    //         toast.success('Signer approved!'); // Removed
+    //       } // Removed
+    //     } catch (error) { // Removed
+    //       console.error('Signer polling error:', error); // Removed
+    //       toast.warning('Failed to check signer status. Retrying...'); // Removed
+    //     } // Removed
+    //   }, 5000); // Removed
+    // } // Removed
     return () => clearInterval(interval);
-  }, [signerStatus, signerUuid]);
+  }, []); // Removed signerStatus, signerUuid
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -262,15 +262,12 @@ export default function ClientPage() {
     }
   }
 
-  const handleRemovePlayButton = async (id: string) => {
-    const playButtonToDelete = playButtons.find(pb => pb.id === id);
-    if (!playButtonToDelete) return;
-    const jsonData = JSON.stringify({ deleted: id });
-    const castResponse = await fetch('/api/cast', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: jsonData, signerUuid }) });
-    if (!castResponse.ok) throw new Error('Failed to delete play button');
+  const handleRemovePlayButton = (id: string) => {
     const updatedButtons = playButtons.filter((pb) => pb.id !== id)
     setPlayButtons(updatedButtons)
-    toast.success("Play button removed")
+    savePlayButtons(updatedButtons)
+    toast.success("Play button removed locally")
+    // Optionally prompt to cast about removal using composeCast
   }
 
   const handleCopyLink = async (playButton: PlayButton) => {
@@ -370,7 +367,7 @@ export default function ClientPage() {
           </Card>
         )}
 
-        {isAuthenticated && signerStatus === 'pending' && <Alert className="mb-4"><AlertDescription>Please approve the signer to enable casting: <Button variant="link" onClick={() => window.open(signerApprovalUrl || '', '_blank')}>Approve Signer</Button></AlertDescription></Alert>}
+        {/* {isAuthenticated && signerStatus === 'pending' && <Alert className="mb-4"><AlertDescription>Please approve the signer to enable casting: <Button variant="link" onClick={() => window.open(signerApprovalUrl || '', '_blank')}>Approve Signer</Button></AlertDescription></Alert>} */}
 
         <Card className="mb-8">
           <CardHeader>

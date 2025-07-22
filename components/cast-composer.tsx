@@ -64,17 +64,23 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
       return;
     }
     try {
-      const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`;
-      const castText = castText || defaultText;
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+      const textToCast = castText && castText.trim().length > 0
+        ? castText
+        : `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`;
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
       const embeds = [playButton.url, miniappUrl];
-      const result = await sdk.actions.composeCast({ text: castText, embeds });
-      if (result.cast) {
-        toast.success('Cast published!');
-        setIsOpen(false);
-      } else {
-        toast.info('Cast canceled');
-      }
+      // Fix: Pass correct arguments to createPlayButtonCast
+      const result = await createPlayButtonCast({
+        id: playButton.id,
+        platform: playButton.platform,
+        title: playButton.title,
+        artist: playButton.artist,
+        url: playButton.url,
+      });
+      setIsOpen(false);
     } catch (err) {
       console.error("Failed to create cast:", err)
       toast.error("Failed to create cast")
