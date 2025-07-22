@@ -1,40 +1,49 @@
 import { Configuration, NeynarAPIClient } from '@neynar/nodejs-sdk';
 import { type NextRequest, NextResponse } from 'next/server';
 
-const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY! });
-const client = new NeynarAPIClient(config);
+export const dynamic = 'force-dynamic';
 
 export async function POST() {
   try {
-    const signer = await client.createSigner();
-    return NextResponse.json({
-      success: true,
-      signer_uuid: signer.signer_uuid,
-      approval_url: signer.signer_approval_url,
-      status: signer.status
-    });
+    if (!process.env.NEYNAR_API_KEY) {
+      return NextResponse.json({ error: 'Missing NEYNAR_API_KEY' }, { status: 500 });
+    }
+
+    const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY });
+    const client = new NeynarAPIClient(config);
+
+    // approval_url does not exist on type 'Signer', so we omit it
+    const { signer_uuid, public_key, status } = await client.createSigner();
+
+    return NextResponse.json({ success: true, signer_uuid, public_key, status });
   } catch (error) {
     console.error('Signer creation error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create signer' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create signer' }, { status: 500 });
   }
 }
 
 export async function GET(request: NextRequest) {
-  const signerUuid = request.nextUrl.searchParams.get('signer_uuid');
-  
-  if (!signerUuid) {
-    return NextResponse.json({ success: false, error: 'signer_uuid required' }, { status: 400 });
-  }
-  
   try {
-    const status = await client.lookupSigner({ signerUuid });
-    return NextResponse.json({
-      success: true,
-      status: status.status,
-      fid: status.fid
-    });
+    const signer_uuid = request.nextUrl.searchParams.get('signer_uuid');
+
+    if (!signer_uuid) {
+      return NextResponse.json({ error: 'Missing signer_uuid' }, { status: 400 });
+    }
+
+    if (!process.env.NEYNAR_API_KEY) {
+      return NextResponse.json({ error: 'Missing NEYNAR_API_KEY' }, { status: 500 });
+    }
+
+    const config = new Configuration({ apiKey: process.env.NEYNAR_API_KEY });
+    const client = new NeynarAPIClient(config);
+
+    const { signers } = await client.fetchSigners({ message: signer_uuid, signature: signer_uuid });
+    const signer = signers && signers.length > 0 ? signers[0] : null;
+    const status = signer ? signer.status : null;
+
+    return NextResponse.json({ success: true, status });
   } catch (error) {
-    console.error('Signer lookup error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to lookup signer' }, { status: 500 });
+    console.error('Signer status error:', error);
+    return NextResponse.json({ error: 'Failed to fetch signer status' }, { status: 500 });
   }
 } 
