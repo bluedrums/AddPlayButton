@@ -85,6 +85,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
       console.error("Failed to create cast:", err)
       toast.error("Failed to create cast")
       setShowDebugInfo(true)
+      
     }
   }
 
