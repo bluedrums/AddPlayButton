@@ -47,7 +47,7 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
   const { user, isAuthenticated, signIn } = useFarcaster()
 
   // Generate default cast text
-  const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`
+  const defaultText = `�� ${playButton.title}`;
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open)

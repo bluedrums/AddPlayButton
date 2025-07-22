@@ -87,7 +87,11 @@ export default function ClientPage() {
     if (fid && playButtonId) {
       fetch(`/api/playbutton?fid=${fid}&playButton=${playButtonId}`)
         .then(res => res.json())
-        .then(data => setSharedPlayButton({...data, createdAt: new Date(data.createdAt)}))
+        .then(data => {
+          const pb = {...data, createdAt: new Date(data.createdAt)};
+          setSharedPlayButton(pb);
+          setShowPlayer(true);  // Ensure modal opens
+        })
         .catch(() => toast.error('Failed to load shared play button'));
     }
   }, [params]);
@@ -96,53 +100,38 @@ export default function ClientPage() {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
   }
 
-  const validateImage = (file: File): Promise<{ isValid: boolean; error?: string; dataUrl?: string }> => {
-    return new Promise((resolve) => {
-      const maxSize = 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        resolve({ isValid: false, error: "File size must be less than 10MB" })
-        return
-      }
-      if (!file.type.startsWith("image/")) {
-        resolve({ isValid: false, error: "Please select an image file" })
-        return
-      }
-      const img = new Image()
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string
-        img.onload = () => {
-          const { width, height } = img
-          const aspectRatio = width / height
-          if (width < 600 || height < 400) {
-            resolve({ isValid: false, error: "Image must be at least 600x400px" })
-            return
-          }
-          if (width > 3000 || height > 2000) {
-            resolve({ isValid: false, error: "Image must not exceed 3000x2000px" })
-            return
-          }
-          const targetRatio = 3 / 2
-          const tolerance = 0.1
-          if (Math.abs(aspectRatio - targetRatio) > tolerance) {
-            resolve({
-              isValid: false,
-              error: `Image must have a 3:2 aspect ratio (current: ${width}x${height})`,
-            })
-            return
-          }
-          resolve({ isValid: true, dataUrl })
-        }
-        img.onerror = () => {
-          resolve({ isValid: false, error: "Invalid image file" })
-        }
-        img.src = dataUrl
-      }
-      reader.onerror = () => {
-        resolve({ isValid: false, error: "Failed to read image file" })
-      }
-      reader.readAsDataURL(file)
-    })
+  const resizeImageTo32 = (img: HTMLImageElement, minWidth = 600, minHeight = 400, maxWidth = 3000, maxHeight = 2000): string => {
+    const targetRatio = 3 / 2;
+    let width = img.width;
+    let height = img.height;
+    let sx = 0, sy = 0;
+    const srcRatio = width / height;
+
+    if (srcRatio > targetRatio) {
+      height = img.height;
+      width = height * targetRatio;
+      sx = (img.width - width) / 2;
+    } else {
+      width = img.width;
+      height = width / targetRatio;
+      sy = (img.height - height) / 2;
+    }
+
+    // Scale to meet min dimensions
+    if (width < minWidth || height < minHeight) {
+      const scale = Math.max(minWidth / width, minHeight / height);
+      width = Math.min(width * scale, maxWidth);
+      height = Math.min(height * scale, maxHeight);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.drawImage(img, sx, sy, img.width, img.height, 0, 0, width, height);
+    }
+    return canvas.toDataURL('image/png');
   }
 
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,9 +145,53 @@ export default function ClientPage() {
       setCoverImageFile(null)
       return
     }
-    setCoverImage(validation.dataUrl || null)
+    let dataUrl = validation.dataUrl || '';
+    // Auto-resize if not 3:2
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((resolve) => { img.onload = resolve; });
+    const srcRatio = img.width / img.height;
+    if (Math.abs(srcRatio - 1.5) > 0.01) {
+      dataUrl = resizeImageTo32(img);
+    }
+    setCoverImage(dataUrl)
     setCoverImageFile(file)
     setImageError("")
+  }
+
+  const validateImage = (file: File): Promise<{ isValid: boolean; error?: string; dataUrl?: string }> => {
+    return new Promise((resolve) => {
+      const maxSize = 10 * 1024 * 1024
+      if (file.size > maxSize) {
+        resolve({ isValid: false, error: "File size must be less than 10MB" })
+        return
+      }
+      if (!file.type.startsWith("image/")) {
+        resolve({ isValid: false, error: "Please select an image file" })
+        return
+      }
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string
+        const img = new Image()
+        img.onload = () => {
+          if (img.width < 600 || img.height < 400) {
+            resolve({ isValid: false, error: "Image must be at least 600x400px" })
+            return
+          }
+          if (img.width > 3000 || img.height > 2000) {
+            resolve({ isValid: false, error: "Image must not exceed 3000x2000px" })
+            return
+          }
+          // No aspect ratio check here, as we resize later
+          resolve({ isValid: true, dataUrl })
+        }
+        img.onerror = () => resolve({ isValid: false, error: "Invalid image file" });
+        img.src = dataUrl
+      }
+      reader.onerror = () => resolve({ isValid: false, error: "Failed to read image file" });
+      reader.readAsDataURL(file)
+    })
   }
 
   const handleRemoveImage = () => {
@@ -229,7 +262,7 @@ export default function ClientPage() {
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       toast.success(`${validated.platform} play button added! Composing cast...`)
       // Immediately compose cast
-      const defaultText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
+      const defaultText = `🎵 ${newPlayButton.title}`;
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
       const embeds: [string] = [miniappUrl];
       const result = await sdk.actions.composeCast({ text: defaultText, embeds });
@@ -244,12 +277,21 @@ export default function ClientPage() {
     }
   }
 
-  const handleRemovePlayButton = (id: string) => {
-    const updatedButtons = playButtons.filter((pb) => pb.id !== id)
-    setPlayButtons(updatedButtons)
-    savePlayButtons(updatedButtons)
-    toast.success("Play button removed locally")
-    // Optionally prompt to cast about removal using composeCast
+  const handleRemovePlayButton = async (id: string) => {
+    try {
+      const defaultText = JSON.stringify({ deleted: id });
+      const result = await sdk.actions.composeCast({ text: defaultText });
+      if (result.cast) {
+        const updatedButtons = playButtons.filter((pb) => pb.id !== id);
+        setPlayButtons(updatedButtons);
+        savePlayButtons(updatedButtons);
+        toast.success('Play button removed and deletion cast published!');
+      } else {
+        toast.info('Deletion cast canceled');
+      }
+    } catch (error) {
+      toast.error('Failed to remove play button');
+    }
   }
 
   const handleCopyLink = async (playButton: PlayButton) => {

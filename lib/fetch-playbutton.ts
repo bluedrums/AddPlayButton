@@ -5,6 +5,7 @@ export async function fetchPlayButton(fid: number, id: string): Promise<any | nu
 
   let cursor: string | undefined = undefined;
   let playButtonData = null;
+  let isDeleted = false;
 
   do {
     const data = await client.fetchCastsForUser({ fid, limit: 150, cursor });
@@ -13,13 +14,16 @@ export async function fetchPlayButton(fid: number, id: string): Promise<any | nu
         const parsed = JSON.parse(cast.text);
         if (parsed.id === id) {
           playButtonData = parsed;
+        } else if (parsed.deleted === id) {
+          isDeleted = true;
           break;
         }
       } catch {}
     }
+    if (isDeleted) break;
     cursor = data.next?.cursor ?? undefined;
-    if (playButtonData) break;
+    if (playButtonData && !isDeleted) break;
   } while (cursor);
 
-  return playButtonData;
+  return isDeleted ? null : playButtonData;
 } 
