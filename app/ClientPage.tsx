@@ -292,8 +292,7 @@ export default function ClientPage() {
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
-      toast.success(`${validated.platform} play button added! Composing cast...`)
-      // Prepare data for storage in cast text
+      toast.success(`${validated.platform} play button added! Composing storage cast...`)
       const storedData = {
         id: newPlayButton.id,
         platform: newPlayButton.platform,
@@ -302,14 +301,21 @@ export default function ClientPage() {
         embedUrl: newPlayButton.embedUrl,
         coverImage: newPlayButton.coverImage
       };
-      const text = JSON.stringify(storedData);
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
-      const embeds: [string] = [miniappUrl];
-      const result = await sdk.actions.composeCast({ text, embeds });
-      if (result.cast) {
-        toast.success('Cast published!');
+      const storageText = JSON.stringify(storedData);
+      const storageResult = await sdk.actions.composeCast({ text: storageText });
+      if (storageResult.cast) {
+        toast.success('Storage cast published! Now composing sharing cast...');
+        const defaultText = `🎵 ${newPlayButton.title}`;
+        const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
+        const embeds: [string] = [miniappUrl];
+        const sharingResult = await sdk.actions.composeCast({ text: defaultText, embeds });
+        if (sharingResult.cast) {
+          toast.success('Sharing cast published!');
+        } else {
+          toast.info('Sharing cast canceled');
+        }
       } else {
-        toast.info('Cast canceled');
+        toast.info('Storage cast canceled');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add play button';
@@ -319,13 +325,13 @@ export default function ClientPage() {
 
   const handleRemovePlayButton = async (id: string) => {
     try {
-      const defaultText = JSON.stringify({ deleted: id });
-      const result = await sdk.actions.composeCast({ text: defaultText });
+      const deletionText = JSON.stringify({ deleted: id });
+      const result = await sdk.actions.composeCast({ text: deletionText });
       if (result.cast) {
         const updatedButtons = playButtons.filter((pb) => pb.id !== id);
         setPlayButtons(updatedButtons);
         savePlayButtons(updatedButtons);
-        toast.success('Play button removed and deletion cast published!');
+        toast.success('Deletion cast published and play button removed!');
       } else {
         toast.info('Deletion cast canceled');
       }
