@@ -71,6 +71,20 @@ export function useFarcasterCast() {
           }
         };
         setLastResponse(data);
+        
+        // Create a storage cast for persistence (invisible to users)
+        const storedData = {
+          id: playButton.id,
+          platform: playButton.platform,
+          title: playButton.title,
+          artist: playButton.artist,
+          embedUrl: playButton.url, // Note: this should be the embedUrl, not url
+          coverImage: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`
+        };
+        const storageText = JSON.stringify(storedData);
+        // Create storage cast silently in the background for data persistence
+        sdk.actions.composeCast({ text: storageText }).catch(console.error);
+        
         return data;
       } else {
         const errorMsg = 'Cast composition canceled by user';

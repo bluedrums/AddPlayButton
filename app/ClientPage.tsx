@@ -73,14 +73,21 @@ export default function ClientPage() {
             setSharedPlayButton(pb);
             setTimeout(() => setShowPlayer(true), 100);
           } else if (data.error) {
-            toast.error(data.error);
+            if (data.error === 'Play button not found') {
+              toast.error('This play button was not found. It may have been deleted or is no longer available.');
+            } else {
+              toast.error(data.error);
+            }
           } else {
             const pb = {...data, createdAt: new Date(data.createdAt)};
             setSharedPlayButton(pb);
             setTimeout(() => setShowPlayer(true), 100);
           }
         })
-        .catch(() => toast.error('Failed to load shared play button'));
+        .catch((error) => {
+          console.error('Failed to load shared play button:', error);
+          toast.error('Failed to load shared play button. It may have been deleted or is no longer available.');
+        });
     }
   }, [params]);
 
@@ -294,6 +301,19 @@ export default function ClientPage() {
       
       if (sharingResult.cast) {
         toast.success('Cast published! The miniapp card should appear in feeds.');
+        
+        // Create a storage cast for persistence (invisible to users)
+        const storedData = {
+          id: newPlayButton.id,
+          platform: newPlayButton.platform,
+          title: newPlayButton.title,
+          artist: newPlayButton.artist,
+          embedUrl: newPlayButton.embedUrl,
+          coverImage: newPlayButton.coverImage
+        };
+        const storageText = JSON.stringify(storedData);
+        // Create storage cast silently in the background for data persistence
+        sdk.actions.composeCast({ text: storageText }).catch(console.error);
       } else {
         toast.info('Cast canceled');
       }
@@ -312,6 +332,10 @@ export default function ClientPage() {
       const updatedButtons = playButtons.filter((pb) => pb.id !== id);
       setPlayButtons(updatedButtons);
       savePlayButtons(updatedButtons);
+      
+      // Create deletion cast in background for data cleanup
+      const deletionText = JSON.stringify({ deleted: id });
+      sdk.actions.composeCast({ text: deletionText }).catch(console.error);
       
       toast.success('Play button removed!');
     } catch (error) {
