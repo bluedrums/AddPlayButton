@@ -273,40 +273,34 @@ export default function ClientPage() {
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       
-      // Create storage cast for persistence
-      toast.success(`${validated.platform} play button added! Composing storage cast...`)
-      const storedData = {
-        id: newPlayButton.id,
-        platform: newPlayButton.platform,
-        title: newPlayButton.title,
-        artist: newPlayButton.artist,
-        embedUrl: newPlayButton.embedUrl,
-        coverImage: newPlayButton.coverImage
-      };
-      const storageText = JSON.stringify(storedData);
-      toast.info('Storage step: Approve this cast to save data (it will show JSON— this is normal for persistence).');
-      const storageResult = await sdk.actions.composeCast({ text: storageText });
+      // Create the shareable cast with the miniapp URL as embed
+      toast.success(`${validated.platform} play button added! Creating shareable cast...`)
+      const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
       
-      if (storageResult.cast) {
-        toast.success('Storage cast published! Now creating shareable cast...');
+      // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
+      const sharingResult = await sdk.actions.composeCast({ 
+        text: shareText, 
+        embeds: [miniappUrl] 
+      });
+      
+      if (sharingResult.cast) {
+        toast.success('Cast published! The miniapp card should appear in feeds.');
         
-        // Create the shareable cast with the miniapp URL as embed
-        const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
-        const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
-        
-        // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
-        const sharingResult = await sdk.actions.composeCast({ 
-          text: shareText, 
-          embeds: [miniappUrl] 
-        });
-        
-        if (sharingResult.cast) {
-          toast.success('Shareable cast published! The miniapp card should appear in feeds.');
-        } else {
-          toast.info('Shareable cast canceled');
-        }
+        // Also create a storage cast for persistence (in background, no user interaction)
+        const storedData = {
+          id: newPlayButton.id,
+          platform: newPlayButton.platform,
+          title: newPlayButton.title,
+          artist: newPlayButton.artist,
+          embedUrl: newPlayButton.embedUrl,
+          coverImage: newPlayButton.coverImage
+        };
+        const storageText = JSON.stringify(storedData);
+        // Create storage cast silently in the background
+        sdk.actions.composeCast({ text: storageText }).catch(console.error);
       } else {
-        toast.info('Storage cast canceled');
+        toast.info('Cast canceled');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add play button';
@@ -316,17 +310,19 @@ export default function ClientPage() {
 
   const handleRemovePlayButton = async (id: string) => {
     try {
+      const playButton = playButtons.find(pb => pb.id === id);
+      if (!playButton) return;
+      
+      // Remove from local state immediately
+      const updatedButtons = playButtons.filter((pb) => pb.id !== id);
+      setPlayButtons(updatedButtons);
+      savePlayButtons(updatedButtons);
+      
+      // Create deletion cast in background
       const deletionText = JSON.stringify({ deleted: id });
-      toast.info('Deletion step: Approve this cast to remove data (it will show JSON— this is normal).');
-      const result = await sdk.actions.composeCast({ text: deletionText });
-      if (result.cast) {
-        const updatedButtons = playButtons.filter((pb) => pb.id !== id);
-        setPlayButtons(updatedButtons);
-        savePlayButtons(updatedButtons);
-        toast.success('Deletion cast published and play button removed!');
-      } else {
-        toast.info('Deletion cast canceled');
-      }
+      sdk.actions.composeCast({ text: deletionText }).catch(console.error);
+      
+      toast.success('Play button removed!');
     } catch (error) {
       toast.error('Failed to remove play button');
     }

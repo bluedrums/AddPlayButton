@@ -67,19 +67,14 @@ export function CastComposer({ playButton, trigger }: CastComposerProps) {
       if (!user) {
         throw new Error("User not authenticated");
       }
-      const textToCast = castText && castText.trim().length > 0
-        ? castText
-        : `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""}`;
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
-      const embeds = [miniappUrl];
-      // Fix: Pass correct arguments to createPlayButtonCast
+      // Pass correct arguments to createPlayButtonCast
       const result = await createPlayButtonCast({
         id: playButton.id,
         platform: playButton.platform,
         title: playButton.title,
         artist: playButton.artist,
-        url: playButton.url,
-      });
+        url: playButton.embedUrl, // Use embedUrl instead of url for consistency
+      }, castText);
       setIsOpen(false);
     } catch (err) {
       console.error("Failed to create cast:", err)
