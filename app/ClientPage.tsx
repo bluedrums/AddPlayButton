@@ -42,7 +42,7 @@ export default function ClientPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
-  const [showPlayer, setShowPlayer] = useState(Boolean(sharedPlayButton));
+  const [showPlayer, setShowPlayer] = useState(false);
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -69,7 +69,8 @@ export default function ClientPage() {
         .then(data => {
           const pb = {...data, createdAt: new Date(data.createdAt)};
           setSharedPlayButton(pb);
-          setShowPlayer(true);  // Ensure modal opens
+          // Automatically open the player modal when shared play button is loaded
+          setTimeout(() => setShowPlayer(true), 100);
         })
         .catch(() => toast.error('Failed to load shared play button'));
     }
@@ -271,6 +272,8 @@ export default function ClientPage() {
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
+      
+      // Create storage cast for persistence
       toast.success(`${validated.platform} play button added! Composing storage cast...`)
       const storedData = {
         id: newPlayButton.id,
@@ -283,16 +286,24 @@ export default function ClientPage() {
       const storageText = JSON.stringify(storedData);
       toast.info('Storage step: Approve this cast to save data (it will show JSON— this is normal for persistence).');
       const storageResult = await sdk.actions.composeCast({ text: storageText });
+      
       if (storageResult.cast) {
-        toast.success('Storage cast published! Now composing sharing cast...');
-        const defaultText = `🎵 ${newPlayButton.title}`;
+        toast.success('Storage cast published! Now creating shareable cast...');
+        
+        // Create the shareable cast with the miniapp URL as embed
+        const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
         const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
-        const embeds: [string] = [miniappUrl];
-        const sharingResult = await sdk.actions.composeCast({ text: defaultText, embeds });
+        
+        // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
+        const sharingResult = await sdk.actions.composeCast({ 
+          text: shareText, 
+          embeds: [miniappUrl] 
+        });
+        
         if (sharingResult.cast) {
-          toast.success('Sharing cast published!');
+          toast.success('Shareable cast published! The miniapp card should appear in feeds.');
         } else {
-          toast.info('Sharing cast canceled');
+          toast.info('Shareable cast canceled');
         }
       } else {
         toast.info('Storage cast canceled');
@@ -353,7 +364,13 @@ export default function ClientPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
-          <h1 className="text-2xl font-bold mb-4 text-center">Shared Play Button</h1>
+          <div className="text-center mb-6">
+            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Play className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Shared Play Button</h1>
+            <p className="text-gray-600 mt-2">Opening player automatically...</p>
+          </div>
           <PlayButtonCard playButton={sharedPlayButton} />
           <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={sharedPlayButton} />
         </div>

@@ -11,20 +11,30 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
     if (!isNaN(fid)) {
       const playButtonData = await fetchPlayButton(fid, playButtonId);
       if (playButtonData) {
-        const miniAppJson = JSON.stringify({
-          name: playButtonData.title,
-          version: "1.0.0",
-          iconUrl: "https://addplaybutton.xyz/icon-512x512.png",
+        // Follow the correct Mini App embed format from the documentation
+        const miniappEmbed = {
+          version: "1",
           imageUrl: playButtonData.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`,
-          buttonTitle: "Play",
-          homeUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${playButtonId}`,
-        });
+          button: {
+            title: "🎵 Play",
+            action: {
+              type: "launch_miniapp",
+              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${playButtonId}`,
+              name: "Add Play Button",
+              splashImageUrl: "https://addplaybutton.xyz/icon-512x512.png",
+              splashBackgroundColor: "#8b5cf6"
+            }
+          }
+        };
+        
+        const miniappJson = JSON.stringify(miniappEmbed);
+        
         return {
           title: playButtonData.title,
           description: `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`,
           other: {
-            "fc:miniapp": miniAppJson,
-            "fc:frame": miniAppJson,
+            "fc:miniapp": miniappJson,
+            "fc:frame": miniappJson, // For backward compatibility
           },
         };
       }

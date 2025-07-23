@@ -4,19 +4,6 @@ import { useState } from "react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { sdk } from '@farcaster/miniapp-sdk';
 
-interface CastEmbed {
-  url: string
-}
-
-interface CreateCastParams {
-  fid: number
-  embedUrl: string
-  embedType: "spotify" | "apple" | "soundcloud" | "youtube"
-  title?: string
-  customText?: string
-  signerUuid: string  // Add this
-}
-
 interface CastResponse {
   success: boolean
   cast?: {
@@ -24,11 +11,7 @@ interface CastResponse {
     text?: string
     embeds?: string[]
   }
-  warpcastUrl?: string
-  isDemo?: boolean
-  message?: string
   error?: string
-  details?: any
 }
 
 export function useFarcasterCast() {
@@ -65,14 +48,11 @@ export function useFarcasterCast() {
 
     try {
       const defaultText = `🎵 ${playButton.title}${playButton.artist ? ` by ${playButton.artist}` : ""} on ${playButton.platform}`;
-      // Use customText if provided, otherwise use defaultText
       const castText = customText || defaultText;
 
-      // Create miniapp URL for this specific play button
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
-
-      // Farcaster SDK expects embeds as an array of URLs (strings), not objects
       const embeds: [string, string] = [playButton.url, miniappUrl];
+      
       const result = await sdk.actions.composeCast({ text: castText, embeds });
 
       if (result.cast) {
