@@ -43,6 +43,9 @@ export default function ClientPage() {
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
   const [showPlayer, setShowPlayer] = useState(Boolean(sharedPlayButton));
+  const [signerUuid, setSignerUuid] = useState<string | null>(null);
+  const [signerStatus, setSignerStatus] = useState<'none' | 'pending' | 'approved'>('none');
+  const [signerApprovalUrl, setSignerApprovalUrl] = useState<string | null>(null);
 
   // Load saved play buttons from localStorage
   useEffect(() => {
@@ -60,26 +63,57 @@ export default function ClientPage() {
     }
   }, [])
 
+  // Load signer from localStorage
+  useEffect(() => {
+    const storedUuid = localStorage.getItem('signerUuid');
+    if (storedUuid) {
+      setSignerUuid(storedUuid);
+      setSignerStatus('approved');
+    }
+  }, []);
+
+  // Create signer if none exists
+  useEffect(() => {
+    if (isAuthenticated && signerStatus === 'none' && !signerUuid) {
+      createSigner();
+    }
+  }, [isAuthenticated, signerStatus, signerUuid]);
+
+  // Poll for signer approval
   useEffect(() => {
     let interval: NodeJS.Timeout | undefined;
-    // if (signerStatus === 'pending' && signerUuid) { // Removed
-    //   interval = setInterval(async () => { // Removed
-    //     try { // Removed
-    //       const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`); // Removed
-    //       if (!response.ok) throw new Error('Failed to check signer status'); // Removed
-    //       const data = await response.json(); // Removed
-    //       if (data.success && data.status === 'approved') { // Removed
-    //         setSignerStatus('approved'); // Removed
-    //         toast.success('Signer approved!'); // Removed
-    //       } // Removed
-    //     } catch (error) { // Removed
-    //       console.error('Signer polling error:', error); // Removed
-    //       toast.warning('Failed to check signer status. Retrying...'); // Removed
-    //     } // Removed
-    //   }, 5000); // Removed
-    // } // Removed
+    if (signerStatus === 'pending' && signerUuid) {
+      interval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/signer?signer_uuid=${signerUuid}`);
+          if (!response.ok) throw new Error('Failed to check signer status');
+          const data = await response.json();
+          if (data.status === 'approved') {
+            setSignerStatus('approved');
+            toast.success('Signer approved!');
+          }
+        } catch (error) {
+          console.error('Signer polling error:', error);
+        }
+      }, 5000);
+    }
     return () => clearInterval(interval);
-  }, []); // Removed signerStatus, signerUuid
+  }, [signerStatus, signerUuid]);
+
+  const createSigner = async () => {
+    try {
+      const response = await fetch('/api/signer', { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to create signer');
+      const data = await response.json();
+      setSignerUuid(data.signer_uuid);
+      setSignerApprovalUrl(data.signer_approval_url);
+      setSignerStatus('pending');
+      localStorage.setItem('signerUuid', data.signer_uuid);
+      toast.info('Please approve the signer to enable storage.');
+    } catch (error) {
+      toast.error('Failed to create signer');
+    }
+  };
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -293,6 +327,11 @@ export default function ClientPage() {
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       toast.success(`${validated.platform} play button added! Composing storage cast...`)
+      // Store data server-side
+      if (signerStatus !== 'approved') {
+        toast.error('Signer not ready. Please approve the signer first.');
+        return;
+      }
       const storedData = {
         id: newPlayButton.id,
         platform: newPlayButton.platform,
@@ -301,21 +340,27 @@ export default function ClientPage() {
         embedUrl: newPlayButton.embedUrl,
         coverImage: newPlayButton.coverImage
       };
-      const storageText = JSON.stringify(storedData);
-      const storageResult = await sdk.actions.composeCast({ text: storageText });
-      if (storageResult.cast) {
-        toast.success('Storage cast published! Now composing sharing cast...');
-        const defaultText = `🎵 ${newPlayButton.title}`;
-        const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
-        const embeds: [string] = [miniappUrl];
-        const sharingResult = await sdk.actions.composeCast({ text: defaultText, embeds });
-        if (sharingResult.cast) {
-          toast.success('Sharing cast published!');
-        } else {
-          toast.info('Sharing cast canceled');
-        }
+      try {
+        const storeResponse = await fetch('/api/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ signerUuid, text: JSON.stringify(storedData) })
+        });
+        if (!storeResponse.ok) throw new Error('Failed to store data');
+        toast.success('Data stored! Composing sharing cast...');
+      } catch (error) {
+        toast.error('Failed to store data');
+        return;
+      }
+      // Compose sharing cast
+      const defaultText = `🎵 ${newPlayButton.title}`;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
+      const embeds: [string] = [miniappUrl];
+      const result = await sdk.actions.composeCast({ text: defaultText, embeds });
+      if (result.cast) {
+        toast.success('Sharing cast published!');
       } else {
-        toast.info('Storage cast canceled');
+        toast.info('Sharing cast canceled');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to add play button';
@@ -324,17 +369,22 @@ export default function ClientPage() {
   }
 
   const handleRemovePlayButton = async (id: string) => {
+    if (signerStatus !== 'approved') {
+      toast.error('Signer not ready. Please approve the signer first.');
+      return;
+    }
     try {
       const deletionText = JSON.stringify({ deleted: id });
-      const result = await sdk.actions.composeCast({ text: deletionText });
-      if (result.cast) {
-        const updatedButtons = playButtons.filter((pb) => pb.id !== id);
-        setPlayButtons(updatedButtons);
-        savePlayButtons(updatedButtons);
-        toast.success('Deletion cast published and play button removed!');
-      } else {
-        toast.info('Deletion cast canceled');
-      }
+      const storeResponse = await fetch('/api/store', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ signerUuid, text: deletionText })
+      });
+      if (!storeResponse.ok) throw new Error('Failed to store deletion');
+      const updatedButtons = playButtons.filter((pb) => pb.id !== id);
+      setPlayButtons(updatedButtons);
+      savePlayButtons(updatedButtons);
+      toast.success('Deletion stored and play button removed!');
     } catch (error) {
       toast.error('Failed to remove play button');
     }
@@ -415,6 +465,17 @@ export default function ClientPage() {
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
               <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo mode will be used.</AlertDescription></Alert>
+              {signerStatus === 'pending' && (
+                <Alert>
+                  <AlertDescription>
+                    Please approve the signer: {signerApprovalUrl ? (
+                      <Button onClick={() => window.open(signerApprovalUrl, '_blank')}>Approve</Button>
+                    ) : (
+                      <span>Loading approval URL...</span>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
               {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1"><div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div><div>Loading: {isLoading ? "Yes" : "No"}</div><div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div><div>User: {user ? user.username : "None"}</div><div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div><div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div></div>}
             </CardContent>
