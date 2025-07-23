@@ -54,7 +54,7 @@ export function useFarcasterCast() {
       const castText = customText || defaultText;
 
       // Use only the miniapp URL as embed - this will trigger Farcaster to fetch the meta tags
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user.fid}&playButton=${playButton.id}`;
+      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user.fid}&playButton=${playButton.id}`;
       
       const result = await sdk.actions.composeCast({ 
         text: castText, 
@@ -71,20 +71,6 @@ export function useFarcasterCast() {
           }
         };
         setLastResponse(data);
-        
-        // Also create a storage cast for persistence (in background, no user interaction)
-        const storedData = {
-          id: playButton.id,
-          platform: playButton.platform,
-          title: playButton.title,
-          artist: playButton.artist,
-          embedUrl: playButton.url, // Note: this should be the embedUrl, not url
-          coverImage: `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/ThePlayButton.png`
-        };
-        const storageText = JSON.stringify(storedData);
-        // Create storage cast silently in the background
-        sdk.actions.composeCast({ text: storageText }).catch(console.error);
-        
         return data;
       } else {
         const errorMsg = 'Cast composition canceled by user';

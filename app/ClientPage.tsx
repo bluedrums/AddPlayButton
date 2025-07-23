@@ -67,10 +67,18 @@ export default function ClientPage() {
       fetch(`/api/playbutton?fid=${fid}&playButton=${playButtonId}`)
         .then(res => res.json())
         .then(data => {
-          const pb = {...data, createdAt: new Date(data.createdAt)};
-          setSharedPlayButton(pb);
-          // Automatically open the player modal when shared play button is loaded
-          setTimeout(() => setShowPlayer(true), 100);
+          if (data.error && data.mock) {
+            // Handle mock data for development
+            const pb = {...data.data, createdAt: new Date()};
+            setSharedPlayButton(pb);
+            setTimeout(() => setShowPlayer(true), 100);
+          } else if (data.error) {
+            toast.error(data.error);
+          } else {
+            const pb = {...data, createdAt: new Date(data.createdAt)};
+            setSharedPlayButton(pb);
+            setTimeout(() => setShowPlayer(true), 100);
+          }
         })
         .catch(() => toast.error('Failed to load shared play button'));
     }
@@ -265,7 +273,7 @@ export default function ClientPage() {
       const validated = await validateUrl(url)
       let playButtonCoverImage = coverImage;
       if (!playButtonCoverImage) {
-        playButtonCoverImage = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/ThePlayButton.png`;
+        playButtonCoverImage = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`;
       }
       const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: playButtonCoverImage, createdAt: new Date() }
       const updatedButtons = [newPlayButton, ...playButtons]
@@ -276,7 +284,7 @@ export default function ClientPage() {
       // Create the shareable cast with the miniapp URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
+              const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
       
       // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
       const sharingResult = await sdk.actions.composeCast({ 
@@ -286,19 +294,6 @@ export default function ClientPage() {
       
       if (sharingResult.cast) {
         toast.success('Cast published! The miniapp card should appear in feeds.');
-        
-        // Also create a storage cast for persistence (in background, no user interaction)
-        const storedData = {
-          id: newPlayButton.id,
-          platform: newPlayButton.platform,
-          title: newPlayButton.title,
-          artist: newPlayButton.artist,
-          embedUrl: newPlayButton.embedUrl,
-          coverImage: newPlayButton.coverImage
-        };
-        const storageText = JSON.stringify(storedData);
-        // Create storage cast silently in the background
-        sdk.actions.composeCast({ text: storageText }).catch(console.error);
       } else {
         toast.info('Cast canceled');
       }
@@ -317,10 +312,6 @@ export default function ClientPage() {
       const updatedButtons = playButtons.filter((pb) => pb.id !== id);
       setPlayButtons(updatedButtons);
       savePlayButtons(updatedButtons);
-      
-      // Create deletion cast in background
-      const deletionText = JSON.stringify({ deleted: id });
-      sdk.actions.composeCast({ text: deletionText }).catch(console.error);
       
       toast.success('Play button removed!');
     } catch (error) {
@@ -361,8 +352,8 @@ export default function ClientPage() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="max-w-md w-full">
           <div className="text-center mb-6">
-            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Play className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-4">
+              <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Shared Play Button</h1>
             <p className="text-gray-600 mt-2">Opening player automatically...</p>
@@ -379,8 +370,8 @@ export default function ClientPage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
-              <Play className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full overflow-hidden">
+              <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Add Play Button</h1>
           </div>

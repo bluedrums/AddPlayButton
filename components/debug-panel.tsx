@@ -213,7 +213,7 @@ export function DebugPanel() {
                 <div className="grid grid-cols-1 gap-2">
                   <div>
                     <span className="font-medium">App URL:</span>{" "}
-                    {process.env.NEXT_PUBLIC_APP_URL || window.location.origin}
+                    {process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}
                   </div>
                   <div>
                     <span className="font-medium">Domain:</span>{" "}
