@@ -9,17 +9,18 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
   if (fidStr && playButtonId) {
     const fid = Number(fidStr);
     if (!isNaN(fid)) {
-      const playButtonData = await fetchPlayButton(fid, playButtonId);
+      const decodedPlayButtonId = decodeURIComponent(playButtonId);
+      const playButtonData = await fetchPlayButton(fid, decodedPlayButtonId);
       if (playButtonData) {
         // Follow the correct Mini App embed format from the documentation
         const miniappEmbed = {
           version: "1",
           imageUrl: playButtonData.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`,
           button: {
-            title: "🎵 Play",
+            title: "Play",
             action: {
               type: "launch_miniapp",
-              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${playButtonId}`,
+              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${encodeURIComponent(decodedPlayButtonId)}`,
               name: "Add Play Button",
               splashImageUrl: "https://addplaybutton.xyz/icon-512x512.png",
               splashBackgroundColor: "#8b5cf6"

@@ -291,7 +291,7 @@ export default function ClientPage() {
       // Create the shareable cast with the miniapp URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
-              const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
+              const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
       
       // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
       const sharingResult = await sdk.actions.composeCast({ 
@@ -309,7 +309,7 @@ export default function ClientPage() {
           title: newPlayButton.title,
           artist: newPlayButton.artist,
           embedUrl: newPlayButton.embedUrl,
-          coverImage: newPlayButton.coverImage
+          coverImage: newPlayButton.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`
         };
         const storageText = JSON.stringify(storedData);
         // Create storage cast silently in the background for data persistence
