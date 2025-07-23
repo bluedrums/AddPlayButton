@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
           name: playButtonData.title,
           version: "1.0.0",
           iconUrl: "https://addplaybutton.xyz/icon-512x512.png",
-          imageUrl: playButtonData.coverImage || "https://addplaybutton.xyz/og-image.png",
+          imageUrl: playButtonData.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`,
           buttonTitle: "Play",
           homeUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${playButtonId}`,
         });

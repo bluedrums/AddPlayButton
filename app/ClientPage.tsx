@@ -134,6 +134,32 @@ export default function ClientPage() {
     return canvas.toDataURL('image/png');
   }
 
+  async function uploadImage(dataUrl: string): Promise<string> {
+    const base64 = dataUrl.split(',')[1];
+    const formData = new FormData();
+    formData.append('image', base64);
+    formData.append('type', 'base64');
+
+    try {
+      const res = await fetch('https://api.imgur.com/3/image', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Client-ID 546c25a59c58ad7', // Public test Client-ID
+        },
+        body: formData
+      });
+
+      if (!res.ok) throw new Error('Image upload failed');
+
+      const data = await res.json();
+      return data.data.link;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+      throw error;
+    }
+  }
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -154,7 +180,9 @@ export default function ClientPage() {
     if (Math.abs(srcRatio - 1.5) > 0.01) {
       dataUrl = resizeImageTo32(img);
     }
-    setCoverImage(dataUrl)
+    // Upload to Imgur
+    const uploadedUrl = await uploadImage(dataUrl);
+    setCoverImage(uploadedUrl)
     setCoverImageFile(file)
     setImageError("")
   }
@@ -255,17 +283,29 @@ export default function ClientPage() {
     if (imageError) { setValidationError("Please fix the image error before proceeding"); return }
     try {
       const validated = await validateUrl(url)
-      const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
+      let playButtonCoverImage = coverImage;
+      if (!playButtonCoverImage) {
+        playButtonCoverImage = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}/ThePlayButton.png`;
+      }
+      const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: playButtonCoverImage, createdAt: new Date() }
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       toast.success(`${validated.platform} play button added! Composing cast...`)
-      // Immediately compose cast
-      const defaultText = `🎵 ${newPlayButton.title}`;
+      // Prepare data for storage in cast text
+      const storedData = {
+        id: newPlayButton.id,
+        platform: newPlayButton.platform,
+        title: newPlayButton.title,
+        artist: newPlayButton.artist,
+        embedUrl: newPlayButton.embedUrl,
+        coverImage: newPlayButton.coverImage
+      };
+      const text = JSON.stringify(storedData);
       const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || window.location.origin}?fid=${user?.fid}&playButton=${newPlayButton.id}`;
       const embeds: [string] = [miniappUrl];
-      const result = await sdk.actions.composeCast({ text: defaultText, embeds });
+      const result = await sdk.actions.composeCast({ text, embeds });
       if (result.cast) {
         toast.success('Cast published!');
       } else {
