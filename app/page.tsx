@@ -9,10 +9,10 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
   if (fidStr && playButtonId) {
     const fid = Number(fidStr);
     if (!isNaN(fid)) {
-      const decodedPlayButtonId = decodeURIComponent(playButtonId);
-      const playButtonData = await fetchPlayButton(fid, decodedPlayButtonId);
+      const decodedId = decodeURIComponent(playButtonId);
+      const playButtonData = await fetchPlayButton(fid, decodedId); // Secure fetch from casts
       if (playButtonData) {
-        // Follow the correct Mini App embed format from the documentation
+        // Generate HTML meta tags ("wrapper") based on verified data
         const miniappEmbed = {
           version: "1",
           imageUrl: playButtonData.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`,
@@ -20,7 +20,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
             title: "Play",
             action: {
               type: "launch_miniapp",
-              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${encodeURIComponent(decodedPlayButtonId)}`,
+              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${encodeURIComponent(decodedId)}`,
               name: "Add Play Button",
               splashImageUrl: "https://addplaybutton.xyz/icon-512x512.png",
               splashBackgroundColor: "#8b5cf6"
@@ -35,7 +35,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
           description: `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`,
           other: {
             "fc:miniapp": miniappJson,
-            "fc:frame": miniappJson, // For backward compatibility
+            "fc:frame": miniappJson, // Backward compatibility
           },
         };
       }

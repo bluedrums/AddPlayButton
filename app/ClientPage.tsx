@@ -377,7 +377,7 @@ export default function ClientPage() {
         <div className="max-w-md w-full">
           <div className="text-center mb-6">
             <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-4">
-              <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
+              <img src="/applogo(small).png" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">Shared Play Button</h1>
             <p className="text-gray-600 mt-2">Opening player automatically...</p>
