@@ -1,11 +1,11 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Ubuntu } from 'next/font/google';
 import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
 import { Toaster } from "@/components/ui/sonner"
 
-const inter = Inter({ subsets: ["latin"] })
+const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
 export const metadata: Metadata = {
   title: "Add Play Button - Farcaster Mini App",
@@ -68,7 +68,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={ubuntu.className}>
         <FarcasterProvider>
           {children}
           <Toaster />
