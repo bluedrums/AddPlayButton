@@ -1,8 +1,8 @@
 {
   "accountAssociation": {
-    "header": "eyJhbGciOiJFZERTQSIsImtpZCI6IiJ9",
+    "header": "eyJmaWQiOjM2MjEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgyY2Q4NWEwOTMyNjFmNTkyNzA4MDRBNkVBNjk3Q2VBNENlQkVjYWZFIn0",
     "payload": "eyJkb21haW4iOiJhZGRwbGF5YnV0dG9uLnh5eiJ9",
-    "signature": "signature_placeholder"
+    "signature": "MHgwZmJiYWIwODg3YTU2MDFiNDU3MzVkOTQ5MDRjM2Y1NGUxMzVhZTQxOGEzMWQ5ODNhODAzZmZlYWNlZWMyZDYzNWY4ZTFjYWU4M2NhNTAwOTMzM2FmMTc1NDlmMDY2YTVlOWUwNTljNmZiNDUxMzg0Njk1NzBhODNiNjcyZWJjZTFi"
   },
   "frame": {
     "name": "Add Play Button",
@@ -174,4 +174,4 @@
     "environment": "production"
   },
   "repository": "https://github.com/addplaybutton/miniapp"
-}
+} 

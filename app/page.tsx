@@ -12,30 +12,27 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
       const decodedId = decodeURIComponent(playButtonId);
       const playButtonData = await fetchPlayButton(fid, decodedId); // Secure fetch from casts
       if (playButtonData) {
-        // Generate HTML meta tags ("wrapper") based on verified data
-        const miniappEmbed = {
-          version: "1",
-          imageUrl: playButtonData.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`,
-          button: {
-            title: "Play",
-            action: {
-              type: "launch_miniapp",
-              url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${fid}&playButton=${encodeURIComponent(decodedId)}`,
-              name: "Add Play Button",
-              splashImageUrl: "https://addplaybutton.xyz/icon-512x512.png",
-              splashBackgroundColor: "#8b5cf6"
-            }
-          }
-        };
-        
-        const miniappJson = JSON.stringify(miniappEmbed);
-        
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+        const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
+        const miniAppUrl = `${baseUrl}?fid=${fid}&playButton=${encodeURIComponent(decodedId)}`;
+        const title = playButtonData.title;
+        const description = `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`;
+
         return {
-          title: playButtonData.title,
-          description: `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`,
+          title,
+          description,
+          openGraph: {
+            title,
+            description,
+            images: [imageUrl],
+          },
           other: {
-            "fc:miniapp": miniappJson,
-            "fc:frame": miniappJson, // Backward compatibility
+            "fc:frame": "vNext",
+            "fc:frame:image": imageUrl,
+            "fc:frame:image:aspect_ratio": "1:1",
+            "fc:frame:button:1": "Play",
+            "fc:frame:button:1:action": "link",
+            "fc:frame:button:1:target": miniAppUrl,
           },
         };
       }
