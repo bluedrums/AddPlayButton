@@ -16,7 +16,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { [key:
         const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
         const miniAppUrl = `${baseUrl}?fid=${fid}&playButton=${encodeURIComponent(decodedId)}`;
         const title = playButtonData.title;
-        const description = `Play ${playButtonData.title}${playButtonData.artist ? ` by ${playButtonData.artist}` : ""} on ${playButtonData.platform}`;
+        const description = `Play ${playButtonData.title}` } on ${playButtonData.platform}`;
 
         return {
           title,

@@ -1,10 +1,11 @@
 import { fetchPlayButton } from '@/lib/fetch-playbutton';
 import type { Metadata } from 'next';
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }): Promise<Metadata> {
   const { id } = params;
-  // Assuming fid is passed or derived; for simplicity, using a placeholder or query param if needed
-  const fid = 12345; // Replace with actual fid logic, e.g., from session or query
+  const fidStr = searchParams.fid;
+  const fid = fidStr ? Number(fidStr) : 12345; // Fallback to demo if not provided
+  if (isNaN(fid)) return {};
   const playButtonData = await fetchPlayButton(fid, id);
   if (!playButtonData) return {};
 
@@ -35,14 +36,18 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   };
 }
 
-export default async function SharePage({ params }: { params: { id: string } }) {
-  return (
-    <html lang="en">
-      <head />
-      <body>
-        <h1>Play Button Shared</h1>
-        <p>This page is for embedding in Farcaster casts. Open in a Farcaster client to interact.</p>
-      </body>
-    </html>
-  );
+export default async function SharePage({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }) {
+  const { id } = params;
+  const fidStr = searchParams.fid;
+  const fid = fidStr ? Number(fidStr) : 12345;
+  if (isNaN(fid)) {
+    return <div>Invalid FID</div>;
+  }
+  const playButtonData = await fetchPlayButton(fid, id);
+  if (!playButtonData) {
+    return <div>Play button not found</div>; // Or redirect
+  }
+  // Redirect to main app with params for direct access
+  const redirectUrl = `/?fid=${fid}&playButton=${encodeURIComponent(id)}`;
+  return <meta httpEquiv="refresh" content={`0;url=${redirectUrl}`} />;
 } 
