@@ -288,32 +288,20 @@ export default function ClientPage() {
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       
-      // Create the shareable cast with the miniapp URL as embed
+      // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
-              const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
       
-      // Use the miniapp URL as the embed - this will trigger Farcaster to fetch the meta tags
+      // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [miniappUrl] 
+        embeds: [shareUrl] 
       });
       
       if (sharingResult.cast) {
         toast.success('Cast published! The miniapp card should appear in feeds.');
-        
-        // Create a storage cast for persistence (invisible to users)
-        const storedData = {
-          id: newPlayButton.id,
-          platform: newPlayButton.platform,
-          title: newPlayButton.title,
-          artist: newPlayButton.artist,
-          embedUrl: newPlayButton.embedUrl,
-          coverImage: newPlayButton.coverImage || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`
-        };
-        const storageText = JSON.stringify(storedData);
-        // Create storage cast silently in the background for data persistence
-        sdk.actions.composeCast({ text: storageText }).catch(console.error);
+        // Removed storage cast to avoid dual casts
       } else {
         toast.info('Cast canceled');
       }
