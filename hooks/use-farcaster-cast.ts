@@ -54,11 +54,11 @@ export function useFarcasterCast() {
       const castText = customText || defaultText;
 
       // Use only the miniapp URL as embed - this will trigger Farcaster to fetch the meta tags
-      const miniappUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}?fid=${user.fid}&playButton=${playButton.id}`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${playButton.id}`;
       
       const result = await sdk.actions.composeCast({ 
         text: castText, 
-        embeds: [miniappUrl] 
+        embeds: [shareUrl] 
       });
 
       if (result.cast) {
@@ -67,7 +67,7 @@ export function useFarcasterCast() {
           cast: {
             hash: result.cast.hash,
             text: castText,
-            embeds: [miniappUrl]
+            embeds: [shareUrl]
           }
         };
         setLastResponse(data);
