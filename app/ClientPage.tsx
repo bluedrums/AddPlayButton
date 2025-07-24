@@ -288,6 +288,22 @@ export default function ClientPage() {
       savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
       
+      // Store on server for persistence
+      const storeRes = await fetch('/api/playbutton', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fid: user?.fid || 12345, // Use demo fid if not authenticated
+          id: newPlayButton.id,
+          data: newPlayButton
+        })
+      });
+
+      if (!storeRes.ok) {
+        toast.error('Failed to store play button data');
+        return;
+      }
+      
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;

@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
-import { fetchPlayButton } from '@/lib/fetch-playbutton';
+
+// In-memory storage (for demo; use a real DB in production)
+const playButtonStore = new Map<string, any>(); // Key: `${fid}_${id}`, Value: playButtonData
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const fidStr = searchParams.get('fid');
-    const id = searchParams.get('playButton');
+    const id = searchParams.get('id');
 
     if (!fidStr || !id) {
-      return NextResponse.json({ error: 'Missing fid or playButton id' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing fid or id' }, { status: 400 });
     }
 
     const fid = Number(fidStr);
@@ -16,35 +18,35 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
     }
 
-    // Check if Neynar API key is configured
-    if (!process.env.NEYNAR_API_KEY) {
-      console.error('NEYNAR_API_KEY environment variable is not set');
-      // Return a mock response for development/testing
-      return NextResponse.json({ 
-        error: 'Neynar API key not configured in development environment',
-        mock: true,
-        data: {
-          id: id,
-          platform: "Spotify",
-          title: "Test Play Button",
-          artist: "Test Artist", 
-          embedUrl: "https://open.spotify.com/embed/track/test",
-          coverImage: "https://addplaybutton.xyz/ThePlayButton.png"
-        }
-      }, { status: 200 });
-    }
+    const key = `${fid}_${id}`;
+    const playButton = playButtonStore.get(key);
 
-    const playButtonData = await fetchPlayButton(fid, id);
-
-    if (!playButtonData) {
+    if (!playButton) {
       return NextResponse.json({ error: 'Play button not found' }, { status: 404 });
     }
 
-    return NextResponse.json(playButtonData);
+    return NextResponse.json({ playButton });
   } catch (error) {
-    console.error('Error in playbutton API route:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error while fetching play button data' 
-    }, { status: 500 });
+    console.error('Error in playbutton GET:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { fid, id, data } = body;
+
+    if (!fid || !id || !data) {
+      return NextResponse.json({ error: 'Missing fid, id, or data' }, { status: 400 });
+    }
+
+    const key = `${fid}_${id}`;
+    playButtonStore.set(key, data);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in playbutton POST:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

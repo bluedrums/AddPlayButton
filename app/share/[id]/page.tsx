@@ -45,7 +45,14 @@ export default async function SharePage({ params, searchParams }: { params: { id
   }
   const playButtonData = await fetchPlayButton(fid, id);
   if (!playButtonData) {
-    return <div>Play button not found</div>; // Or redirect
+    return (
+      <html lang="en">
+        <head />
+        <body>
+          <div>Play button not found. It may have been deleted or expired.</div>
+        </body>
+      </html>
+    );
   }
   // Redirect to main app with params for direct access
   const redirectUrl = `/?fid=${fid}&playButton=${encodeURIComponent(id)}`;
