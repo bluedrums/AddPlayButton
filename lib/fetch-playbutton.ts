@@ -11,6 +11,6 @@ export async function fetchPlayButton(fid: number, id: string): Promise<any | nu
     return data.playButton || null;
   } catch (error) {
     console.error('Error fetching play button data:', error);
-    throw error;
+    return null; // Return null on error instead of throwing
   }
 } 

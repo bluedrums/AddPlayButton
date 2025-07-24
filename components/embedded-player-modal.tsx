@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -50,6 +50,7 @@ export function EmbeddedPlayerModal({
   const [isMuted, setIsMuted] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [copied, setCopied] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null); // New ref for DialogContent
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -59,6 +60,15 @@ export function EmbeddedPlayerModal({
       setCopied(false)
     }
   }, [isOpen])
+
+  // Sync isFullscreen state with browser fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -88,9 +98,13 @@ export function EmbeddedPlayerModal({
     }
   }
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen)
-  }
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await dialogRef.current?.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  };
 
   const getPlatformColor = (platform: string) => {
     switch (platform.toLowerCase()) {
@@ -110,11 +124,14 @@ export function EmbeddedPlayerModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
+        ref={dialogRef}
         className={`${
-          isFullscreen ? "max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh]" : "max-w-4xl max-h-[90vh]"
+          isFullscreen
+            ? "fixed inset-0 p-0 m-0 flex items-center justify-center bg-black"
+            : "max-w-4xl max-h-[90vh]"
         } overflow-hidden transition-all duration-300`}
       >
-        <DialogHeader className="pb-4">
+        <DialogHeader className={`${isFullscreen ? "hidden" : "pb-4"}`}>
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <DialogTitle className="flex items-center gap-2 text-xl">
@@ -142,10 +159,10 @@ export function EmbeddedPlayerModal({
           </div>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className={`${isFullscreen ? "space-y-0 flex-1 flex items-center justify-center" : "space-y-4"}`}>
           {/* Cast Success Alert */}
           {showCastSuccess && (
-            <Alert className="border-green-200 bg-green-50">
+            <Alert className={`${isFullscreen ? "hidden" : "border-green-200 bg-green-50"}`}>
               <Sparkles className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
                 <div className="flex items-center justify-between">
@@ -167,7 +184,7 @@ export function EmbeddedPlayerModal({
           )}
 
           {/* Player Info Card */}
-          <Card>
+          <Card className={`${isFullscreen ? "hidden" : ""}`}>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-4">
                 {/* Cover Image or Platform Icon */}
@@ -228,7 +245,11 @@ export function EmbeddedPlayerModal({
           {/* Embedded Player */}
           <Card className="overflow-hidden">
             <CardContent className="p-0">
-              <div className={`${isFullscreen ? "aspect-video" : "aspect-video"} bg-gray-100 relative`}>
+              <div
+                className={`${
+                  isFullscreen ? "w-full max-w-[90vw] aspect-video" : "aspect-video"
+                } bg-gray-100 relative`}
+              >
                 <iframe
                   src={playButton.embedUrl}
                   width="100%"
@@ -258,13 +279,21 @@ export function EmbeddedPlayerModal({
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={toggleFullscreen}
+                    className="h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white border-0"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Platform-specific Info */}
-          <div className="text-center text-sm text-gray-500">
+          <div className={`${isFullscreen ? "hidden" : "text-center text-sm text-gray-500"}`}>
             <p>
               Playing from {playButton.platform} •
               <Button
@@ -278,6 +307,18 @@ export function EmbeddedPlayerModal({
             </p>
           </div>
         </div>
+
+        {/* Close button for fullscreen mode */}
+        {isFullscreen && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="absolute top-4 right-4 h-8 w-8 p-0 text-white"
+          >
+            <X className="w-6 h-6" />
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   )
