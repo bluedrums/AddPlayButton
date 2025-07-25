@@ -402,6 +402,10 @@ export default function ClientPage() {
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Add Play Button</h1>
+            <Avatar className="w-12 h-12 cursor-pointer" onClick={isAuthenticated ? handleSignOut : handleSignIn}>
+              <AvatarImage src={user?.pfpUrl || '/placeholder-user.jpg'} alt={user?.displayName || 'User'} />
+              <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+            </Avatar>
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Transform your music and video links into interactive play buttons for Farcaster. Support for Spotify, Apple Music, YouTube, and SoundCloud.
