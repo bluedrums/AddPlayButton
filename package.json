@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "next build",
     "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
-    "start": "next start"
+    "postinstall": "node scripts/setup-db.mjs"
   },
   "dependencies": {
-    "@farcaster/auth-kit": "latest",
+    "@farcaster/auth-kit": "^0.2.2",
     "@farcaster/miniapp-sdk": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@neynar/nodejs-sdk": "^3.26.0",
@@ -70,7 +71,7 @@
     "eslint": "^8.51.0",
     "eslint-config-next": "14.0.0",
     "postcss": "^8.5",
-    "tailwindcss": "^3.3.5",
+    "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }
 }

@@ -6,6 +6,15 @@ config({ path: '.env.local' });
 async function main() {
   try {
     await sql`
+      CREATE TABLE IF NOT EXISTS play_buttons (
+        id VARCHAR(255) PRIMARY KEY,
+        user_fid BIGINT,
+        data JSONB
+      );
+    `;
+    console.log('Table "play_buttons" created successfully.');
+    
+    await sql`
       CREATE TABLE IF NOT EXISTS users (
         fid BIGINT PRIMARY KEY,
         username VARCHAR(255),
@@ -17,8 +26,8 @@ async function main() {
     `;
     console.log('Table "users" created successfully.');
   } catch (error) {
-    console.error('Error creating table "users":', error);
+    console.error('Error creating tables:', error);
   }
 }
 
-main();
+main(); 
