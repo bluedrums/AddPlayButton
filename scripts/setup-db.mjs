@@ -7,9 +7,10 @@ async function main() {
   try {
     await sql`
       CREATE TABLE IF NOT EXISTS play_buttons (
-        id VARCHAR(255) PRIMARY KEY,
+        id VARCHAR(255),
         user_fid BIGINT,
-        data JSONB
+        data JSONB,
+        PRIMARY KEY (user_fid, id)
       );
     `;
     console.log('Table "play_buttons" created successfully.');
