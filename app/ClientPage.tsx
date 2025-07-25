@@ -27,6 +27,12 @@ interface PlayButton {
   createdAt: Date
 }
 
+interface OembedData {
+  title?: string
+  author_name?: string
+  thumbnail_url?: string
+}
+
 export default function ClientPage() {
   const params = useSearchParams();
   const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
@@ -34,11 +40,9 @@ export default function ClientPage() {
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
-  const [coverImageFile, setCoverImageFile] = useState<File | null>(null)
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState("")
-  const [imageError, setImageError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
@@ -95,149 +99,19 @@ export default function ClientPage() {
     localStorage.setItem("playButtons", JSON.stringify(buttons))
   }
 
-  const resizeImageTo32 = (img: HTMLImageElement, minWidth = 600, minHeight = 400, maxWidth = 3000, maxHeight = 2000): string => {
-    const targetRatio = 3 / 2;
-    let width = img.width;
-    let height = img.height;
-    let sx = 0, sy = 0;
-    const srcRatio = width / height;
-
-    if (srcRatio > targetRatio) {
-      height = img.height;
-      width = height * targetRatio;
-      sx = (img.width - width) / 2;
-    } else {
-      width = img.width;
-      height = width / targetRatio;
-      sy = (img.height - height) / 2;
-    }
-
-    // Scale to meet min dimensions
-    if (width < minWidth || height < minHeight) {
-      const scale = Math.max(minWidth / width, minHeight / height);
-      width = Math.min(width * scale, maxWidth);
-      height = Math.min(height * scale, maxHeight);
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.drawImage(img, sx, sy, img.width, img.height, 0, 0, width, height);
-    }
-    return canvas.toDataURL('image/png');
-  }
-
-  async function uploadImage(dataUrl: string): Promise<string> {
-    const base64 = dataUrl.split(',')[1];
-    const formData = new FormData();
-    formData.append('image', base64);
-    formData.append('type', 'base64');
-
-    try {
-      const res = await fetch('https://api.imgur.com/3/image', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Client-ID 546c25a59c58ad7', // Public test Client-ID
-        },
-        body: formData
-      });
-
-      if (!res.ok) throw new Error('Image upload failed');
-
-      const data = await res.json();
-      return data.data.link;
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-      throw error;
-    }
-  }
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setImageError("")
-    const validation = await validateImage(file)
-    if (!validation.isValid) {
-      setImageError(validation.error || "Invalid image")
-      setCoverImage(null)
-      setCoverImageFile(null)
-      return
-    }
-    let dataUrl = validation.dataUrl || '';
-    // Auto-resize if not 3:2
-    const img = new Image();
-    img.src = dataUrl;
-    await new Promise((resolve) => { img.onload = resolve; });
-    const srcRatio = img.width / img.height;
-    if (Math.abs(srcRatio - 1.5) > 0.01) {
-      dataUrl = resizeImageTo32(img);
-    }
-    // Upload to Imgur
-    const uploadedUrl = await uploadImage(dataUrl);
-    setCoverImage(uploadedUrl)
-    setCoverImageFile(file)
-    setImageError("")
-  }
-
-  const validateImage = (file: File): Promise<{ isValid: boolean; error?: string; dataUrl?: string }> => {
-    return new Promise((resolve) => {
-      const maxSize = 10 * 1024 * 1024
-      if (file.size > maxSize) {
-        resolve({ isValid: false, error: "File size must be less than 10MB" })
-        return
-      }
-      if (!file.type.startsWith("image/")) {
-        resolve({ isValid: false, error: "Please select an image file" })
-        return
-      }
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const dataUrl = e.target?.result as string
-        const img = new Image()
-        img.onload = () => {
-          if (img.width < 600 || img.height < 400) {
-            resolve({ isValid: false, error: "Image must be at least 600x400px" })
-            return
-          }
-          if (img.width > 3000 || img.height > 2000) {
-            resolve({ isValid: false, error: "Image must not exceed 3000x2000px" })
-            return
-          }
-          // No aspect ratio check here, as we resize later
-          resolve({ isValid: true, dataUrl })
-        }
-        img.onerror = () => resolve({ isValid: false, error: "Invalid image file" });
-        img.src = dataUrl
-      }
-      reader.onerror = () => resolve({ isValid: false, error: "Failed to read image file" });
-      reader.readAsDataURL(file)
-    })
-  }
-
-  const handleRemoveImage = () => {
-    setCoverImage(null)
-    setCoverImageFile(null)
-    setImageError("")
-    const fileInput = document.getElementById("cover-image-input") as HTMLInputElement
-    if (fileInput) {
-      fileInput.value = ""
-    }
-  }
-
-  const detectPlatform = (url: string): { platform: string; embedUrl: string } | null => {
+  const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
     if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
       const trackMatch = cleanUrl.match(/track\/([a-zA-Z0-9]+)/)
       const albumMatch = cleanUrl.match(/album\/([a-zA-Z0-9]+)/)
       const playlistMatch = cleanUrl.match(/playlist\/([a-zA-Z0-9]+)/)
-      if (trackMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/track/${trackMatch[1]}` }
-      if (albumMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/album/${albumMatch[1]}` }
-      if (playlistMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/playlist/${playlistMatch[1]}` }
+      const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(cleanUrl)}`
+      if (trackMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/track/${trackMatch[1]}`, oembedEndpoint: oembedUrl }
+      if (albumMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/album/${albumMatch[1]}`, oembedEndpoint: oembedUrl }
+      if (playlistMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/playlist/${playlistMatch[1]}`, oembedEndpoint: oembedUrl }
     }
     if (cleanUrl.includes("music.apple.com") || cleanUrl.includes("apple.co")) {
+      // Apple Music does not have a public oEmbed API
       return { platform: "Apple Music", embedUrl: cleanUrl.replace("music.apple.com", "embed.music.apple.com") }
     }
     if (cleanUrl.includes("youtube.com") || cleanUrl.includes("youtu.be")) {
@@ -247,22 +121,51 @@ export default function ClientPage() {
         const match = cleanUrl.match(/[?&]v=([^&]+)/)
         if (match) videoId = match[1]
       }
-      if (videoId) return { platform: "YouTube", embedUrl: `https://www.youtube.com/embed/${videoId}` }
+      if (videoId) return { platform: "YouTube", embedUrl: `https://www.youtube.com/embed/${videoId}`, oembedEndpoint: `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
     if (cleanUrl.includes("soundcloud.com")) {
-      return { platform: "SoundCloud", embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true` }
+      return { platform: "SoundCloud", embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`, oembedEndpoint: `https://soundcloud.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
     return null
+  }
+
+  const fetchOembedData = async (endpoint: string): Promise<OembedData> => {
+    try {
+      const res = await fetch(`/api/oembed?url=${encodeURIComponent(endpoint)}`)
+      if (!res.ok) throw new Error('Failed to fetch oEmbed data');
+      const data = await res.json();
+      return data;
+    } catch (error) {
+      console.error("oEmbed fetch error:", error)
+      // Return empty object on failure so the flow can continue
+      return {}; 
+    }
   }
 
   const validateUrl = async (url: string) => {
     setIsValidating(true)
     setValidationError("")
+    setCoverImage(null)
+    setTitle("")
     try {
       const detection = detectPlatform(url)
       if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, or SoundCloud links.")
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      return { platform: detection.platform, embedUrl: detection.embedUrl, suggestedTitle: `Sample ${detection.platform} Track`, artist: "Sample Artist" }
+      
+      let oembedData: OembedData = {};
+      if (detection.oembedEndpoint) {
+        oembedData = await fetchOembedData(detection.oembedEndpoint);
+      }
+      
+      const suggestedTitle = oembedData.title || `My ${detection.platform} Mix`;
+      const artist = oembedData.author_name || "";
+      const imageUrl = oembedData.thumbnail_url || null;
+
+      setTitle(suggestedTitle)
+      if (imageUrl) {
+        setCoverImage(imageUrl);
+      }
+      
+      return { platform: detection.platform, embedUrl: detection.embedUrl, suggestedTitle, artist }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Validation failed"
       setValidationError(message)
@@ -275,7 +178,6 @@ export default function ClientPage() {
   const handleAddPlayButton = async () => {
     if (!url.trim()) { setValidationError("Please enter a valid URL"); return }
     if (!title.trim()) { setValidationError("Please enter a title"); return }
-    if (imageError) { setValidationError("Please fix the image error before proceeding"); return }
     try {
       const validated = await validateUrl(url)
       let playButtonCoverImage = coverImage;
@@ -286,7 +188,7 @@ export default function ClientPage() {
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
       savePlayButtons(updatedButtons)
-      setUrl(""); setTitle(""); setCoverImage(null); setCoverImageFile(null); setValidationError(""); setImageError("")
+      setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
       
       // Store on server for persistence
       const storeRes = await fetch('/api/playbutton', {
@@ -408,7 +310,7 @@ export default function ClientPage() {
             </Avatar>
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Transform your music and video links into interactive play buttons for Farcaster. Support for Spotify, Apple Music, YouTube, and SoundCloud.
+            Create shareable cards for music and video links that play in the miniapp window while in Farcaster. Support for Spotify, Apple Music, YouTube, and SoundCloud.
           </p>
         </div>
 
@@ -445,41 +347,37 @@ export default function ClientPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="w-5 h-5" />Add New Play Button</CardTitle>
-            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud</CardDescription>
+            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud. Share and drive traffic.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="title-input" className="text-sm font-medium text-gray-700">Title <span className="text-red-500">*</span></label>
-              <Input id="title-input" placeholder="Enter a title for your play button..." value={title} onChange={(e) => setTitle(e.target.value)} className="w-full" disabled={isValidating} />
-            </div>
-            <div className="space-y-2">
               <label htmlFor="url-input" className="text-sm font-medium text-gray-700">Music or Video URL <span className="text-red-500">*</span></label>
-              <Input id="url-input" placeholder="https://open.spotify.com/track/..." value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onKeyDown={(e) => e.key === "Enter" && handleAddPlayButton()} />
+              <Input id="url-input" placeholder="https://open.spotify.com/track/..." value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => validateUrl(url)} />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="cover-image-input" className="text-sm font-medium text-gray-700">Cover Image <span className="text-gray-500">(optional)</span></label>
-              <div className="space-y-3">
-                {!coverImage ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                    <input id="cover-image-input" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isValidating} />
-                    <label htmlFor="cover-image-input" className="cursor-pointer flex flex-col items-center gap-2">
-                      <Upload className="w-8 h-8 text-gray-400" />
-                      <div className="text-sm text-gray-600"><span className="font-medium text-purple-600 hover:text-purple-500">Click to upload</span> or drag and drop</div>
-                      <div className="text-xs text-gray-500">3:2 aspect ratio • 600x400px to 3000x2000px • Max 10MB</div>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="relative">
-                    <div className="aspect-[3/2] w-full max-w-md mx-auto rounded-lg overflow-hidden border">
-                      <img src={coverImage || "/placeholder.svg"} alt="Cover preview" className="w-full h-full object-cover" />
+
+            {isValidating && <div className="flex items-center justify-center text-gray-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /><span>Fetching details...</span></div>}
+
+            {title && (
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="title-input" className="text-sm font-medium text-gray-700">Title <span className="text-red-500">*</span></label>
+                  <Input id="title-input" placeholder="Enter a title for your play button..." value={title} onChange={(e) => setTitle(e.target.value)} className="w-full" />
+                </div>
+                {coverImage && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Cover Image</label>
+                    <div className="relative">
+                      <div className="aspect-[3/2] w-full max-w-md mx-auto rounded-lg overflow-hidden border">
+                        <img src={coverImage} alt="Cover preview" className="w-full h-full object-cover" />
+                      </div>
+                      <Button variant="destructive" size="sm" onClick={() => setCoverImage(null)} className="absolute top-2 right-2"><X className="w-4 h-4" /></Button>
                     </div>
-                    <Button variant="destructive" size="sm" onClick={handleRemoveImage} className="absolute top-2 right-2"><X className="w-4 h-4" /></Button>
                   </div>
                 )}
-                {imageError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{imageError}</AlertDescription></Alert>}
-              </div>
-            </div>
-            <Button onClick={handleAddPlayButton} disabled={isValidating || !url.trim() || !title.trim() || !!imageError} className="w-full bg-purple-600 hover:bg-purple-700">
+              </>
+            )}
+
+            <Button onClick={handleAddPlayButton} disabled={isValidating || !url.trim() || !title.trim()} className="w-full bg-purple-600 hover:bg-purple-700">
               {isValidating ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Validating...</>) : (<><Play className="w-4 h-4 mr-2" />Add Play Button</>)}
             </Button>
             {validationError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{validationError}</AlertDescription></Alert>}
