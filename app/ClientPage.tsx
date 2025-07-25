@@ -437,31 +437,7 @@ export default function ClientPage() {
             </CardContent>
           </Card>
         ) : (
-          <Card className="mb-8">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16">
-                  <AvatarImage src={user?.pfpUrl || "/placeholder.svg"} alt={user?.displayName} />
-                  <AvatarFallback>{user?.displayName?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h2 className="text-xl font-semibold">{user?.displayName}</h2>
-                    <Badge variant="default" className="text-xs">{user?.fid === 12345 ? "Demo Mode" : "Connected"}</Badge>
-                  </div>
-                  <p className="text-gray-600">@{user?.username}</p>
-                  {user?.bio && <p className="text-sm text-gray-500 mt-1">{user?.bio}</p>}
-                  <div className="flex gap-4 mt-2 text-sm text-gray-500">
-                    <span>{user?.followerCount?.toLocaleString()} followers</span>
-                    <span>{user?.followingCount?.toLocaleString()} following</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center mt-4">
-                <Button variant="outline" size="sm" onClick={handleSignOut}><LogOut className="w-4 h-4 mr-2" />Sign Out</Button>
-              </div>
-            </CardContent>
-          </Card>
+          null
         )}
 
         {/* {isAuthenticated && signerStatus === 'pending' && <Alert className="mb-4"><AlertDescription>Please approve the signer to enable casting: <Button variant="link" onClick={() => window.open(signerApprovalUrl || '', '_blank')}>Approve Signer</Button></AlertDescription></Alert>} */}
