@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   X,
   ExternalLink,
@@ -20,6 +19,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface PlayButton {
   id: string
@@ -51,6 +51,7 @@ export function EmbeddedPlayerModal({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [copied, setCopied] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null); // New ref for DialogContent
+  const [isFullOverlay, setIsFullOverlay] = useState(false); // New state for full-overlay mode
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -106,6 +107,10 @@ export function EmbeddedPlayerModal({
     }
   };
 
+  const toggleFullOverlay = () => {
+    setIsFullOverlay(!isFullOverlay);
+  };
+
   const getPlatformColor = (platform: string) => {
     switch (platform.toLowerCase()) {
       case "spotify":
@@ -122,134 +127,150 @@ export function EmbeddedPlayerModal({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent
-        ref={dialogRef}
-        className={`${
-          isFullscreen
-            ? "fixed inset-0 p-0 m-0 flex items-center justify-center bg-black"
-            : "max-w-4xl max-h-[90vh]"
-        } overflow-hidden transition-all duration-300`}
-      >
-        <DialogHeader className={`${isFullscreen ? "hidden" : "pb-4"}`}>
-          <div className="flex items-start justify-between">
-            <div className="flex-1 min-w-0">
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <div
-                  className={`w-8 h-8 ${getPlatformColor(playButton.platform)} rounded-full flex items-center justify-center`}
-                >
-                  <Music className="w-4 h-4 text-white" />
-                </div>
-                <span className="truncate">{playButton.title}</span>
-              </DialogTitle>
-              <DialogDescription className="mt-1">
-                {playButton.artist && <span className="text-gray-600">by {playButton.artist} • </span>}
-                <span>Playing on {playButton.platform}</span>
-              </DialogDescription>
-            </div>
-
-            <div className="flex items-center gap-2 ml-4">
-              <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="h-8 w-8 p-0">
-                <Maximize2 className="w-4 h-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <div className={`${isFullscreen ? "space-y-0 flex-1 flex items-center justify-center" : "space-y-4"}`}>
-          {/* Cast Success Alert */}
-          {showCastSuccess && (
-            <Alert className={`${isFullscreen ? "hidden" : "border-green-200 bg-green-50"}`}>
-              <Sparkles className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">🎉 Cast published successfully!</span>
-                  {castUrl && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-1 text-green-700 hover:text-green-800"
-                      onClick={() => window.open(castUrl, "_blank")}
-                    >
-                      <ExternalLink className="w-4 h-4 mr-1" />
-                      View on Warpcast
-                    </Button>
-                  )}
-                </div>
-              </AlertDescription>
-            </Alert>
+    <>
+      {isOpen && (
+        <div
+          className={cn(
+            "fixed inset-0 z-50 flex items-center justify-center",
+            isFullOverlay ? "bg-black/70" : "bg-transparent" // Opacity 0.7 background when in overlay mode
           )}
+          onClick={isFullOverlay ? onClose : undefined} // Click outside to close in overlay mode
+        >
+          {/* Centered content wrapper */}
+          <div
+            className={cn(
+              "relative bg-background p-6 rounded-lg shadow-lg",
+              isFullOverlay ? "max-w-[90vw] max-h-[90vh] overflow-auto" : "max-w-4xl max-h-[90vh]"
+            )}
+          >
+            {/* Close button */}
+            <Button variant="ghost" size="sm" onClick={onClose} className="absolute top-2 right-2 h-8 w-8 p-0">
+              <X className="w-4 h-4" />
+            </Button>
 
-          {/* Player Info Card */}
-          <Card className={`${isFullscreen ? "hidden" : ""}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-4">
-                {/* Cover Image or Platform Icon */}
-                {playButton.coverImage ? (
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <img
-                      src={playButton.coverImage || "/placeholder.svg"}
-                      alt={`${playButton.title} cover`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className={`w-16 h-16 ${getPlatformColor(playButton.platform)} rounded-lg flex items-center justify-center flex-shrink-0`}
-                  >
-                    <Music className="w-8 h-8 text-white" />
-                  </div>
-                )}
+            {/* Maximize button */}
+            <Button variant="ghost" size="sm" onClick={toggleFullOverlay} className="absolute top-2 right-10 h-8 w-8 p-0">
+              <Maximize2 className="w-4 h-4" />
+            </Button>
 
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-lg truncate">{playButton.title}</h3>
-                  {playButton.artist && <p className="text-gray-600 truncate">{playButton.artist}</p>}
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline">{playButton.platform}</Badge>
-                    {playButton.coverImage && (
-                      <Badge variant="secondary" className="text-xs">
-                        <ImageIcon className="w-3 h-3 mr-1" />
-                        Custom Cover
-                      </Badge>
-                    )}
+            {/* Header - hidden in overlay mode */}
+            {!isFullOverlay && (
+              <div className="pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-xl">
+                      <div
+                        className={`w-8 h-8 ${getPlatformColor(playButton.platform)} rounded-full flex items-center justify-center`}
+                      >
+                        <Music className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="truncate">{playButton.title}</span>
+                    </div>
+                    <div className="mt-1">
+                      {playButton.artist && <span className="text-gray-600">by {playButton.artist} • </span>}
+                      <span>Playing on {playButton.platform}</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" onClick={handleShare} className="w-full bg-transparent">
-                    <Share className="w-4 h-4 mr-2" />
-                    Share
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleCopyLink} className="w-full bg-transparent">
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy Link
-                      </>
-                    )}
-                  </Button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="h-8 w-8 p-0">
+                      <Maximize2 className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </CardHeader>
-          </Card>
+            )}
 
-          {/* Embedded Player */}
-          <Card className="overflow-hidden">
-            <CardContent className="p-0">
-              <div
-                className={`${
-                  isFullscreen ? "w-full max-w-[90vw] aspect-video" : "aspect-video"
-                } bg-gray-100 relative`}
-              >
+            <div className={cn("space-y-4", isFullOverlay && "space-y-0")}>
+              {/* Cast Success Alert - hidden in overlay mode */}
+              {showCastSuccess && !isFullOverlay && (
+                <Alert className="border-green-200 bg-green-50">
+                  <Sparkles className="h-4 w-4 text-green-600" />
+                  <AlertDescription className="text-green-800">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">🎉 Cast published successfully!</span>
+                      {castUrl && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto p-1 text-green-700 hover:text-green-800"
+                          onClick={() => window.open(castUrl, "_blank")}
+                        >
+                          <ExternalLink className="w-4 h-4 mr-1" />
+                          View on Warpcast
+                        </Button>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* Player Info Card - hidden in overlay mode */}
+              {!isFullOverlay && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-4">
+                      {/* Cover Image or Platform Icon */}
+                      {playButton.coverImage ? (
+                        <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img
+                            src={playButton.coverImage || "/placeholder.svg"}
+                            alt={`${playButton.title} cover`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className={`w-16 h-16 ${getPlatformColor(playButton.platform)} rounded-lg flex items-center justify-center flex-shrink-0`}
+                        >
+                          <Music className="w-8 h-8 text-white" />
+                        </div>
+                      )}
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-lg truncate">{playButton.title}</h3>
+                        {playButton.artist && <p className="text-gray-600 truncate">{playButton.artist}</p>}
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge variant="outline">{playButton.platform}</Badge>
+                          {playButton.coverImage && (
+                            <Badge variant="secondary" className="text-xs">
+                              <ImageIcon className="w-3 h-3 mr-1" />
+                              Custom Cover
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-col gap-2">
+                        <Button variant="outline" size="sm" onClick={handleShare} className="w-full bg-transparent">
+                          <Share className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={handleCopyLink} className="w-full bg-transparent">
+                          {copied ? (
+                            <>
+                              <Check className="w-4 h-4 mr-2" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-4 h-4 mr-2" />
+                              Copy Link
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+
+              {/* Embedded Player - centered and full focus */}
+              <div className={cn(isFullOverlay ? "w-full aspect-video" : "aspect-video", "bg-gray-100 relative")}>
                 <iframe
                   src={playButton.embedUrl}
                   width="100%"
@@ -279,47 +300,29 @@ export function EmbeddedPlayerModal({
                   >
                     <ExternalLink className="w-4 h-4" />
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={toggleFullscreen}
-                    className="h-8 w-8 p-0 bg-black/20 hover:bg-black/40 text-white border-0"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </Button>
                 </div>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Platform-specific Info */}
-          <div className={`${isFullscreen ? "hidden" : "text-center text-sm text-gray-500"}`}>
-            <p>
-              Playing from {playButton.platform} •
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 ml-1 text-purple-600 hover:text-purple-700"
-                onClick={() => window.open(playButton.url, "_blank")}
-              >
-                Open in {playButton.platform}
-              </Button>
-            </p>
+              {/* Platform-specific Info - hidden in overlay mode */}
+              {!isFullOverlay && (
+                <div className="text-center text-sm text-gray-500">
+                  <p>
+                    Playing from {playButton.platform} •
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 ml-1 text-purple-600 hover:text-purple-700"
+                      onClick={() => window.open(playButton.url, "_blank")}
+                    >
+                      Open in {playButton.platform}
+                    </Button>
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Close button for fullscreen mode */}
-        {isFullscreen && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="absolute top-4 right-4 h-8 w-8 p-0 text-white"
-          >
-            <X className="w-6 h-6" />
-          </Button>
-        )}
-      </DialogContent>
-    </Dialog>
+      )}
+    </>
   )
 }
