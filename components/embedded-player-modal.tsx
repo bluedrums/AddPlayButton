@@ -48,28 +48,16 @@ export function EmbeddedPlayerModal({
   castUrl,
 }: EmbeddedPlayerModalProps) {
   const [isMuted, setIsMuted] = useState(false)
-  const [isFullscreen, setIsFullscreen] = useState(false)
   const [copied, setCopied] = useState(false)
-  const dialogRef = useRef<HTMLDivElement>(null); // New ref for DialogContent
   const [isFullOverlay, setIsFullOverlay] = useState(false); // New state for full-overlay mode
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setIsFullscreen(false)
       setIsMuted(false)
       setCopied(false)
     }
   }, [isOpen])
-
-  // Sync isFullscreen state with browser fullscreen changes
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -98,14 +86,6 @@ export function EmbeddedPlayerModal({
       toast.error("Failed to copy link")
     }
   }
-
-  const toggleFullscreen = async () => {
-    if (!document.fullscreenElement) {
-      await dialogRef.current?.requestFullscreen();
-    } else {
-      await document.exitFullscreen();
-    }
-  };
 
   const toggleFullOverlay = () => {
     setIsFullOverlay(!isFullOverlay);
@@ -140,7 +120,7 @@ export function EmbeddedPlayerModal({
           <div
             className={cn(
               "relative bg-background p-6 rounded-lg shadow-lg",
-              isFullOverlay ? "max-w-[90vw] max-h-[90vh] overflow-auto" : "max-w-4xl max-h-[90vh]"
+              isFullOverlay ? "max-w-[90vw] max-h-[90vh] overflow-auto" : "w-full max-w-md max-h-[90vh]"
             )}
           >
             {/* Close button */}
@@ -173,7 +153,7 @@ export function EmbeddedPlayerModal({
                   </div>
 
                   <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="sm" onClick={toggleFullscreen} className="h-8 w-8 p-0">
+                    <Button variant="ghost" size="sm" onClick={toggleFullOverlay} className="h-8 w-8 p-0">
                       <Maximize2 className="w-4 h-4" />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
