@@ -59,6 +59,14 @@ export function EmbeddedPlayerModal({
     }
   }, [isOpen])
 
+  useEffect(() => {
+    if (isOpen) {
+      setIsFullOverlay(true);
+    } else {
+      setIsFullOverlay(false);
+    }
+  }, [isOpen]);
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -124,13 +132,11 @@ export function EmbeddedPlayerModal({
             )}
           >
             {/* Close button */}
-            <Button variant="ghost" size="sm" onClick={onClose} className="absolute top-2 right-2 h-8 w-8 p-0">
-              <X className="w-4 h-4" />
+            <Button onClick={onClose} className="absolute top-4 right-4 h-8 w-8 p-0 text-white">
+              <X className="w-6 h-6" />
             </Button>
-
-            {/* Maximize button */}
-            <Button variant="ghost" size="sm" onClick={toggleFullOverlay} className="absolute top-2 right-10 h-8 w-8 p-0">
-              <Maximize2 className="w-4 h-4" />
+            <Button onClick={toggleFullOverlay} className="absolute top-4 right-12 h-8 w-8 p-0 text-white">
+              <Maximize2 className="w-6 h-6" />
             </Button>
 
             {/* Header - hidden in overlay mode */}
@@ -150,15 +156,6 @@ export function EmbeddedPlayerModal({
                       {playButton.artist && <span className="text-gray-600">by {playButton.artist} • </span>}
                       <span>Playing on {playButton.platform}</span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    <Button variant="ghost" size="sm" onClick={toggleFullOverlay} className="h-8 w-8 p-0">
-                      <Maximize2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
-                      <X className="w-4 h-4" />
-                    </Button>
                   </div>
                 </div>
               </div>
