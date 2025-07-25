@@ -50,19 +50,27 @@ export default function ClientPage() {
 
   // Load saved play buttons from localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("playButtons")
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved).map((pb: any) => ({
-          ...pb,
-          createdAt: new Date(pb.createdAt),
-        }))
-        setPlayButtons(parsed)
-      } catch (error) {
-        console.error("Error loading saved play buttons:", error)
-      }
+    if (isAuthenticated && user?.fid) {
+      fetch('/api/playbutton/all', {
+        headers: {
+          'x-user-fid': String(user.fid),
+        },
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const parsed = data.map((pb: any) => ({
+              ...pb,
+              createdAt: new Date(pb.createdAt),
+            }));
+            setPlayButtons(parsed);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading play buttons from DB:', error);
+        });
     }
-  }, [])
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -94,10 +102,6 @@ export default function ClientPage() {
         });
     }
   }, [params]);
-
-  const savePlayButtons = (buttons: PlayButton[]) => {
-    localStorage.setItem("playButtons", JSON.stringify(buttons))
-  }
 
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
@@ -187,18 +191,19 @@ export default function ClientPage() {
       const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: playButtonCoverImage, createdAt: new Date() }
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
-      savePlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
       
       // Store on server for persistence
       const storeRes = await fetch('/api/playbutton', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-fid': String(user?.fid || 12345),
+        },
         body: JSON.stringify({
-          fid: user?.fid || 12345, // Use demo fid if not authenticated
           id: newPlayButton.id,
-          data: newPlayButton
-        })
+          data: newPlayButton,
+        }),
       });
 
       if (!storeRes.ok) {
@@ -208,7 +213,12 @@ export default function ClientPage() {
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
-      const shareText = `🎵 ${newPlayButton.title}${newPlayButton.artist ? ` by ${newPlayButton.artist}` : ""} on ${newPlayButton.platform}`;
+      let shareText = `🎵 ${newPlayButton.title}`;
+      if (newPlayButton.artist) {
+        shareText += ` by ${newPlayButton.artist}`;
+      }
+      shareText += ` on ${newPlayButton.platform}`;
+
       const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
       
       // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
@@ -234,14 +244,15 @@ export default function ClientPage() {
       const playButton = playButtons.find(pb => pb.id === id);
       if (!playButton) return;
       
-      // Remove from local state immediately
       const updatedButtons = playButtons.filter((pb) => pb.id !== id);
       setPlayButtons(updatedButtons);
-      savePlayButtons(updatedButtons);
       
-      // Create deletion cast in background for data cleanup
-      const deletionText = JSON.stringify({ deleted: id });
-      sdk.actions.composeCast({ text: deletionText }).catch(console.error);
+      await fetch(`/api/playbutton?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-user-fid': String(user?.fid),
+        },
+      });
       
       toast.success('Play button removed!');
     } catch (error) {

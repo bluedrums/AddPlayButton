@@ -29,25 +29,20 @@ export function useFarcasterAuth() {
 
   const initializeAuth = async () => {
     try {
-      // Check if we have saved auth data
-      const savedAuth = localStorage.getItem("farcaster-auth")
-      if (savedAuth) {
-        const authData = JSON.parse(savedAuth)
-        if (authData.user && authData.authType) {
-          setAuthState({
-            user: authData.user,
-            isLoading: false,
-            isAuthenticated: true,
-            error: null,
-            authType: authData.authType,
-            canUpgradeToReal: authData.authType === "demo",
-          })
-          return
-        }
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        const user = await res.json();
+        setAuthState({
+          user,
+          isLoading: false,
+          isAuthenticated: true,
+          error: null,
+          authType: 'real',
+          canUpgradeToReal: false,
+        });
+      } else {
+        await createDemoUser();
       }
-
-      // No saved auth, create demo user immediately
-      await createDemoUser()
     } catch (error) {
       console.error("Auth initialization error:", error)
       // Even if there's an error, create demo user as fallback
@@ -66,14 +61,6 @@ export function useFarcasterAuth() {
       verifications: [],
     }
 
-    const authData = {
-      user: demoUser,
-      authType: "demo",
-      timestamp: Date.now(),
-    }
-
-    localStorage.setItem("farcaster-auth", JSON.stringify(authData))
-
     setAuthState({
       user: demoUser,
       isLoading: false,
@@ -85,25 +72,8 @@ export function useFarcasterAuth() {
   }
 
   const signIn = async () => {
-    // This is now only used for upgrading to real auth
-    return upgradeToRealAuth()
-  }
-
-  const upgradeToRealAuth = async () => {
-    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }))
-
+    setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      // Check if we're in an environment that supports real auth
-      const canUseRealAuth =
-        typeof window !== "undefined" &&
-        window.location.hostname !== "localhost" &&
-        process.env.NEXT_PUBLIC_FORCE_REAL_AUTH === "true"
-
-      if (!canUseRealAuth) {
-        throw new Error("Real Farcaster auth not available in this environment")
-      }
-
-      // Try to use real Farcaster Auth Kit
       const { AuthKitProvider, SignInButton, useProfile } = await import("@farcaster/auth-kit")
 
       // This would be the real auth implementation
@@ -117,7 +87,7 @@ export function useFarcasterAuth() {
       console.error("Real auth upgrade failed:", error)
 
       // Stay in demo mode but show error
-      setAuthState((prev) => ({
+      setAuthState((prev: AuthState) => ({
         ...prev,
         isLoading: false,
         error: "Real Farcaster auth not available. Continuing in demo mode.",
@@ -127,19 +97,13 @@ export function useFarcasterAuth() {
 
       // Clear error after 5 seconds
       setTimeout(() => {
-        setAuthState((prev) => ({ ...prev, error: null }))
+        setAuthState((prev: AuthState) => ({ ...prev, error: null }))
       }, 5000)
     }
   }
 
   const signOut = useCallback(() => {
-    localStorage.removeItem("farcaster-auth")
-
     // Reset to demo mode instead of signing out completely
-    createDemoUser()
-  }, [])
-
-  const useDemoMode = useCallback(() => {
     createDemoUser()
   }, [])
 
@@ -147,7 +111,5 @@ export function useFarcasterAuth() {
     ...authState,
     signIn,
     signOut,
-    upgradeToRealAuth,
-    useDemoMode,
   }
 }

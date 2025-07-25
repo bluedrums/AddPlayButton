@@ -1,0 +1,28 @@
+import { NextResponse } from 'next/server';
+import { sql } from '@vercel/postgres';
+
+export async function GET(request: Request) {
+  try {
+    const fidStr = request.headers.get('x-user-fid');
+
+    if (!fidStr) {
+      return NextResponse.json({ error: 'Missing fid' }, { status: 400 });
+    }
+
+    const fid = Number(fidStr);
+    if (isNaN(fid)) {
+      return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
+    }
+
+    const { rows } = await sql`
+      SELECT data FROM play_buttons WHERE user_fid = ${fid};
+    `;
+
+    const playButtons = rows.map(row => row.data);
+
+    return NextResponse.json(playButtons);
+  } catch (error) {
+    console.error('Error in playbutton GET_ALL:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

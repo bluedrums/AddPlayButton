@@ -1,43 +1,32 @@
-import { type NextRequest, NextResponse } from "next/server"
+import { NextResponse } from 'next/server';
+import { sql } from '@vercel/postgres';
 
-export const dynamic = 'force-dynamic';
-
-export async function GET(request: NextRequest) {
+export async function GET(request: Request) {
   try {
-    // Get the authorization header
-    const authHeader = request.headers.get("authorization")
+    const fidStr = request.headers.get('x-user-fid');
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "No valid session" }, { status: 401 })
+    if (!fidStr) {
+      return NextResponse.json({ error: 'Missing fid' }, { status: 400 });
     }
 
-    const token = authHeader.substring(7)
-
-    // Validate the session token with Farcaster
-    const response = await fetch("https://api.warpcast.com/v2/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 })
+    const fid = Number(fidStr);
+    if (isNaN(fid)) {
+      return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
     }
 
-    const userData = await response.json()
+    const { rows } = await sql`
+      SELECT * FROM users WHERE fid = ${fid};
+    `;
 
-    return NextResponse.json({
-      fid: userData.result.user.fid,
-      username: userData.result.user.username,
-      displayName: userData.result.user.displayName,
-      pfpUrl: userData.result.user.pfp?.url,
-      bio: userData.result.user.profile?.bio?.text,
-      followerCount: userData.result.user.followerCount,
-      followingCount: userData.result.user.followingCount,
-      verifications: userData.result.user.verifications || [],
-    })
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    const user = rows[0];
+
+    return NextResponse.json(user);
   } catch (error) {
-    console.error("Me API error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error('Error in me GET:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

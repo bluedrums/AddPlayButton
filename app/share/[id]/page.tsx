@@ -42,22 +42,24 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
 }
 
 export default async function SharePage({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }) {
-  try {
-    const { id } = params;
-    const fidStr = searchParams.fid;
-    const fid = fidStr ? Number(fidStr) : 12345;
-    if (isNaN(fid)) {
-      return <html lang="en"><body><div>Invalid FID</div></body></html>;
-    }
-    const playButtonData = await fetchPlayButton(fid, id);
-    if (!playButtonData) {
-      return <html lang="en"><body><div>Play button not found. It may have been deleted or expired.</div></body></html>;
-    }
-    // Redirect to main app with params for direct access
-    const redirectUrl = `/?fid=${fid}&playButton=${encodeURIComponent(id)}`;
-    return <html lang="en"><head><meta httpEquiv="refresh" content={`0;url=${redirectUrl}`} /></head><body>Redirecting...</body></html>;
-  } catch (error) {
-    console.error('Error rendering share page:', error);
-    return <html lang="en"><body><div>An error occurred. Please try again later.</div></body></html>;
+  const { id } = params;
+  const fid = searchParams.fid ? Number(searchParams.fid) : undefined;
+  const playButton = await fetchPlayButton(fid, id);
+
+  if (!playButton) {
+    return (
+      <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+        <h1>Play Button Not Found</h1>
+        <p>This play button may have been deleted or the link is expired.</p>
+      </div>
+    );
   }
+
+  return (
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>{playButton.name}</h1>
+      <p>To use this play button, open the link in a Farcaster client.</p>
+      <img src={playButton.coverImage} alt={playButton.name} style={{ maxWidth: '100%' }} />
+    </div>
+  );
 } 

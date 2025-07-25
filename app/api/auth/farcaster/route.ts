@@ -1,4 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { SignJWT } from "jose"
+import { sql } from "@vercel/postgres"
+
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY!)
 
 // Farcaster auth verification endpoint
 export async function POST(request: NextRequest) {
@@ -109,7 +113,38 @@ export async function POST(request: NextRequest) {
       }
 
       console.log("🎉 Authentication successful for user:", user.username)
-      return NextResponse.json({ success: true, user })
+
+      console.log(`💾 Saving user ${user.username} (FID: ${user.fid}) to database...`)
+      await sql`
+        INSERT INTO users (fid, username, display_name, pfp_url, custody_address, verifications)
+        VALUES (${user.fid}, ${user.username}, ${user.displayName}, ${user.pfpUrl}, ${user.custodyAddress}, ${JSON.stringify(user.verifications)})
+        ON CONFLICT (fid)
+        DO UPDATE SET
+          username = EXCLUDED.username,
+          display_name = EXCLUDED.display_name,
+          pfp_url = EXCLUDED.pfp_url,
+          custody_address = EXCLUDED.custody_address,
+          verifications = EXCLUDED.verifications;
+      `
+      console.log(`✅ User ${user.username} saved to database.`)
+
+      // Create a JWT session token
+      const token = await new SignJWT({ fid: user.fid })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(JWT_SECRET);
+
+      const response = NextResponse.json({ success: true, user });
+      response.cookies.set('session', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'strict',
+        path: '/',
+        maxAge: 60 * 60 * 24 // 24 hours
+      });
+
+      return response;
     }
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
