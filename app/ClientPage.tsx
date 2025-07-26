@@ -186,18 +186,20 @@ export default function ClientPage() {
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
-      let shareText = `🎵 ${newPlayButton.title}`;
+      let shareText = `${newPlayButton.title}`;
       if (newPlayButton.artist) {
         shareText += ` by ${newPlayButton.artist}`;
       }
       shareText += ` on ${newPlayButton.platform}`;
 
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+      const shareUrl = `${appUrl}/?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
+      const imageUrl = `${appUrl}/addplaybuttonfavicon.jpg`;
       
       // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [shareUrl] 
+        embeds: [imageUrl, shareUrl] 
       });
       
       if (sharingResult.cast) {

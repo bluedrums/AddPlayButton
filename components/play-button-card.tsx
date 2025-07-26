@@ -51,17 +51,19 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     }
 
     try {
-      let shareText = `🎵 ${playButton.title}`;
+      let shareText = `${playButton.title}`;
       if (playButton.artist) {
         shareText += ` by ${playButton.artist}`;
       }
       shareText += ` on ${playButton.platform}`;
       
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/?fid=${user.fid}&playButton=${encodeURIComponent(playButton.id)}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+      const shareUrl = `${appUrl}/?fid=${user.fid}&playButton=${encodeURIComponent(playButton.id)}`;
+      const imageUrl = `${appUrl}/addplaybuttonfavicon.jpg`;
 
       const { cast } = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [shareUrl] 
+        embeds: [imageUrl, shareUrl] 
       });
 
       if (cast) {

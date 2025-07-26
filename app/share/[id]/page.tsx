@@ -15,10 +15,10 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
     const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(id)}&t=${Date.now()}`;
 
     return {
-      title: playButtonData.name,
-      description: `Play "${playButtonData.name}" using the Add Play Button mini-app`,
+      title: playButtonData.title,
+      description: `Play "${playButtonData.title}" using the Add Play Button mini-app`,
       openGraph: {
-        title: playButtonData.name,
+        title: playButtonData.title,
         description: `Play on ${playButtonData.platform}`,
         images: [imageUrl],
       },
@@ -62,9 +62,9 @@ export default async function SharePage({ params, searchParams }: { params: { id
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h1>{playButton.name}</h1>
+      <h1>{playButton.title}</h1>
       <p>To use this play button, open the link in a Farcaster client.</p>
-      <img src={playButton.coverImage} alt={playButton.name} style={{ maxWidth: '100%' }} />
+      <img src={playButton.coverImage} alt={playButton.title} style={{ maxWidth: '100%' }} />
     </div>
   );
 } 
