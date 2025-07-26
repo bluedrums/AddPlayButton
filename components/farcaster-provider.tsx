@@ -25,7 +25,7 @@ interface FarcasterContextType {
   signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
-  setUser: (user: FarcasterUser | null) => void
+  setUser: (user: FarcasterUser | null) => void;
   setError: (error: string | null) => void
 }
 
@@ -56,66 +56,45 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
 
   const isAuthenticated = !!user
 
-  const fetchPlayButtons = async () => {
-    try {
-      const res = await fetch('/api/playbutton/all', { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
-        const parsed = data.map((pb: any) => ({
-          ...pb,
-          createdAt: new Date(pb.createdAt),
-        }));
-        setPlayButtons(parsed);
-      } else {
-        // Don't set an error here, as it could be normal for a new user
-        console.log('Could not fetch play buttons, maybe a new user?');
-      }
-    } catch (err) {
-      console.error('Failed to fetch play buttons:', err);
-      setError('Could not load your play buttons.');
-    }
-  };
-
+  // Effect 1: Initialize authentication state
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch('/api/auth/status', { credentials: 'include' });
-        const data = await res.json();
+        // Check for an existing server-side session first
+        const statusRes = await fetch('/api/auth/status', { credentials: 'include' });
+        const statusData = await statusRes.json();
 
-        if (data.isAuthenticated) {
-          setUserState(data.user);
-          await fetchPlayButtons(); // Fetch buttons after confirming session
+        if (statusData.isAuthenticated) {
+          setUserState(statusData.user);
+        } else {
+          // If no session, try to authenticate with the Farcaster SDK
+          await sdk.actions.ready();
           setIsSDKReady(true);
-          return;
-        }
+          
+          const context = await sdk.context;
+          if (context?.user) {
+            const userData = {
+              fid: context.user.fid,
+              username: context.user.username || `user${context.user.fid}`,
+              displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+              pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+            };
 
-        await sdk.actions.ready();
-        setIsSDKReady(true);
-        
-        const context = await sdk.context;
-        if (context?.user) {
-          const userData = {
-            fid: context.user.fid,
-            username: context.user.username || `user${context.user.fid}`,
-            displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-            pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
-          };
+            // Create a new server-side session from the SDK context
+            const sessionRes = await fetch('/api/auth/session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(userData),
+            });
 
-          const sessionRes = await fetch('/api/auth/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify(userData),
-          });
-
-          if (sessionRes.ok) {
-            // The session has been created. Reload the page to ensure the new
-            // session cookie is picked up by the browser for all subsequent
-            // requests. This is the most reliable way to solve the race condition.
-            window.location.reload();
-          } else {
-            setError("Failed to create a session.");
+            if (sessionRes.ok) {
+              const sessionData = await sessionRes.json();
+              setUserState(sessionData.user); // Set user from the new session's response
+            } else {
+              setError("Failed to create a session.");
+            }
           }
         }
       } catch (err) {
@@ -127,6 +106,35 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     }
     initialize()
   }, [])
+
+  // Effect 2: Fetch user data when authentication state changes
+  useEffect(() => {
+    const fetchPlayButtons = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await fetch('/api/playbutton/all', { credentials: 'include' });
+          if (res.ok) {
+            const data = await res.json();
+            const parsed = data.map((pb: any) => ({
+              ...pb,
+              createdAt: new Date(pb.createdAt),
+            }));
+            setPlayButtons(parsed);
+          } else {
+            setPlayButtons([]);
+            console.log('Could not fetch play buttons, maybe a new user?');
+          }
+        } catch (err) {
+          console.error('Failed to fetch play buttons:', err);
+          setError('Could not load your play buttons.');
+        }
+      } else {
+        setPlayButtons([]); // Clear data if not authenticated
+      }
+    };
+
+    fetchPlayButtons();
+  }, [isAuthenticated]); // This effect depends on the authentication state
 
   const signIn = async () => {
     console.log("Sign in triggered");
@@ -142,8 +150,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Sign out failed:', error);
     } finally {
-      setUserState(null)
-      setPlayButtons([]) // Clear buttons on sign out
+      setUserState(null) // This will trigger the data-fetching useEffect to clear playButtons
     }
   }
 
