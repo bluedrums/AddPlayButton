@@ -110,8 +110,10 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           });
 
           if (sessionRes.ok) {
-            setUserState(userData);
-            await fetchPlayButtons(); // Fetch buttons after creating session
+            // The session has been created. Reload the page to ensure the new
+            // session cookie is picked up by the browser for all subsequent
+            // requests. This is the most reliable way to solve the race condition.
+            window.location.reload();
           } else {
             setError("Failed to create a session.");
           }
