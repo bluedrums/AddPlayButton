@@ -9,7 +9,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
-import { useFarcasterCast } from "@/hooks/use-farcaster-cast"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
@@ -37,7 +36,6 @@ interface OembedData {
 export default function ClientPage() {
   const params = useSearchParams();
   const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, setUser, playButtons, setPlayButtons } = useFarcaster()
-  const { createPlayButtonCast, isCreating } = useFarcasterCast()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)

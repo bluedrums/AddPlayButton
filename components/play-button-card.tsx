@@ -8,9 +8,9 @@ import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
-import { CastComposer } from "@/components/cast-composer"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
+import { sdk } from "@farcaster/miniapp-sdk"
 
 interface PlayButton {
   id: string
@@ -30,7 +30,7 @@ interface PlayButtonCardProps {
 
 export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
   const [showPlayer, setShowPlayer] = useState(false)
-  const { isAuthenticated } = useFarcaster()
+  const { isAuthenticated, user } = useFarcaster()
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(playButton.url)
@@ -41,6 +41,37 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     if (onRemove) {
       onRemove(playButton.id)
       toast.success("Play button removed")
+    }
+  }
+
+  const handleCast = async () => {
+    if (!isAuthenticated || !user) {
+      // should not happen if button is disabled, but good practice
+      return;
+    }
+
+    try {
+      let shareText = `🎵 ${playButton.title}`;
+      if (playButton.artist) {
+        shareText += ` by ${playButton.artist}`;
+      }
+      shareText += ` on ${playButton.platform}`;
+      
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(playButton.id)}?fid=${user.fid}`;
+
+      const { cast } = await sdk.actions.composeCast({ 
+        text: shareText, 
+        embeds: [shareUrl] 
+      });
+
+      if (cast) {
+        toast.success('Cast composed successfully.');
+      } else {
+        toast.info('Cast composer closed.');
+      }
+    } catch (e) {
+      console.error('Error composing cast', e);
+      toast.error('Could not open composer.');
     }
   }
 
@@ -72,21 +103,17 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                   Play
                 </Button>
 
-                <CastComposer
-                  playButton={playButton}
-                  trigger={
-                    <Button
-                      variant="outline"
-                      className="flex-1 bg-transparent"
-                      size="sm"
-                      disabled={!isAuthenticated}
-                      title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Cast
-                    </Button>
-                  }
-                />
+                <Button
+                  variant="outline"
+                  className="flex-1 bg-transparent"
+                  size="sm"
+                  disabled={!isAuthenticated}
+                  title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
+                  onClick={handleCast}
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Cast
+                </Button>
               </div>
             </div>
 
@@ -151,10 +178,6 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                   <Music className="w-6 h-6 text-purple-600" />
                 </div>
               )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">Embedded {playButton.platform} Player</p>
-                <p className="text-xs text-gray-600">Click Play to preview in modal</p>
-              </div>
             </div>
           </div>
         </CardContent>
