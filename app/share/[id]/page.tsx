@@ -12,7 +12,7 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
-    const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(id)}&t=${Date.now()}`;
+    const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(id)}`;
 
     return {
       title: playButtonData.title,
@@ -27,14 +27,14 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
         "fc:frame:image": imageUrl,
         "fc:frame:image:aspect_ratio": "1.91:1",
         "fc:frame:button:1": "▶️ Play",
-        "fc:frame:button:1:action": "link",
+        "fc:frame:button:1:action": "post_redirect",
         "fc:frame:button:1:target": miniAppUrl,
         "of:accepts:farcaster": "vNext",
         "of:accepts:xmtp": "2024-02-01",
         "of:image": imageUrl,
         "of:image:aspect_ratio": "1.91:1",
         "of:button:1": "▶️ Play",
-        "of:button:1:action": "link",
+        "of:button:1:action": "post_redirect",
         "of:button:1:target": miniAppUrl,
         "of:post_url": miniAppUrl,
       }

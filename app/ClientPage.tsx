@@ -137,16 +137,19 @@ export default function ClientPage() {
       
       const suggestedTitle = oembedData.title || `My ${detection.platform} Mix`;
       const artist = oembedData.author_name || "";
-      const imageUrl = oembedData.thumbnail_url || undefined;
+      const imageUrl = oembedData.thumbnail_url; // this can be string or undefined
 
       setTitle(suggestedTitle)
-      if (imageUrl) {
-        setCoverImage(imageUrl);
-      } else {
-        setCoverImage(`${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`);
-      }
+      // Set cover image for UI preview, with a fallback
+      setCoverImage(imageUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`);
       
-      return { platform: detection.platform, embedUrl: detection.embedUrl, suggestedTitle, artist }
+      return { 
+        platform: detection.platform, 
+        embedUrl: detection.embedUrl, 
+        suggestedTitle, 
+        artist, 
+        coverImage: imageUrl // Return the actual image URL (or undefined)
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Validation failed"
       setValidationError(message)
@@ -161,7 +164,16 @@ export default function ClientPage() {
     if (!title.trim()) { setValidationError("Please enter a title"); return }
     try {
       const validated = await validateUrl(url)
-      const newPlayButton: PlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
+      const newPlayButton: PlayButton = { 
+        id: Date.now().toString(), 
+        url: url.trim(), 
+        platform: validated.platform, 
+        title: title.trim(), 
+        artist: validated.artist, 
+        embedUrl: validated.embedUrl, 
+        coverImage: validated.coverImage, // Use directly from validation result
+        createdAt: new Date() 
+      }
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
@@ -186,20 +198,18 @@ export default function ClientPage() {
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
-      let shareText = `${newPlayButton.title}`;
-      if (newPlayButton.artist) {
+      let shareText = `🎵 ${newPlayButton.title}`;
+/*       if (newPlayButton.artist) {
         shareText += ` by ${newPlayButton.artist}`;
-      }
+      } */
       shareText += ` on ${newPlayButton.platform}`;
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-      const shareUrl = `${appUrl}/?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
-      const imageUrl = `${appUrl}/addplaybuttonfavicon.jpg`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
       
       // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [imageUrl, shareUrl] 
+        embeds: [shareUrl] 
       });
       
       if (sharingResult.cast) {
