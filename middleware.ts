@@ -4,6 +4,24 @@ import { jwtVerify } from 'jose';
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
 export async function middleware(request: NextRequest) {
+  const { method } = request;
+  const { pathname } = request.nextUrl;
+
+  // Define which routes require authentication
+  const protectedRoutes = [
+    { path: '/api/playbutton', methods: ['POST', 'DELETE'] },
+    { path: '/api/playbutton/all', methods: ['GET'] },
+  ];
+
+  const isProtectedRoute = protectedRoutes.some(
+    (route) => pathname === route.path && route.methods.includes(method)
+  );
+
+  // If the route is not protected, allow the request to pass through
+  if (!isProtectedRoute) {
+    return NextResponse.next();
+  }
+
   const sessionCookie = request.cookies.get('session');
 
   // If no session cookie, block access
@@ -40,9 +58,7 @@ export async function middleware(request: NextRequest) {
   }
 }
 
-// Middleware will run on all routes inside /api/, except the auth routes themselves
+// Update the matcher to run on all API routes, so the logic inside can decide
 export const config = {
-  matcher: [
-    '/api/((?!auth|verify-api-key).*)',
-  ],
+  matcher: '/api/:path*',
 }; 

@@ -52,9 +52,7 @@ export default function ClientPage() {
   useEffect(() => {
     if (isAuthenticated && user?.fid) {
       fetch('/api/playbutton/all', {
-        headers: {
-          'x-user-fid': String(user.fid),
-        },
+        credentials: 'include', // Include cookies in the request
       })
         .then(res => res.json())
         .then(data => {
@@ -76,7 +74,7 @@ export default function ClientPage() {
     const fid = params.get('fid');
     const playButtonId = params.get('playButton');
     if (fid && playButtonId) {
-      fetch(`/api/playbutton?fid=${fid}&playButton=${playButtonId}`)
+      fetch(`/api/playbutton?fid=${fid}&id=${playButtonId}`)
         .then(res => res.json())
         .then(data => {
           if (data.error && data.mock) {
@@ -196,9 +194,9 @@ export default function ClientPage() {
       // Store on server for persistence
       const storeRes = await fetch('/api/playbutton', {
         method: 'POST',
+        credentials: 'include', // Include cookies in the request
         headers: {
           'Content-Type': 'application/json',
-          'x-user-fid': String(user?.fid || 12345),
         },
         body: JSON.stringify({
           id: newPlayButton.id,
@@ -249,9 +247,7 @@ export default function ClientPage() {
       
       await fetch(`/api/playbutton?id=${id}`, {
         method: 'DELETE',
-        headers: {
-          'x-user-fid': String(user?.fid),
-        },
+        credentials: 'include', // Include cookies in the request
       });
       
       toast.success('Play button removed!');

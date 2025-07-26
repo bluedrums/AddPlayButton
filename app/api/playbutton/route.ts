@@ -4,7 +4,7 @@ import { sql } from '@vercel/postgres';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const fidStr = request.headers.get('x-user-fid'); // Read from header
+    const fidStr = searchParams.get('fid'); // Read from query param
     const id = searchParams.get('id');
 
     if (!fidStr || !id) {
