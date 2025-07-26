@@ -8,8 +8,6 @@ interface AuthState {
   isLoading: boolean
   isAuthenticated: boolean
   error: string | null
-  authType: "real" | "demo"
-  canUpgradeToReal: boolean
 }
 
 export function useFarcasterAuth() {
@@ -18,8 +16,6 @@ export function useFarcasterAuth() {
     isLoading: true,
     isAuthenticated: false,
     error: null,
-    authType: "demo",
-    canUpgradeToReal: true,
   })
 
   // This hook is now primarily responsible for handling the sign-out logic
@@ -35,8 +31,6 @@ export function useFarcasterAuth() {
       isLoading: false,
       isAuthenticated: false,
       error: null,
-      authType: "demo",
-      canUpgradeToReal: true,
     });
   }, [])
 
@@ -50,8 +44,6 @@ export function useFarcasterAuth() {
         isLoading: false,
         isAuthenticated: true,
         error: null,
-        authType: "real",
-        canUpgradeToReal: false,
       });
     },
   }
