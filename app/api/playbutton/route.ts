@@ -34,31 +34,42 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  console.log('Received POST /api/playbutton request');
   try {
-    const fidStr = request.headers.get('x-user-fid'); // Read from header
+    const fidStr = request.headers.get('x-user-fid');
     const body = await request.json();
     const { id, data } = body;
 
+    console.log('Playbutton POST details:', { fidStr, id, hasData: !!data });
+
     if (!fidStr || !id || !data) {
+      console.log('Validation failed: Missing fid, id, or data.');
       return NextResponse.json({ error: 'Missing fid, id, or data' }, { status: 400 });
     }
 
     const fid = Number(fidStr);
     if (isNaN(fid)) {
+      console.log('Validation failed: Invalid fid.');
       return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
     }
 
+    console.log(`Attempting to write to play_buttons for fid: ${fid}, id: ${id}`);
     await sql`
       INSERT INTO play_buttons (user_fid, id, data)
       VALUES (${fid}, ${id}, ${JSON.stringify(data)})
       ON CONFLICT (user_fid, id)
       DO UPDATE SET data = EXCLUDED.data;
     `;
+    console.log('Successfully wrote to play_buttons.');
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     console.error('Error in playbutton POST:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error', details: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
