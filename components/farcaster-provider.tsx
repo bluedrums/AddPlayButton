@@ -90,7 +90,9 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (sessionRes.ok) {
-              setUserState(userData); // Set user from the SDK context
+              const sessionData = await sessionRes.json();
+              setUserState(sessionData.user);
+              setPlayButtons(sessionData.playButtons || []);
             } else {
               setError("Failed to create a session.");
             }
@@ -127,12 +129,13 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           console.error('Failed to fetch play buttons:', err);
           setError('Could not load your play buttons.');
         }
-      } else {
-        setPlayButtons([]); // Clear data if not authenticated
       }
     };
-
-    fetchPlayButtons();
+    if (isAuthenticated) {
+      fetchPlayButtons();
+    } else {
+      setPlayButtons([]);
+    }
   }, [isAuthenticated]); // This effect depends on the authentication state
 
   const signIn = async () => {

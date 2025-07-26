@@ -32,7 +32,11 @@ export async function POST(request: NextRequest) {
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
 
-    const response = NextResponse.json({ success: true, user });
+    // Fetch the user's play buttons to return with the session
+    const { rows } = await sql`SELECT data FROM play_buttons WHERE user_fid = ${user.fid};`;
+    const playButtons = rows.map(row => row.data);
+
+    const response = NextResponse.json({ success: true, user, playButtons });
     response.cookies.set('session', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
