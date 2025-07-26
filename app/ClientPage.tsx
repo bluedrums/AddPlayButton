@@ -35,40 +35,17 @@ interface OembedData {
 
 export default function ClientPage() {
   const params = useSearchParams();
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, setUser } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, setUser, playButtons, setPlayButtons } = useFarcaster()
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
-  const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
   const [isValidating, setIsValidating] = useState(false)
   const [validationError, setValidationError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
-
-  // Load saved play buttons when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetch('/api/playbutton/all', {
-        credentials: 'include', // Include cookies in the request
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            const parsed = data.map((pb: any) => ({
-              ...pb,
-              createdAt: new Date(pb.createdAt),
-            }));
-            setPlayButtons(parsed);
-          }
-        })
-        .catch(error => {
-          console.error('Error loading play buttons from DB:', error);
-        });
-    }
-  }, [isAuthenticated]);
 
   useEffect(() => {
     const fid = params.get('fid');

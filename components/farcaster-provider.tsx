@@ -4,11 +4,24 @@ import { createContext, useContext, useState, useEffect } from "react"
 import type { FarcasterUser } from "@/lib/farcaster"
 import { sdk } from "@farcaster/miniapp-sdk"
 
+interface PlayButton {
+  id: string;
+  url: string;
+  platform: string;
+  title: string;
+  artist?: string;
+  embedUrl: string;
+  coverImage?: string;
+  createdAt: Date;
+}
+
 interface FarcasterContextType {
   user: FarcasterUser | null
   isAuthenticated: boolean
   isLoading: boolean
   error: string | null
+  playButtons: PlayButton[];
+  setPlayButtons: (buttons: PlayButton[]) => void;
   signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
@@ -21,6 +34,8 @@ const FarcasterContext = createContext<FarcasterContextType>({
   isAuthenticated: false,
   isLoading: true,
   error: null,
+  playButtons: [],
+  setPlayButtons: () => {},
   signIn: async () => {},
   signOut: () => {},
   isSDKReady: false,
@@ -37,24 +52,44 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isSDKReady, setIsSDKReady] = useState(false)
+  const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
 
   const isAuthenticated = !!user
+
+  const fetchPlayButtons = async () => {
+    try {
+      const res = await fetch('/api/playbutton/all', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        const parsed = data.map((pb: any) => ({
+          ...pb,
+          createdAt: new Date(pb.createdAt),
+        }));
+        setPlayButtons(parsed);
+      } else {
+        // Don't set an error here, as it could be normal for a new user
+        console.log('Could not fetch play buttons, maybe a new user?');
+      }
+    } catch (err) {
+      console.error('Failed to fetch play buttons:', err);
+      setError('Could not load your play buttons.');
+    }
+  };
 
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
       try {
-        // First, check for an existing server-side session
         const res = await fetch('/api/auth/status', { credentials: 'include' });
         const data = await res.json();
 
         if (data.isAuthenticated) {
           setUserState(data.user);
-          setIsSDKReady(true); // Assume SDK is ready if authenticated
+          await fetchPlayButtons(); // Fetch buttons after confirming session
+          setIsSDKReady(true);
           return;
         }
 
-        // If no session, initialize the SDK and check for Farcaster context
         await sdk.actions.ready();
         setIsSDKReady(true);
         
@@ -67,15 +102,16 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
           };
 
-          // Create a server-side session from the SDK context
           const sessionRes = await fetch('/api/auth/session', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify(userData),
           });
 
           if (sessionRes.ok) {
             setUserState(userData);
+            await fetchPlayButtons(); // Fetch buttons after creating session
           } else {
             setError("Failed to create a session.");
           }
@@ -91,7 +127,6 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async () => {
-    // This can be used to trigger a manual sign-in flow if needed
     console.log("Sign in triggered");
   }
 
@@ -106,6 +141,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
       console.error('Sign out failed:', error);
     } finally {
       setUserState(null)
+      setPlayButtons([]) // Clear buttons on sign out
     }
   }
 
@@ -119,6 +155,8 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     setUser,
     error,
     setError,
+    playButtons,
+    setPlayButtons,
   }
 
   return <FarcasterContext.Provider value={contextValue}>{children}</FarcasterContext.Provider>
