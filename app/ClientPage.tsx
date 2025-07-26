@@ -204,12 +204,13 @@ export default function ClientPage() {
       } */
       shareText += ` on ${newPlayButton.platform}`;
 
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+      const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
       
       // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [shareUrl] 
+        embeds: [frameUrl] 
       });
       
       if (sharingResult.cast) {

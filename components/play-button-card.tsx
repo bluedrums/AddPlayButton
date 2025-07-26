@@ -58,12 +58,11 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       shareText += ` on ${playButton.platform}`;
       
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-      const shareUrl = `${appUrl}/?fid=${user.fid}&playButton=${encodeURIComponent(playButton.id)}`;
-      const imageUrl = `${appUrl}/addplaybuttonfavicon.jpg`;
+      const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}?fid=${user.fid}`;
 
       const { cast } = await sdk.actions.composeCast({ 
         text: shareText, 
-        embeds: [imageUrl, shareUrl] 
+        embeds: [frameUrl] 
       });
 
       if (cast) {
