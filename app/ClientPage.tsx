@@ -144,11 +144,13 @@ export default function ClientPage() {
       
       const suggestedTitle = oembedData.title || `My ${detection.platform} Mix`;
       const artist = oembedData.author_name || "";
-      const imageUrl = oembedData.thumbnail_url || null;
+      const imageUrl = oembedData.thumbnail_url || undefined;
 
       setTitle(suggestedTitle)
       if (imageUrl) {
         setCoverImage(imageUrl);
+      } else {
+        setCoverImage(`${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`);
       }
       
       return { platform: detection.platform, embedUrl: detection.embedUrl, suggestedTitle, artist }
@@ -166,11 +168,7 @@ export default function ClientPage() {
     if (!title.trim()) { setValidationError("Please enter a title"); return }
     try {
       const validated = await validateUrl(url)
-      let playButtonCoverImage = coverImage;
-      if (!playButtonCoverImage) {
-        playButtonCoverImage = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`;
-      }
-      const newPlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: playButtonCoverImage, createdAt: new Date() }
+      const newPlayButton: PlayButton = { id: Date.now().toString(), url: url.trim(), platform: validated.platform, title: title.trim(), artist: validated.artist, embedUrl: validated.embedUrl, coverImage: coverImage || undefined, createdAt: new Date() }
       const updatedButtons = [newPlayButton, ...playButtons]
       setPlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
