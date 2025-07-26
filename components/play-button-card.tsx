@@ -57,7 +57,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       }
       shareText += ` on ${playButton.platform}`;
       
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(playButton.id)}?fid=${user.fid}`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/?fid=${user.fid}&playButton=${encodeURIComponent(playButton.id)}`;
 
       const { cast } = await sdk.actions.composeCast({ 
         text: shareText, 
@@ -88,9 +88,25 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
+            {/* Cover image */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                {playButton.coverImage ? (
+                  <img
+                    src={playButton.coverImage || "/placeholder.svg"}
+                    alt={`${playButton.title} cover`}
+                    className="w-12 h-12 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
+                    <Music className="w-6 h-6 text-purple-600" />
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
-              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1">{playButton.artist}</p>}
+              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1"><br>{playButton.artist}</p>}
 
               {/* Play and Cast buttons directly under title/artist */}
               <div className="flex gap-2 mt-3">
@@ -162,24 +178,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
             </div>
           </div>
 
-          <Separator className="mb-3" />
 
-          {/* Embedded player preview */}
-          <div className="bg-gray-50 rounded-lg p-3">
-            <div className="flex items-center gap-3">
-              {playButton.coverImage ? (
-                <img
-                  src={playButton.coverImage || "/placeholder.svg"}
-                  alt={`${playButton.title} cover`}
-                  className="w-12 h-12 rounded object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
-                  <Music className="w-6 h-6 text-purple-600" />
-                </div>
-              )}
-            </div>
-          </div>
         </CardContent>
       </Card>
 

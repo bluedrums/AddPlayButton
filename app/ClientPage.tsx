@@ -43,8 +43,8 @@ export default function ClientPage() {
   const [validationError, setValidationError] = useState("")
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [showDebug, setShowDebug] = useState(false)
-  const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
-  const [showPlayer, setShowPlayer] = useState(false);
+  const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
+  const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
 
   useEffect(() => {
     if (isSDKReady) {
@@ -59,12 +59,7 @@ export default function ClientPage() {
       fetch(`/api/playbutton?fid=${fid}&id=${playButtonId}`)
         .then(res => res.json())
         .then(data => {
-          if (data.error && data.mock) {
-            // Handle mock data for development
-            const pb = {...data.data, createdAt: new Date()};
-            setSharedPlayButton(pb);
-            setTimeout(() => setShowPlayer(true), 100);
-          } else if (data.error) {
+          if (data.error) {
             if (data.error === 'Play button not found') {
               toast.error('This play button was not found. It may have been deleted or is no longer available.');
             } else {
@@ -72,8 +67,8 @@ export default function ClientPage() {
             }
           } else {
             const pb = {...data, createdAt: new Date(data.createdAt)};
-            setSharedPlayButton(pb);
-            setTimeout(() => setShowPlayer(true), 100);
+            setActivePlayButton(pb);
+            setIsPlayerModalOpen(true);
           }
         })
         .catch((error) => {
@@ -197,7 +192,7 @@ export default function ClientPage() {
       }
       shareText += ` on ${newPlayButton.platform}`;
 
-      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
+      const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/?fid=${user?.fid}&playButton=${encodeURIComponent(newPlayButton.id)}`;
       
       // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
@@ -264,26 +259,15 @@ export default function ClientPage() {
 
   if (!isSDKReady || isLoading) return <SplashScreen />
 
-  if (sharedPlayButton) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full">
-          <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-4">
-              <img src="/applogo(small).png" alt="Add Play Button" className="w-full h-full object-cover" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Shared Play Button</h1>
-            <p className="text-gray-600 mt-2">Opening player automatically...</p>
-          </div>
-          <PlayButtonCard playButton={sharedPlayButton} />
-          <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={sharedPlayButton} />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+      {activePlayButton && (
+        <EmbeddedPlayerModal
+          isOpen={isPlayerModalOpen}
+          onClose={() => setIsPlayerModalOpen(false)}
+          playButton={activePlayButton}
+        />
+      )}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
