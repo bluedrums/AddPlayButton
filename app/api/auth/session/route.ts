@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true, user, playButtons });
     response.cookies.set('session', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none', // allow cross-site iframe requests
       path: '/',
       maxAge: 60 * 60 * 24, // 24 hours
     });
