@@ -51,7 +51,7 @@ export default function ClientPage() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const res = await fetch('/api/auth/status');
+        const res = await fetch('/api/auth/status', { credentials: 'include' });
         const data = await res.json();
         if (data.isAuthenticated) {
           // This will trigger the rest of the app's logic
