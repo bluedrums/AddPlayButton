@@ -143,8 +143,14 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     setUserState(user)
   }
 
-  const signOut = () => {
-    setUserState(null)
+  const signOut = async () => {
+    try {
+      await fetch('/api/auth/signout', { method: 'POST', credentials: 'include' });
+    } catch (error) {
+      console.error('Sign out failed:', error);
+    } finally {
+      setUserState(null)
+    }
   }
 
   const contextValue: FarcasterContextType = {

@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
       response.cookies.set('session', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV !== 'development',
-        sameSite: 'strict',
+        sameSite: 'lax', // Use 'lax' for iframe compatibility
         path: '/',
         maxAge: 60 * 60 * 24 // 24 hours
       });

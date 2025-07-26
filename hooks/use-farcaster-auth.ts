@@ -18,26 +18,13 @@ export function useFarcasterAuth() {
     error: null,
   })
 
-  // This hook is now primarily responsible for handling the sign-out logic
-  // and providing a consistent auth state object to the rest of the application.
-
-  const signOut = useCallback(() => {
-    // For now, we'll just clear the session cookie.
-    // A full implementation would also call an API endpoint to invalidate the session on the server.
-    document.cookie = 'session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    
-    setAuthState({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false,
-      error: null,
-    });
-  }, [])
+  // This hook is now primarily responsible for providing a consistent auth state object.
+  // Sign-out logic is handled in the FarcasterProvider.
 
   return {
     ...authState,
     signIn: () => {}, // Placeholder for signIn
-    signOut,
+    signOut: () => {}, // Placeholder for signOut
     setUser: (user: FarcasterUser) => {
       setAuthState({
         user,
