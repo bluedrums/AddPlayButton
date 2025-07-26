@@ -106,7 +106,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
-              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1"><br>{playButton.artist}</p>}
+              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1"><br></br>{playButton.artist}</p>}
 
               {/* Play and Cast buttons directly under title/artist */}
               <div className="flex gap-2 mt-3">
