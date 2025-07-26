@@ -35,7 +35,7 @@ interface OembedData {
 
 export default function ClientPage() {
   const params = useSearchParams();
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, setUser } = useFarcaster()
   const { createPlayButtonCast, isCreating } = useFarcasterCast()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
@@ -48,9 +48,30 @@ export default function ClientPage() {
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
 
-  // Load saved play buttons from localStorage
   useEffect(() => {
-    if (isAuthenticated && user?.fid) {
+    const checkAuthStatus = async () => {
+      try {
+        const res = await fetch('/api/auth/status');
+        const data = await res.json();
+        if (data.isAuthenticated) {
+          // This will trigger the rest of the app's logic
+          setUser({
+            fid: data.user.fid,
+            username: data.user.username,
+            displayName: data.user.display_name,
+            pfpUrl: data.user.pfp_url,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to check auth status', error);
+      }
+    };
+    checkAuthStatus();
+  }, []);
+
+  // Load saved play buttons when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
       fetch('/api/playbutton/all', {
         credentials: 'include', // Include cookies in the request
       })
@@ -68,7 +89,7 @@ export default function ClientPage() {
           console.error('Error loading play buttons from DB:', error);
         });
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fid = params.get('fid');

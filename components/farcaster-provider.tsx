@@ -23,6 +23,8 @@ interface FarcasterContextType {
   signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
+  setUser: (user: FarcasterUser) => void;
+  setError: (error: string | null) => void;
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
@@ -33,6 +35,8 @@ const FarcasterContext = createContext<FarcasterContextType>({
   signIn: async () => {},
   signOut: () => {},
   isSDKReady: false,
+  setUser: () => {},
+  setError: () => {},
 })
 
 export function useFarcaster() {
@@ -148,12 +152,17 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const setUser = (user: FarcasterUser) => {
+    setIsAuthenticated(true);
+    setUserState(user);
+  };
+
   const signOut = () => {
     setUser(null)
     setError(null)
   }
 
-  const value: FarcasterContextType = {
+  const contextValue: FarcasterContextType = {
     user,
     isAuthenticated,
     isLoading,
@@ -161,7 +170,9 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     signIn,
     signOut,
     isSDKReady,
+    setUser,
+    setError,
   }
 
-  return <FarcasterContext.Provider value={value}>{children}</FarcasterContext.Provider>
+  return <FarcasterContext.Provider value={contextValue}>{children}</FarcasterContext.Provider>
 }
