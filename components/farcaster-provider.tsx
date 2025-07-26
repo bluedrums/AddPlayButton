@@ -1,19 +1,8 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useState, useEffect } from "react"
+import type { FarcasterUser } from "@/lib/farcaster"
 import { sdk } from "@farcaster/miniapp-sdk"
-
-interface FarcasterUser {
-  fid: number
-  username: string
-  displayName: string
-  pfpUrl: string
-  bio?: string
-  followerCount?: number
-  followingCount?: number
-  verifications?: string[]
-}
 
 interface FarcasterContextType {
   user: FarcasterUser | null
@@ -23,7 +12,7 @@ interface FarcasterContextType {
   signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
-  setUser: (user: FarcasterUser) => void
+  setUser: (user: FarcasterUser | null) => void
   setError: (error: string | null) => void
 }
 
@@ -52,94 +41,61 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   const isAuthenticated = !!user
 
   useEffect(() => {
-    const initializeSDK = async () => {
+    const initialize = async () => {
+      setIsLoading(true);
       try {
-        await sdk.actions.ready()
-        setIsSDKReady(true)
+        // First, check for an existing server-side session
+        const res = await fetch('/api/auth/status', { credentials: 'include' });
+        const data = await res.json();
 
-        try {
-          const context = await sdk.context
+        if (data.isAuthenticated) {
+          setUserState(data.user);
+          setIsSDKReady(true); // Assume SDK is ready if authenticated
+          return;
+        }
 
-          if (context?.user) {
-            const userData: FarcasterUser = {
-              fid: context.user.fid,
-              username: context.user.username || `user${context.user.fid}`,
-              displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-              pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
-              bio: context.user.bio,
-              followerCount: context.user.followerCount,
-              followingCount: context.user.followingCount,
-              verifications: context.user.verifications || [],
-            }
+        // If no session, initialize the SDK and check for Farcaster context
+        await sdk.actions.ready();
+        setIsSDKReady(true);
+        
+        const context = await sdk.context;
+        if (context?.user) {
+          const userData = {
+            fid: context.user.fid,
+            username: context.user.username || `user${context.user.fid}`,
+            displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+            pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+          };
 
-            setUserState(userData)
-            setError(null)
+          // Create a server-side session from the SDK context
+          const sessionRes = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+          });
+
+          if (sessionRes.ok) {
+            setUserState(userData);
           } else {
-            console.log("No user context available")
+            setError("Failed to create a session.");
           }
-        } catch (contextError) {
-          console.log("No user context:", contextError)
         }
       } catch (err) {
-        console.error("SDK initialization error:", err)
-        setError("Failed to initialize Farcaster SDK")
+        console.error("Initialization error:", err)
+        setError("Failed to initialize.")
       } finally {
         setIsLoading(false)
       }
     }
-
-    initializeSDK()
+    initialize()
   }, [])
 
   const signIn = async () => {
-    setIsLoading(true)
-    setError(null)
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      const context = await sdk.context
-
-      if (context?.user) {
-        const userData: FarcasterUser = {
-          fid: context.user.fid,
-          username: context.user.username || `user${context.user.fid}`,
-          displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
-          pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
-          bio: context.user.bio,
-          followerCount: context.user.followerCount,
-          followingCount: context.user.followingCount,
-          verifications: context.user.verifications || [],
-        }
-
-        setUserState(userData)
-        setError(null)
-      } else {
-        const demoUser: FarcasterUser = {
-          fid: 12345,
-          username: "demo_user",
-          displayName: "Demo User",
-          pfpUrl: "/placeholder-user.jpg",
-          bio: "Demo user for testing the Add Play Button app",
-          followerCount: 100,
-          followingCount: 50,
-          verifications: [],
-        }
-
-        setUserState(demoUser)
-        setError(null)
-
-        console.log("Using demo user - real authentication not available in this context")
-      }
-    } catch (err) {
-      console.error("Sign in error:", err)
-      setError("Authentication failed. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
+    // This can be used to trigger a manual sign-in flow if needed
+    console.log("Sign in triggered");
   }
 
-  const setUser = (user: FarcasterUser) => {
+  const setUser = (user: FarcasterUser | null) => {
     setUserState(user)
   }
 

@@ -48,27 +48,6 @@ export default function ClientPage() {
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
 
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const res = await fetch('/api/auth/status', { credentials: 'include' });
-        const data = await res.json();
-        if (data.isAuthenticated) {
-          // This will trigger the rest of the app's logic
-          setUser({
-            fid: data.user.fid,
-            username: data.user.username,
-            displayName: data.user.display_name,
-            pfpUrl: data.user.pfp_url,
-          });
-        }
-      } catch (error) {
-        console.error('Failed to check auth status', error);
-      }
-    };
-    checkAuthStatus();
-  }, []);
-
   // Load saved play buttons when authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -298,9 +277,9 @@ export default function ClientPage() {
     }
   }
 
-  const handleSignOut = () => {
-    signOut()
-    toast.success("Signed out successfully")
+  const handleSignOut = async () => {
+    await signOut();
+    setUser(null); // Explicitly clear user state on the client
   }
 
   if (!isSDKReady || isLoading) return <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center"><div className="text-center"><Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" /><p className="text-gray-600">Loading Farcaster SDK...</p></div></div>
