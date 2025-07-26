@@ -90,8 +90,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             });
 
             if (sessionRes.ok) {
-              const sessionData = await sessionRes.json();
-              setUserState(sessionData.user); // Set user from the new session's response
+              setUserState(userData); // Set user from the SDK context
             } else {
               setError("Failed to create a session.");
             }
