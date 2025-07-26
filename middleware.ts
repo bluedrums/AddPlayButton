@@ -7,6 +7,8 @@ export async function middleware(request: NextRequest) {
   const { method } = request;
   const { pathname } = request.nextUrl;
 
+  console.log(`🔍 Middleware: ${method} ${pathname}`);
+
   // Define which routes require authentication
   const protectedRoutes = [
     { path: '/api/playbutton', methods: ['POST', 'DELETE'] },
@@ -19,18 +21,22 @@ export async function middleware(request: NextRequest) {
 
   // If the route is not protected, allow the request to pass through
   if (!isProtectedRoute) {
+    console.log('✅ Middleware: Route not protected, allowing access');
     return NextResponse.next();
   }
 
+  console.log('🔒 Middleware: Protected route, checking authentication');
   const sessionCookie = request.cookies.get('session');
 
   // If no session cookie, block access
   if (!sessionCookie) {
     console.log('🚫 Middleware: No session cookie found. Access denied.');
+    console.log('🍪 Available cookies:', Array.from(request.cookies.getAll()).map(c => c.name));
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
   try {
+    console.log('🔐 Middleware: Verifying JWT token...');
     // Verify the JWT
     const { payload } = await jwtVerify(sessionCookie.value, JWT_SECRET);
     const fid = payload.fid as number;
@@ -39,6 +45,7 @@ export async function middleware(request: NextRequest) {
       throw new Error('Invalid token payload');
     }
 
+    console.log(`✅ Middleware: Token valid for user ${fid}`);
     // Add user fid to the request headers to be used in the API route
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set('x-user-fid', fid.toString());
