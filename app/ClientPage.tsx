@@ -15,6 +15,7 @@ import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
+import SplashScreen from "@/components/splash-screen";
 
 interface PlayButton {
   id: string
@@ -46,6 +47,12 @@ export default function ClientPage() {
   const [showDebug, setShowDebug] = useState(false)
   const [sharedPlayButton, setSharedPlayButton] = useState<PlayButton | null>(null);
   const [showPlayer, setShowPlayer] = useState(false);
+
+  useEffect(() => {
+    if (isSDKReady) {
+      sdk.actions.ready();
+    }
+  }, [isSDKReady]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -259,20 +266,7 @@ export default function ClientPage() {
     setUser(null); // Explicitly clear user state on the client
   }
 
-  if (!isSDKReady || isLoading) return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
-      <div className="text-center">
-        <Loader2 className="h-12 w-12 animate-spin text-purple-600 mx-auto mb-4" />
-        <p className="text-gray-600">Loading Farcaster SDK...</p>
-        {authError && (
-          <div className="mt-4 p-4 bg-red-100 text-red-700 rounded-lg max-w-md">
-            <p className="font-semibold">Error:</p>
-            <p>{authError}</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
+  if (!isSDKReady || isLoading) return <SplashScreen />
 
   if (sharedPlayButton) {
     return (
