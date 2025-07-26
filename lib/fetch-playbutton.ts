@@ -1,16 +1,26 @@
-import { Configuration, NeynarAPIClient } from '@neynar/nodejs-sdk';
+import "server-only";
 
-export async function fetchPlayButton(fid: number, id: string): Promise<any | null> {
+export const fetchPlayButton = async (fid: number, id: string) => {
   try {
-    const response = await fetch(`/api/playbutton?fid=${fid}&id=${encodeURIComponent(id)}`);
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+    const apiUrl = `${baseUrl}/api/playbutton?fid=${fid}&id=${id}`;
+    
+    const response = await fetch(apiUrl, {
+      next: { revalidate: 10 } // Revalidate every 10 seconds
+    });
+    
     if (!response.ok) {
-      console.error('Failed to fetch play button:', response.status);
+      console.error(`Failed to fetch play button. Status: ${response.status}`);
       return null;
     }
     const data = await response.json();
-    return data.playButton || null;
+    if (data.error) {
+      console.error(`API Error fetching play button: ${data.error}`);
+      return null;
+    }
+    return data;
   } catch (error) {
-    console.error('Error fetching play button data:', error);
-    return null; // Return null on error instead of throwing
+    console.error('Error in fetchPlayButton:', error);
+    return null;
   }
-} 
+}; 
