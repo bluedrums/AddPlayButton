@@ -93,6 +93,26 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
               const sessionData = await sessionRes.json();
               setUserState(sessionData.user);
               setPlayButtons(sessionData.playButtons || []);
+              const fetchPlayButtons = async () => {
+                try {
+                  const res = await fetch('/api/playbutton/all', { credentials: 'include' });
+                  if (res.ok) {
+                    const data = await res.json();
+                    const parsed = data.map((pb: any) => ({
+                      ...pb,
+                      createdAt: new Date(pb.createdAt),
+                    }));
+                    setPlayButtons(parsed);
+                  } else {
+                    setPlayButtons([]);
+                    console.log('Could not fetch play buttons, maybe a new user?');
+                  }
+                } catch (err) {
+                  console.error('Failed to fetch play buttons:', err);
+                  setError('Could not load your play buttons.');
+                }
+              };
+              await fetchPlayButtons();
             } else {
               setError("Failed to create a session.");
             }
