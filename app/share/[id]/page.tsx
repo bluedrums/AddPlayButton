@@ -6,7 +6,8 @@ export const revalidate = 0;
 
 export async function generateMetadata({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }): Promise<Metadata> {
   try {
-    const { id } = params;
+    const encodedId = params.id;
+    const id = decodeURIComponent(encodedId);
     const fidStr = searchParams.fid;
     const fid = fidStr ? Number(fidStr) : 12345; // Fallback to demo if not provided
     if (isNaN(fid)) return {};
@@ -15,7 +16,7 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
-    const miniAppUrl = `${baseUrl}/open?fid=${fid}&playButton=${encodeURIComponent(id)}`;
+    const miniAppUrl = `${baseUrl}/open?fid=${fid}&playButton=${encodeURIComponent(encodedId)}`;
 
     return {
       title: playButtonData.title,
