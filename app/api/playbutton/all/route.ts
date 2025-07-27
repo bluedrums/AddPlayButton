@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
+  console.log('Received GET /api/playbutton/all request');
   try {
     const fidStr = request.headers.get('x-user-fid');
 
