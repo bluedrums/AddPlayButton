@@ -20,11 +20,20 @@ export async function GET(request: Request) {
       SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
     `;
 
+    let playButtonRow = rows[0] as any;
+
+    // Fallback: if not found with fid, try by id only (public share)
     if (rows.length === 0) {
-      return NextResponse.json({ error: 'Play button not found' }, { status: 404 });
+      const fallback = await sql`
+        SELECT data FROM play_buttons WHERE id = ${id} LIMIT 1;
+      `;
+      if (fallback.rows.length === 0) {
+        return NextResponse.json({ error: 'Play button not found' }, { status: 404 });
+      }
+      playButtonRow = fallback.rows[0];
     }
 
-    const playButton = rows[0].data;
+    const playButton = playButtonRow.data;
 
     return NextResponse.json(playButton);
   } catch (error) {
