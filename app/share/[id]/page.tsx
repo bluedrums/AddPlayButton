@@ -33,6 +33,7 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
         "fc:frame:button:1": "Play",
         "fc:frame:button:1:action": "post_redirect",
         "fc:frame:button:1:target": miniAppUrl,
+        "fc:frame:post_url": miniAppUrl,
         "of:accepts:farcaster": "vNext",
         "of:accepts:xmtp": "2024-02-01",
         "of:image": imageUrl,
