@@ -16,14 +16,6 @@ export const metadata: Metadata = {
     description: "Create interactive Farcaster casts for music and video links",
     images: [`/ThePlayButton.png`],
   },
-  other: {
-    "fc:frame": "vNext",
-    "fc:frame:image": `/ThePlayButton.png`,
-    "fc:frame:image:aspect_ratio": "1.91:1",
-    "fc:frame:button:1": "Create a Play Button",
-    "fc:frame:button:1:action": "link",
-    "fc:frame:button:1:target": `${process.env.NEXT_PUBLIC_APP_URL}`,
-  },
 };
 
 export const viewport: Viewport = {
