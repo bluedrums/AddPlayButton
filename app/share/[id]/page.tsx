@@ -12,7 +12,7 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
-    const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(id)}`;
+    const miniAppUrl = `${baseUrl}/redirect?fid=${fid}&playButton=${encodeURIComponent(id)}`;
 
     return {
       title: playButtonData.title,
