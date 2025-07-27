@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
     const playButton = rows[0].data;
 
-    return NextResponse.json({ playButton });
+    return NextResponse.json(playButton);
   } catch (error) {
     console.error('Error in playbutton GET:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
