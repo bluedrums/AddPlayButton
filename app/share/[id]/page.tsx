@@ -1,6 +1,9 @@
 import { fetchPlayButton } from '@/lib/fetch-playbutton';
 import type { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function generateMetadata({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }): Promise<Metadata> {
   try {
     const { id } = params;
@@ -26,14 +29,14 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
         "fc:frame": "vNext",
         "fc:frame:image": imageUrl,
         "fc:frame:image:aspect_ratio": "1.91:1",
-        "fc:frame:button:1": "▶️ Play",
+        "fc:frame:button:1": "Play",
         "fc:frame:button:1:action": "post_redirect",
         "fc:frame:button:1:target": miniAppUrl,
         "of:accepts:farcaster": "vNext",
         "of:accepts:xmtp": "2024-02-01",
         "of:image": imageUrl,
         "of:image:aspect_ratio": "1.91:1",
-        "of:button:1": "▶️ Play",
+        "of:button:1": "Play",
         "of:button:1:action": "post_redirect",
         "of:button:1:target": miniAppUrl,
         "of:post_url": miniAppUrl,
