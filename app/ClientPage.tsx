@@ -236,6 +236,9 @@ export default function ClientPage() {
       await fetch(`/api/playbutton?id=${id}`, {
         method: 'DELETE',
         credentials: 'include', // Include cookies in the request
+        headers: {
+          'x-user-fid': user?.fid ? String(user.fid) : '',
+        },
       });
       
       toast.success('Play button removed!');
