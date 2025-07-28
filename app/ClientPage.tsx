@@ -102,6 +102,17 @@ export default function ClientPage() {
       }
       if (videoId) return { platform: "YouTube", embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`, oembedEndpoint: `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
+    if (cleanUrl.includes("vimeo.com")) {
+      const match = cleanUrl.match(/vimeo\.com\/(\d+)/);
+      if (match && match[1]) {
+        const videoId = match[1];
+        return { 
+          platform: "Vimeo", 
+          embedUrl: `https://player.vimeo.com/video/${videoId}?autoplay=1`, 
+          oembedEndpoint: `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(cleanUrl)}` 
+        };
+      }
+    }
     if (cleanUrl.includes("soundcloud.com")) {
       return { platform: "SoundCloud", embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`, oembedEndpoint: `https://soundcloud.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
@@ -128,7 +139,7 @@ export default function ClientPage() {
     setTitle("")
     try {
       const detection = detectPlatform(url)
-      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, or SoundCloud links.")
+      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, or Vimeo links.")
       
       let oembedData: OembedData = {};
       if (detection.oembedEndpoint) {
@@ -334,12 +345,12 @@ export default function ClientPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="w-5 h-5" />Add New Play Button</CardTitle>
-            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, or SoundCloud. Share and drive traffic.</CardDescription>
+            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, SoundCloud, or Vimeo. Share and drive traffic.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="url-input" className="text-sm font-medium text-gray-700">Music or Video URL <span className="text-red-500">*</span></label>
-              <Input id="url-input" placeholder="https://open.spotify.com/track/..." value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => validateUrl(url)} />
+              <Input id="url-input" placeholder="" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => validateUrl(url)} />
             </div>
 
             {isValidating && <div className="flex items-center justify-center text-gray-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /><span>Fetching details...</span></div>}
@@ -380,6 +391,28 @@ export default function ClientPage() {
 
         {playButtons.length === 0 && <Card><CardContent className="text-center py-12"><Music className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-semibold text-gray-900 mb-2">No play buttons yet</h3><p className="text-gray-600">Add your first music or video link to get started!</p></CardContent></Card>}
       </div>
+      
+      {/* Credits Footer */}
+      <footer className="mt-16 py-8 border-t border-gray-200">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-600">
+              Made for Creators by a Creator @derekhoiem
+            </p>
+            <p className="text-xs text-gray-500">
+              No, we're not training AI. No, we don't sell your info.
+            </p>
+            <div className="flex justify-center gap-4 text-xs">
+              <a href="#" className="text-gray-500 hover:text-gray-700 underline">Privacy Policy</a>
+              <span className="text-gray-400">/</span>
+              <a href="#" className="text-gray-500 hover:text-gray-700 underline">Terms of Use</a>
+            </div>
+            <p className="text-xs text-gray-400">
+              (c) Rain On Me Productions LLC
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 } 

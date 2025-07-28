@@ -32,7 +32,18 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('✅ Status check: User authenticated:', rows[0].username);
-    return NextResponse.json({ isAuthenticated: true, user: rows[0] });
+    
+    // Transform database row to match frontend expectations
+    const user = {
+      fid: rows[0].fid,
+      username: rows[0].username,
+      displayName: rows[0].display_name,
+      pfpUrl: rows[0].pfp_url,
+      custodyAddress: rows[0].custody_address,
+      verifications: rows[0].verifications || []
+    };
+    
+    return NextResponse.json({ isAuthenticated: true, user });
   } catch (error) {
     console.error('❌ Status check: Session verification failed:', error);
     return NextResponse.json({ isAuthenticated: false, user: null });
