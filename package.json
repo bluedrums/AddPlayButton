@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@base-org/account": "^1.1.1",
+    "@base-org/account-ui": "^1.0.1",
     "@farcaster/auth-kit": "^0.2.2",
     "@farcaster/miniapp-sdk": "latest",
     "@hookform/resolvers": "^3.9.1",
@@ -56,12 +58,15 @@
     "react-day-picker": "latest",
     "react-dom": "^18",
     "react-hook-form": "latest",
+    "react-qr-code": "^2.0.18",
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "sonner": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
+    "viem": "^2.33.1",
+    "wagmi": "^2.16.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

@@ -16,6 +16,9 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { pay, getPaymentStatus } from '@base-org/account';
+import { BasePayButton } from '@base-org/account-ui/react';
+import { useAccount } from 'wagmi';
 
 interface PlayButton {
   id: string
@@ -48,6 +51,7 @@ export default function ClientPage() {
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
+  const { address, isConnected } = useAccount()
 
   useEffect(() => {
     if (isSDKReady) {
@@ -283,9 +287,36 @@ export default function ClientPage() {
   }
 
   const handleSignOut = async () => {
-    await signOut();
-    setUser(null); // Explicitly clear user state on the client
+    signOut();
+    // Explicitly clear user state on the client
+    setUser(null);
   }
+
+  const handleCoinbasePay = async () => {
+    try {
+      const result = await pay({
+        amount: '1.00',
+        to: process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}`,
+        testnet: false 
+      });
+      if (result && 'id' in result) {
+        const { status } = await getPaymentStatus({ 
+          id: result.id,
+          testnet: false
+        });
+        if (status === 'completed') {
+          toast.success('Payment settled');
+        } else {
+          toast.error('Payment did not complete.');
+        }
+      } else {
+        toast.error('Payment initiation failed.');
+      }
+    } catch (error) {
+      console.error('Coinbase Pay error:', error);
+      toast.error('An error occurred with Coinbase Pay.');
+    }
+  };
 
   const handleDonate = async (walletType: string = selectedWallet) => {
     if (!isAuthenticated || !user) {
@@ -336,38 +367,7 @@ export default function ClientPage() {
         toast.success('Payment sent via Farcaster Wallet! 💜');
 
       } else if (walletType === "coinbase") {
-        const { ethereum } = window as any;
-        if (typeof window !== "undefined" && ethereum && ethereum.isCoinbaseWallet) {
-          try {
-            await ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x2105' }], // 0x2105 is hex for 8453
-            });
-
-            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-            const fromAddress = accounts[0];
-            const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-            const amount = 1000000;
-            const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
-            const paddedAmount = amount.toString(16).padStart(64, '0');
-            const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
-            const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
-            
-            await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
-            toast.success('Payment sent via Coinbase Wallet! 💜');
-          } catch (switchError: any) {
-            if (switchError.code === 4902) {
-              toast.error('Please add the Base network to your Coinbase Wallet and try again.');
-            } else {
-              toast.error('Failed to switch network. Please ensure you are on the Base network.');
-            }
-          }
-        } else {
-          const encodedAddress = encodeURIComponent(recipientAddress);
-          const paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
-          await sdk.actions.openUrl(paymentUrl);
-          toast.success(`Opening Coinbase Wallet... 💜`);
-        }
+        await handleCoinbasePay();
       } else if (walletType === "walletconnect") {
         // WalletConnect via Uniswap
         // This link pre-fills a swap to send exactly 1 USDC on the Base network 
@@ -507,20 +507,24 @@ export default function ClientPage() {
                       <Button variant="outline" size="sm" className="h-8 w-full flex justify-between">
                         {selectedWallet === "farcaster" && "Farcaster Wallet"}
                         {selectedWallet === "coinbase" && "Coinbase Wallet"}
-                        {selectedWallet === "walletconnect" && "WalletConnect"}
                         <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>Farcaster Wallet</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>Coinbase Wallet</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>WalletConnect</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               </div>
               
               <div className="flex justify-center">
+              {selectedWallet === "coinbase" ? (
+                  <BasePayButton
+                    colorScheme="light"
+                    onClick={handleCoinbasePay}
+                  />
+                ) : (
                 <Button 
                   onClick={() => handleDonate(selectedWallet)} 
                   disabled={!isAuthenticated || isDonating}
@@ -538,6 +542,7 @@ export default function ClientPage() {
                     </>
                   )}
                 </Button>
+                )}
               </div>
               
               {/* USDC Address Display */}
