@@ -295,63 +295,72 @@ export default function ClientPage() {
 
     setIsDonating(true);
     try {
-      // Get USDC address from environment (with fallback)
-      const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000";
-      
+      const recipientAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
+      if (!recipientAddress) {
+        toast.error("Donation address is not configured.");
+        setIsDonating(false);
+        return;
+      }
+
       if (walletType === "farcaster") {
-        // Use Farcaster SDK's built-in wallet provider
-        try {
-          const provider = await sdk.wallet.getEthereumProvider();
-          if (!provider) {
-            throw new Error("No Ethereum provider available");
-          }
-
-          // USDC contract on Base
-          const usdcContract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-          
-          // ERC-20 transfer data for 1 USDC (1,000,000 wei)
-          const transferData = {
-            to: usdcContract as `0x${string}`,
-            data: `0xa9059cbb000000000000000000000000${usdcAddress.slice(2)}000000000000000000000000000000000000000000000000000000000000000f4240` as `0x${string}`, // transfer(address,uint256) - 1 USDC
-            value: "0x0" as `0x${string}`, // No ETH, just USDC transfer
-          };
-
-          // Send transaction through Farcaster wallet
-          const tx = await provider.request({
-            method: 'eth_sendTransaction',
-            params: [transferData]
-          });
-
-          toast.success('Payment sent! Thank you for your support! 💜');
-          console.log('Transaction hash:', tx);
-        } catch (error) {
-          console.error('Farcaster wallet error:', error);
-          toast.error('Failed to send payment through Farcaster wallet');
+        // 1. Farcaster Wallet using sdk.wallet.getEthereumProvider()
+        const provider = await sdk.wallet.getEthereumProvider();
+        if (!provider) {
+          throw new Error("Farcaster Wallet provider not available.");
         }
-      } else {
-        // Fallback to external payment URLs for other wallets
-        let paymentUrl: string;
         
+        const accounts = await provider.request({ method: 'eth_accounts' });
+        if (!accounts || !accounts[0]) {
+          throw new Error("No connected accounts found in Farcaster Wallet.");
+        }
+        const fromAddress = accounts[0];
+
+        const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
+        const amount = 1000000; // 1 USDC (6 decimals)
+        
+        // Correctly ABI-encode the "transfer" function call
+        const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
+        const paddedAmount = amount.toString(16).padStart(64, '0');
+        const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
+
+        const txParams = {
+          from: fromAddress as `0x${string}`,
+          to: usdcContractAddress as `0x${string}`,
+          value: '0x0' as `0x${string}`,
+          data: txData as `0x${string}`,
+        };
+        
+        await provider.request({
+          method: 'eth_sendTransaction',
+          params: [txParams],
+        });
+
+        toast.success('Payment sent via Farcaster Wallet! 💜');
+
+      } else {
+        let paymentUrl: string;
+
         switch (walletType) {
           case "coinbase":
-            paymentUrl = `https://pay.coinbase.com/buy/select-asset?appId=YQREMB&destinationWallets[USDC]=${usdcAddress}&amount=1&currency=USD`;
+            // 2. Coinbase Wallet
+            paymentUrl = `https://pay.coinbase.com/buy/select-asset?appId=your-coinbase-app-id&destinationWallets[${recipientAddress}]=1&presetCryptoAmount=1&presetCryptoCurrency=USDC`;
             break;
-            
+          
           case "walletconnect":
-            paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453&wallet=walletconnect`;
+            // 3. WalletConnect via Uniswap
+             paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=${"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"}&exactAmount=1&recipient=${recipientAddress}`;
             break;
-            
+
           default:
-            paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453`;
-            break;
+            throw new Error("Invalid wallet type selected.");
         }
-        
         await sdk.actions.openUrl(paymentUrl);
         toast.success(`Opening ${walletType} payment interface... 💜`);
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to process payment.';
       console.error('Payment error:', error);
-      toast.error('Failed to process payment');
+      toast.error(message);
     } finally {
       setIsDonating(false);
     }
