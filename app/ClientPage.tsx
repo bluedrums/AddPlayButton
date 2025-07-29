@@ -309,16 +309,15 @@ export default function ClientPage() {
           throw new Error("Farcaster Wallet provider not available.");
         }
         
-        const accounts = await provider.request({ method: 'eth_accounts' });
+        const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || !accounts[0]) {
-          throw new Error("No connected accounts found in Farcaster Wallet.");
+          throw new Error("Could not connect to Farcaster Wallet.");
         }
         const fromAddress = accounts[0];
 
         const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
         const amount = 1000000; // 1 USDC (6 decimals)
         
-        // Correctly ABI-encode the "transfer" function call
         const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
         const paddedAmount = amount.toString(16).padStart(64, '0');
         const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
@@ -337,27 +336,36 @@ export default function ClientPage() {
 
         toast.success('Payment sent via Farcaster Wallet! 💜');
 
-      } else {
-        let paymentUrl: string;
-
-        switch (walletType) {
-          case "coinbase":
-            // 2. Coinbase Wallet – simple deep-link to pre-fill a $1 USDC transfer on Base
-            // Docs: https://docs.cloud.coinbase.com/wallet-sdk/docs/deeplinks
-            const encodedAddress = encodeURIComponent(recipientAddress);
-            paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
-            break;
+      } else if (walletType === "coinbase") {
+        const { ethereum } = window as any;
+        // Check if Coinbase Wallet extension is installed and active
+        if (typeof window !== "undefined" && ethereum && ethereum.isCoinbaseWallet) {
+          // Use the extension directly on desktop
+          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+          const fromAddress = accounts[0];
+          const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+          const amount = 1000000;
+          const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
+          const paddedAmount = amount.toString(16).padStart(64, '0');
+          const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
+          const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
           
-          case "walletconnect":
-            // 3. WalletConnect via Uniswap
-             paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=${"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"}&exactAmount=1&recipient=${recipientAddress}`;
-            break;
-
-          default:
-            throw new Error("Invalid wallet type selected.");
+          await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
+          toast.success('Payment sent via Coinbase Wallet! 💜');
+        } else {
+          // Fallback to deep-link for mobile or if extension is not active
+          const encodedAddress = encodeURIComponent(recipientAddress);
+          const paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
+          await sdk.actions.openUrl(paymentUrl);
+          toast.success(`Opening Coinbase Wallet... 💜`);
         }
+      } else if (walletType === "walletconnect") {
+        // WalletConnect via Uniswap
+        const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactAmount=1&recipient=${recipientAddress}`;
         await sdk.actions.openUrl(paymentUrl);
-        toast.success(`Opening ${walletType} payment interface... 💜`);
+        toast.success(`Opening WalletConnect... 💜`);
+      } else {
+        throw new Error("Invalid wallet type selected.");
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to process payment.';
@@ -520,20 +528,20 @@ export default function ClientPage() {
               </div>
               
               {/* USDC Address Display */}
-              <div className="bg-gray-50 p-3 rounded-lg">
-                <p className="text-xs font-medium text-gray-700 mb-1">USDC Address (Base):</p>
-                <div className="flex items-center gap-2">
-                  <code className="text-xs bg-white px-2 py-1 rounded border flex-1 font-mono break-all">
+              <div className="flex justify-center">
+                <div className="w-60">
+                  <p className="text-xs font-medium text-gray-700 mb-1">USDC Address (Base):</p>
+                  <code className="block text-xs bg-white p-2 rounded border font-mono break-all w-full text-left">
                     {process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000"}
                   </code>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => {
                       navigator.clipboard.writeText(process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000");
                       toast.success("Address copied to clipboard");
                     }}
-                    className="text-xs"
+                    className="text-xs w-full mt-2"
                   >
                     Copy
                   </Button>
@@ -557,7 +565,7 @@ export default function ClientPage() {
       <footer className="mt-16 py-8 border-t border-gray-200">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center space-y-2">
-            <p className="text-sm text-gray-500">
+            <p className="text-xs text-gray-500">
               Made for Creators by a Creator <a href="https://farcaster.xyz/derekhoiem">@derekhoiem</a>
             </p>
             <p className="text-xs text-gray-500">
@@ -569,7 +577,7 @@ export default function ClientPage() {
               <a href="https://www.rainonmeproductions.com/terms-of-use" className="text-gray-500 hover:text-gray-700 underline">Terms of Use</a>
             </div>
             <p className="text-xs text-gray-400">
-              © Rain On Me Productions LLC
+              © 2025<a href="https://www.rainonmeproductions.com" className="text-gray-500 hover:text-gray-700 underline">Rain On Me Productions LLC</a>
             </p>
           </div>
         </div>
