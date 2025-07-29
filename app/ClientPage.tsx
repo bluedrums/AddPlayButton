@@ -165,7 +165,7 @@ export default function ClientPage() {
         coverImage: imageUrl // Return the actual image URL (or undefined)
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Validation failed"
+      const message = error instanceof Error ? error.message : "Validation failed. Please enter a valid URL."
       setValidationError(message)
       throw error
     } finally {
@@ -392,7 +392,7 @@ export default function ClientPage() {
             </Avatar>
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Create shareable cards for music and video links that play in the miniapp window while in Farcaster. Support for Spotify, Apple Music, YouTube, and SoundCloud.
+            Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, and SoundCloud.
           </p>
         </div>
 
