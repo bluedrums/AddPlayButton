@@ -9,6 +9,15 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'encrypted-media=(), fullscreen=(), autoplay=()',
           },
+          // Allow embedding in Warpcast mini-app iframe
+          {
+            key: 'X-Frame-Options',
+            value: 'ALLOWALL',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors *",
+          },
         ],
       },
     ];
