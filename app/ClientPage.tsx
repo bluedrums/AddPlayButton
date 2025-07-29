@@ -369,7 +369,12 @@ export default function ClientPage() {
           toast.success(`Opening Coinbase Wallet... 💜`);
         }
       } else if (walletType === "walletconnect") {
-        const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactAmount=1&recipient=${recipientAddress}`;
+        // WalletConnect via Uniswap
+        // This link pre-fills a swap to send exactly 1 USDC on the Base network 
+        // to the recipient address. The user can use any token in their wallet to pay.
+        const encodedRecipient = encodeURIComponent(recipientAddress);
+        const usdcAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+        const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=${usdcAddress}&exactAmount=1&recipient=${encodedRecipient}`;
         await sdk.actions.openUrl(paymentUrl);
         toast.success(`Opening WalletConnect... 💜`);
       } else {
@@ -487,7 +492,7 @@ export default function ClientPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="w-5 h-5" />
-              Support the App! 💜
+              Support the App!
             </CardTitle>
             <CardDescription>
             </CardDescription>
