@@ -343,9 +343,13 @@ export default function ClientPage() {
         switch (walletType) {
           case "coinbase":
             // 2. Coinbase Wallet - using the latest Onramp experience
-            // Replace 'your-app-id' with your actual ID from the Coinbase Developer Platform
+            const coinbaseAppId = process.env.NEXT_PUBLIC_COINBASE_APP_ID;
+            if (!coinbaseAppId) {
+              throw new Error("Coinbase App ID is not configured. Please set NEXT_PUBLIC_COINBASE_APP_ID in your environment variables.");
+            }
+            
             const onrampUrl = new URL('https://pay.coinbase.com/buy/onramp');
-            onrampUrl.searchParams.set('appId', 'your-app-id');
+            onrampUrl.searchParams.set('appId', coinbaseAppId);
             onrampUrl.searchParams.set('destinationWallets', JSON.stringify([
               { address: recipientAddress, blockchains: ['base'], assets: ['USDC'] }
             ]));

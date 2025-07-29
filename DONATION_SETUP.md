@@ -18,6 +18,9 @@ NEYNAR_API_KEY=your-neynar-api-key
 
 # Add the USDC donation address
 NEXT_PUBLIC_USDC_ADDRESS=0xYourBaseUSDCAddressHere
+
+# Add the Coinbase App ID for payment integration
+NEXT_PUBLIC_COINBASE_APP_ID=your-coinbase-project-id-here
 ```
 
 2. **For production deployment** (Vercel, etc.), add the environment variable in your deployment platform:
@@ -36,6 +39,17 @@ NEXT_PUBLIC_USDC_ADDRESS=0xYourBaseUSDCAddressHere
 The USDC address should be a valid Ethereum address on Base network:
 - Format: `0x` followed by 40 hexadecimal characters
 - Example: `0x1234567890123456789012345678901234567890`
+
+### Coinbase App ID Setup
+
+To enable Coinbase Wallet payments, you need a Project ID from the Coinbase Developer Platform:
+
+1. **Go to [Coinbase Developer Platform](https://cdp.coinbase.com/)**
+2. **Create a new project** or select an existing one
+3. **Find your Project ID** in the project dashboard
+4. **Add it to your environment variables** as `NEXT_PUBLIC_COINBASE_APP_ID`
+
+**Note**: This is different from any mini-app integration with Coinbase Wallet. This ID is specifically for using Coinbase's Onramp payment services.
 
 ### Testing
 
