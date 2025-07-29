@@ -19,8 +19,8 @@ NEYNAR_API_KEY=your-neynar-api-key
 # Add the USDC donation address
 NEXT_PUBLIC_USDC_ADDRESS=0xYourBaseUSDCAddressHere
 
-# Add the Coinbase App ID for payment integration
-NEXT_PUBLIC_COINBASE_APP_ID=your-coinbase-project-id-here
+# (Optional) Coinbase App ID – Only needed if you later switch to Coinbase Pay Onramp flow
+# NEXT_PUBLIC_COINBASE_APP_ID=your-coinbase-project-id-here
 ```
 
 2. **For production deployment** (Vercel, etc.), add the environment variable in your deployment platform:

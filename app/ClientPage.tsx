@@ -342,18 +342,10 @@ export default function ClientPage() {
 
         switch (walletType) {
           case "coinbase":
-            // 2. Coinbase Wallet - using the latest Onramp experience
-            const coinbaseAppId = process.env.NEXT_PUBLIC_COINBASE_APP_ID;
-            if (!coinbaseAppId) {
-              throw new Error("Coinbase App ID is not configured. Please set NEXT_PUBLIC_COINBASE_APP_ID in your environment variables.");
-            }
-            
-            const onrampUrl = new URL('https://pay.coinbase.com/buy/onramp');
-            onrampUrl.searchParams.set('appId', coinbaseAppId);
-            onrampUrl.searchParams.set('destinationWallets', JSON.stringify([
-              { address: recipientAddress, blockchains: ['base'], assets: ['USDC'] }
-            ]));
-            paymentUrl = onrampUrl.toString();
+            // 2. Coinbase Wallet – simple deep-link to pre-fill a $1 USDC transfer on Base
+            // Docs: https://docs.cloud.coinbase.com/wallet-sdk/docs/deeplinks
+            const encodedAddress = encodeURIComponent(recipientAddress);
+            paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
             break;
           
           case "walletconnect":
@@ -486,28 +478,22 @@ export default function ClientPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-center">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">Wallet:</span>
+              <div className="flex justify-center">
+                <div className="w-60">
+                  <label className="block mb-2 text-sm font-medium text-gray-700">Wallet:</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8">
+                      <Button variant="outline" size="sm" className="h-8 w-full flex justify-between">
                         {selectedWallet === "farcaster" && "Farcaster Wallet"}
                         {selectedWallet === "coinbase" && "Coinbase Wallet"}
                         {selectedWallet === "walletconnect" && "WalletConnect"}
-                        <ChevronDown className="w-3 h-3 ml-1" />
+                        <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>
-                        Farcaster Wallet
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>
-                        Coinbase Wallet
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>
-                        WalletConnect
-                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>Farcaster Wallet</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>Coinbase Wallet</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>WalletConnect</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -517,7 +503,7 @@ export default function ClientPage() {
                 <Button 
                   onClick={() => handleDonate(selectedWallet)} 
                   disabled={!isAuthenticated || isDonating}
-                  className="bg-purple-600 hover:bg-purple-700"
+                  className="bg-purple-600 hover:bg-purple-700 w-60"
                 >
                   {isDonating ? (
                     <>
