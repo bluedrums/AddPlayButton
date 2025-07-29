@@ -303,7 +303,6 @@ export default function ClientPage() {
       }
 
       if (walletType === "farcaster") {
-        // 1. Farcaster Wallet using sdk.wallet.getEthereumProvider()
         const provider = await sdk.wallet.getEthereumProvider();
         if (!provider) {
           throw new Error("Farcaster Wallet provider not available.");
@@ -338,16 +337,13 @@ export default function ClientPage() {
 
       } else if (walletType === "coinbase") {
         const { ethereum } = window as any;
-        // Check if Coinbase Wallet extension is installed and active
         if (typeof window !== "undefined" && ethereum && ethereum.isCoinbaseWallet) {
           try {
-             // Request to switch to the Base network (chainId 8453)
             await ethereum.request({
               method: 'wallet_switchEthereumChain',
               params: [{ chainId: '0x2105' }], // 0x2105 is hex for 8453
             });
 
-            // Use the extension directly on desktop
             const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
             const fromAddress = accounts[0];
             const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
@@ -360,7 +356,6 @@ export default function ClientPage() {
             await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
             toast.success('Payment sent via Coinbase Wallet! 💜');
           } catch (switchError: any) {
-            // Handle error if user rejects network switch or doesn't have Base network added
             if (switchError.code === 4902) {
               toast.error('Please add the Base network to your Coinbase Wallet and try again.');
             } else {
@@ -368,14 +363,12 @@ export default function ClientPage() {
             }
           }
         } else {
-          // Fallback to deep-link for mobile or if extension is not active
           const encodedAddress = encodeURIComponent(recipientAddress);
           const paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
           await sdk.actions.openUrl(paymentUrl);
           toast.success(`Opening Coinbase Wallet... 💜`);
         }
       } else if (walletType === "walletconnect") {
-        // WalletConnect via Uniswap
         const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactAmount=1&recipient=${recipientAddress}`;
         await sdk.actions.openUrl(paymentUrl);
         toast.success(`Opening WalletConnect... 💜`);
