@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift } from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift, ChevronDown } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import { sdk } from '@farcaster/miniapp-sdk';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 interface PlayButton {
   id: string
@@ -46,6 +47,7 @@ export default function ClientPage() {
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
 
   useEffect(() => {
     if (isSDKReady) {
@@ -285,7 +287,7 @@ export default function ClientPage() {
     setUser(null); // Explicitly clear user state on the client
   }
 
-  const handleDonate = async () => {
+  const handleDonate = async (walletType: string = selectedWallet) => {
     if (!isAuthenticated || !user) {
       toast.error("Please sign in to donate");
       return;
@@ -296,17 +298,60 @@ export default function ClientPage() {
       // Get USDC address from environment (with fallback)
       const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000";
       
-      // Create a payment URL that will open the user's wallet
-      // This could be a Uniswap, 1inch, or other DEX payment URL
-      const paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453`;
-      
-      // Use Farcaster SDK to open the payment URL in the user's wallet
-      await sdk.actions.openUrl(paymentUrl);
-      
-      toast.success('Opening payment interface... 💜');
+      if (walletType === "farcaster") {
+        // Use Farcaster SDK's built-in wallet provider
+        try {
+          const provider = await sdk.wallet.getEthereumProvider();
+          if (!provider) {
+            throw new Error("No Ethereum provider available");
+          }
+
+          // USDC contract on Base
+          const usdcContract = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+          
+          // ERC-20 transfer data for 1 USDC (1,000,000 wei)
+          const transferData = {
+            to: usdcContract as `0x${string}`,
+            data: `0xa9059cbb000000000000000000000000${usdcAddress.slice(2)}000000000000000000000000000000000000000000000000000000000000000f4240` as `0x${string}`, // transfer(address,uint256) - 1 USDC
+            value: "0x0" as `0x${string}`, // No ETH, just USDC transfer
+          };
+
+          // Send transaction through Farcaster wallet
+          const tx = await provider.request({
+            method: 'eth_sendTransaction',
+            params: [transferData]
+          });
+
+          toast.success('Payment sent! Thank you for your support! 💜');
+          console.log('Transaction hash:', tx);
+        } catch (error) {
+          console.error('Farcaster wallet error:', error);
+          toast.error('Failed to send payment through Farcaster wallet');
+        }
+      } else {
+        // Fallback to external payment URLs for other wallets
+        let paymentUrl: string;
+        
+        switch (walletType) {
+          case "coinbase":
+            paymentUrl = `https://pay.coinbase.com/buy/select-asset?appId=YQREMB&destinationWallets[USDC]=${usdcAddress}&amount=1&currency=USD`;
+            break;
+            
+          case "walletconnect":
+            paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453&wallet=walletconnect`;
+            break;
+            
+          default:
+            paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453`;
+            break;
+        }
+        
+        await sdk.actions.openUrl(paymentUrl);
+        toast.success(`Opening ${walletType} payment interface... 💜`);
+      }
     } catch (error) {
       console.error('Payment error:', error);
-      toast.error('Failed to open payment interface');
+      toast.error('Failed to process payment');
     } finally {
       setIsDonating(false);
     }
@@ -418,14 +463,40 @@ export default function ClientPage() {
               Support the Creator
             </CardTitle>
             <CardDescription>
-              If you find Add Play Button helpful, consider supporting the creator with $1 USDC on Base
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-center">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-gray-700">Wallet:</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8">
+                        {selectedWallet === "farcaster" && "Farcaster Wallet"}
+                        {selectedWallet === "coinbase" && "Coinbase Wallet"}
+                        {selectedWallet === "walletconnect" && "WalletConnect"}
+                        <ChevronDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>
+                        Farcaster Wallet
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>
+                        Coinbase Wallet
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>
+                        WalletConnect
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              
+              <div className="flex justify-center">
                 <Button 
-                  onClick={handleDonate} 
+                  onClick={() => handleDonate(selectedWallet)} 
                   disabled={!isAuthenticated || isDonating}
                   className="bg-purple-600 hover:bg-purple-700"
                 >
