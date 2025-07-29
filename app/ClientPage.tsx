@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X } from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
@@ -45,6 +45,7 @@ export default function ClientPage() {
   const [showDebug, setShowDebug] = useState(false)
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
+  const [isDonating, setIsDonating] = useState(false);
 
   useEffect(() => {
     if (isSDKReady) {
@@ -284,6 +285,37 @@ export default function ClientPage() {
     setUser(null); // Explicitly clear user state on the client
   }
 
+  const handleDonate = async () => {
+    if (!isAuthenticated || !user) {
+      toast.error("Please sign in to donate");
+      return;
+    }
+
+    setIsDonating(true);
+    try {
+      // Get USDC address from environment (with fallback)
+      const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000";
+      
+      // Create a cast with donation message and address
+      const donationText = `🎵 Supporting Add Play Button with $1 USDC 💜\n\nIf you find this tool helpful, consider supporting the creator!\n\nUSDC (Base): ${usdcAddress}`;
+      
+      const sharingResult = await sdk.actions.composeCast({ 
+        text: donationText
+      });
+      
+      if (sharingResult.cast) {
+        toast.success('Thank you for your support! 💜');
+      } else {
+        toast.info('Donation cast canceled');
+      }
+    } catch (error) {
+      console.error('Donation error:', error);
+      toast.error('Failed to process donation');
+    } finally {
+      setIsDonating(false);
+    }
+  }
+
   if (!isSDKReady || isLoading) return <SplashScreen />
 
   return (
@@ -350,7 +382,7 @@ export default function ClientPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="url-input" className="text-sm font-medium text-gray-700">Music or Video URL <span className="text-red-500">*</span></label>
-              <Input id="url-input" placeholder="" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => validateUrl(url)} />
+              <Input id="url-input" placeholder="" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => url.trim() && validateUrl(url)} />
             </div>
 
             {isValidating && <div className="flex items-center justify-center text-gray-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /><span>Fetching details...</span></div>}
@@ -382,6 +414,74 @@ export default function ClientPage() {
           </CardContent>
         </Card>
 
+        {/* Donation Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gift className="w-5 h-5" />
+              Support the Creator
+            </CardTitle>
+            <CardDescription>
+              If you find Add Play Button helpful, consider supporting the creator with $1 USDC on Base
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-600 mb-2">
+                    This tool is free to use and helps creators share music and video content on Farcaster.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Your support helps keep the lights on and new features coming! 💜
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleDonate} 
+                  disabled={!isAuthenticated || isDonating}
+                  className="bg-purple-600 hover:bg-purple-700 ml-4"
+                >
+                  {isDonating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4 mr-2" />
+                      Donate $1 USDC
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* USDC Address Display */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <p className="text-xs font-medium text-gray-700 mb-1">USDC Address (Base):</p>
+                <div className="flex items-center gap-2">
+                  <code className="text-xs bg-white px-2 py-1 rounded border flex-1 font-mono break-all">
+                    {process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000"}
+                  </code>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => {
+                      navigator.clipboard.writeText(process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000");
+                      toast.success("Address copied to clipboard");
+                    }}
+                    className="text-xs"
+                  >
+                    Copy
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Send USDC on Base network to support the creator
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {playButtons.length > 0 && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2"><Video className="w-5 h-5" />Your Play Buttons ({playButtons.length})</h2>
@@ -396,19 +496,19 @@ export default function ClientPage() {
       <footer className="mt-16 py-8 border-t border-gray-200">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">
-              Made for Creators by a Creator @derekhoiem
+            <p className="text-sm text-gray-500">
+              Made for Creators by a Creator <a href="https://farcaster.xyz/derekhoiem">@derekhoiem</a>
             </p>
             <p className="text-xs text-gray-500">
               No, we're not training AI. No, we don't sell your info.
             </p>
             <div className="flex justify-center gap-4 text-xs">
-              <a href="#" className="text-gray-500 hover:text-gray-700 underline">Privacy Policy</a>
+              <a href="https://www.rainonmeproductions.com/privacy-policy" className="text-gray-500 hover:text-gray-700 underline">Privacy Policy</a>
               <span className="text-gray-400">/</span>
-              <a href="#" className="text-gray-500 hover:text-gray-700 underline">Terms of Use</a>
+              <a href="https://www.rainonmeproductions.com/terms-of-use" className="text-gray-500 hover:text-gray-700 underline">Terms of Use</a>
             </div>
             <p className="text-xs text-gray-400">
-              (c) Rain On Me Productions LLC
+              © Rain On Me Productions LLC
             </p>
           </div>
         </div>

@@ -88,76 +88,78 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     <>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            {/* Cover image */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="flex items-center gap-3">
-                {playButton.coverImage ? (
-                  <img
-                    src={playButton.coverImage || "/placeholder.svg"}
-                    alt={`${playButton.title} cover`}
-                    className="w-12 h-12 rounded object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="w-12 h-12 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
-                    <Music className="w-6 h-6 text-purple-600" />
-                  </div>
-                )}
+          <div className="flex items-start gap-4">
+            {/* Cover image - positioned top-left */}
+            {playButton.coverImage ? (
+              <img
+                src={playButton.coverImage}
+                alt={`${playButton.title} cover`}
+                className="w-16 h-16 rounded object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-16 h-16 bg-purple-100 rounded flex items-center justify-center flex-shrink-0">
+                <Music className="w-8 h-8 text-purple-600" />
               </div>
-            </div>
+            )}
+            
+            {/* Content area */}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
-              {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1"><br></br>{playButton.artist}</p>}
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
+                  {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1">{playButton.artist}</p>}
 
-              {/* Play and Cast buttons directly under title/artist */}
-              <div className="flex gap-2 mt-3">
-                <Button
-                  onClick={() => setShowPlayer(true)}
-                  className="bg-green-600 hover:bg-green-700 flex-1"
-                  size="sm"
-                >
-                  <Play className="w-4 h-4 mr-2" />
-                  Play
-                </Button>
+                  {/* Play and Cast buttons directly under title/artist */}
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      onClick={() => setShowPlayer(true)}
+                      className="bg-green-600 hover:bg-green-700 flex-1"
+                      size="sm"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Play
+                    </Button>
 
-                <Button
-                  variant="outline"
-                  className="flex-1 bg-transparent"
-                  size="sm"
-                  disabled={!isAuthenticated}
-                  title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
-                  onClick={handleCast}
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Cast
-                </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 bg-transparent"
+                      size="sm"
+                      disabled={!isAuthenticated}
+                      title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
+                      onClick={handleCast}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Cast
+                    </Button>
+                  </div>
+                </div>
+
+                {/* More actions menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Open Original
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyLink}>
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy Link
+                    </DropdownMenuItem>
+                    {onRemove && (
+                      <DropdownMenuItem onClick={handleRemove} className="text-red-600">
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Remove
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
-
-            {/* More actions menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Open Original
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyLink}>
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy Link
-                </DropdownMenuItem>
-                {onRemove && (
-                  <DropdownMenuItem onClick={handleRemove} className="text-red-600">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Remove
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </CardHeader>
 
@@ -178,8 +180,6 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
               {formatDate(playButton.createdAt)}
             </div>
           </div>
-
-
         </CardContent>
       </Card>
 
