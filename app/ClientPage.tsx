@@ -342,8 +342,14 @@ export default function ClientPage() {
 
         switch (walletType) {
           case "coinbase":
-            // 2. Coinbase Wallet
-            paymentUrl = `https://pay.coinbase.com/buy/select-asset?appId=your-coinbase-app-id&destinationWallets[${recipientAddress}]=1&presetCryptoAmount=1&presetCryptoCurrency=USDC`;
+            // 2. Coinbase Wallet - using the latest Onramp experience
+            // Replace 'your-app-id' with your actual ID from the Coinbase Developer Platform
+            const onrampUrl = new URL('https://pay.coinbase.com/buy/onramp');
+            onrampUrl.searchParams.set('appId', 'your-app-id');
+            onrampUrl.searchParams.set('destinationWallets', JSON.stringify([
+              { address: recipientAddress, blockchains: ['base'], assets: ['USDC'] }
+            ]));
+            paymentUrl = onrampUrl.toString();
             break;
           
           case "walletconnect":
