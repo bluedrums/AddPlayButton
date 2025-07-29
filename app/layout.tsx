@@ -4,7 +4,6 @@ import { Ubuntu } from 'next/font/google';
 import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
 import { Toaster } from "@/components/ui/sonner"
-import { Web3ModalProvider } from "@/components/WagmiProvider"
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -34,12 +33,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={ubuntu.className}>
-        <Web3ModalProvider>
-          <FarcasterProvider>
-            {children}
-            <Toaster />
-          </FarcasterProvider>
-        </Web3ModalProvider>
+        <FarcasterProvider>
+          {children}
+          <Toaster />
+        </FarcasterProvider>
       </body>
     </html>
   )

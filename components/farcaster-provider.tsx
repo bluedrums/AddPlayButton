@@ -1,8 +1,11 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type { FarcasterUser } from "@/lib/farcaster"
 import { sdk } from "@farcaster/miniapp-sdk"
+import { WagmiProvider } from 'wagmi'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { config } from '@/lib/wagmi'
 
 interface PlayButton {
   id: string;
@@ -43,11 +46,13 @@ const FarcasterContext = createContext<FarcasterContextType>({
   setError: () => {},
 })
 
+const queryClient = new QueryClient()
+
 export function useFarcaster() {
   return useContext(FarcasterContext)
 }
 
-export function FarcasterProvider({ children }: { children: React.ReactNode }) {
+export function FarcasterProvider({ children }: { children: ReactNode }) {
   const [user, setUserState] = useState<FarcasterUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -225,5 +230,13 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     setPlayButtons,
   }
 
-  return <FarcasterContext.Provider value={contextValue}>{children}</FarcasterContext.Provider>
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <FarcasterContext.Provider value={contextValue}>
+          {children}
+        </FarcasterContext.Provider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  )
 }
