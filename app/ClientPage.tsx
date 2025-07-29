@@ -340,18 +340,33 @@ export default function ClientPage() {
         const { ethereum } = window as any;
         // Check if Coinbase Wallet extension is installed and active
         if (typeof window !== "undefined" && ethereum && ethereum.isCoinbaseWallet) {
-          // Use the extension directly on desktop
-          const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-          const fromAddress = accounts[0];
-          const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-          const amount = 1000000;
-          const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
-          const paddedAmount = amount.toString(16).padStart(64, '0');
-          const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
-          const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
-          
-          await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
-          toast.success('Payment sent via Coinbase Wallet! 💜');
+          try {
+             // Request to switch to the Base network (chainId 8453)
+            await ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: '0x2105' }], // 0x2105 is hex for 8453
+            });
+
+            // Use the extension directly on desktop
+            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+            const fromAddress = accounts[0];
+            const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+            const amount = 1000000;
+            const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
+            const paddedAmount = amount.toString(16).padStart(64, '0');
+            const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
+            const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
+            
+            await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
+            toast.success('Payment sent via Coinbase Wallet! 💜');
+          } catch (switchError: any) {
+            // Handle error if user rejects network switch or doesn't have Base network added
+            if (switchError.code === 4902) {
+              toast.error('Please add the Base network to your Coinbase Wallet and try again.');
+            } else {
+              toast.error('Failed to switch network. Please ensure you are on the Base network.');
+            }
+          }
         } else {
           // Fallback to deep-link for mobile or if extension is not active
           const encodedAddress = encodeURIComponent(recipientAddress);
@@ -479,7 +494,7 @@ export default function ClientPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Gift className="w-5 h-5" />
-              Support the Creator
+              Support the App! 💜
             </CardTitle>
             <CardDescription>
             </CardDescription>
