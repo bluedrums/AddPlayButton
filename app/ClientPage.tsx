@@ -590,12 +590,12 @@ export default function ClientPage() {
               No, we're not training AI. No, we don't sell your info.
             </p>
             <div className="flex justify-center gap-4 text-xs">
-              <a href="https://www.rainonmeproductions.com/privacy-policy" className="text-gray-500 hover:text-gray-700 underline">Privacy Policy</a>
+              <a href="https://www.rainonmeproductions.com/privacy-policy" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Privacy Policy</a>
               <span className="text-gray-400">/</span>
-              <a href="https://www.rainonmeproductions.com/terms-of-use" className="text-gray-500 hover:text-gray-700 underline">Terms of Use</a>
+              <a href="https://www.rainonmeproductions.com/terms-of-use" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Terms of Use</a>
             </div>
             <p className="text-xs text-gray-400">
-              © 2025<a href="https://www.rainonmeproductions.com" className="text-gray-500 hover:text-gray-700 underline">Rain On Me Productions LLC</a>
+              © 2025 <a href="https://www.rainonmeproductions.com" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Rain On Me Productions LLC</a>
             </p>
           </div>
         </div>

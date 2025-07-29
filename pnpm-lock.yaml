@@ -107,6 +107,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: latest
         version: 1.2.7(@types/react-dom@18.3.7(@types/react@18.3.23))(@types/react@18.3.23)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@tanstack/react-query':
+        specifier: ^5.83.0
+        version: 5.83.0(react@18.3.1)
       '@vercel/og':
         specifier: ^0.7.2
         version: 0.7.2

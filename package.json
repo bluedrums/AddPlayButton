@@ -42,6 +42,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@tanstack/react-query": "^5.83.0",
     "@vercel/og": "^0.7.2",
     "@vercel/postgres": "^0.10.0",
     "@walletconnect/modal": "^2.7.0",
