@@ -296,21 +296,17 @@ export default function ClientPage() {
       // Get USDC address from environment (with fallback)
       const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000";
       
-      // Create a cast with donation message and address
-      const donationText = `🎵 Supporting Add Play Button with $1 USDC 💜\n\nIf you find this tool helpful, consider supporting the creator!\n\nUSDC (Base): ${usdcAddress}`;
+      // Create a payment URL that will open the user's wallet
+      // This could be a Uniswap, 1inch, or other DEX payment URL
+      const paymentUrl = `https://app.uniswap.org/swap?outputCurrency=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913&exactField=output&exactAmount=1000000&recipient=${usdcAddress}&chainId=8453`;
       
-      const sharingResult = await sdk.actions.composeCast({ 
-        text: donationText
-      });
+      // Use Farcaster SDK to open the payment URL in the user's wallet
+      await sdk.actions.openUrl(paymentUrl);
       
-      if (sharingResult.cast) {
-        toast.success('Thank you for your support! 💜');
-      } else {
-        toast.info('Donation cast canceled');
-      }
+      toast.success('Opening payment interface... 💜');
     } catch (error) {
-      console.error('Donation error:', error);
-      toast.error('Failed to process donation');
+      console.error('Payment error:', error);
+      toast.error('Failed to open payment interface');
     } finally {
       setIsDonating(false);
     }
@@ -427,19 +423,11 @@ export default function ClientPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 mb-2">
-                    This tool is free to use and helps creators share music and video content on Farcaster.
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Your support helps keep the lights on and new features coming! 💜
-                  </p>
-                </div>
+              <div className="flex items-center justify-end">
                 <Button 
                   onClick={handleDonate} 
                   disabled={!isAuthenticated || isDonating}
-                  className="bg-purple-600 hover:bg-purple-700 ml-4"
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
                   {isDonating ? (
                     <>
@@ -474,9 +462,6 @@ export default function ClientPage() {
                     Copy
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Send USDC on Base network to support the creator
-                </p>
               </div>
             </div>
           </CardContent>
