@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     }
 
     const { rows } = await sql`
-      SELECT data FROM play_buttons WHERE user_fid = ${fid};
+      SELECT data FROM play_buttons WHERE user_fid = ${fid} ORDER BY (data->>'createdAt')::timestamptz DESC;
     `;
 
     const playButtons = rows.map(row => row.data);
