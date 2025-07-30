@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Turns off Vercel’s automatic  X-Frame-Options: SAMEORIGIN
+    allowIframeEmbedding: true,
+  },
   async headers() {
     return [
       {
@@ -9,35 +13,18 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'encrypted-media=(), fullscreen=(), autoplay=()',
           },
-          // Allow embedding in Warpcast mini-app iframe
-          // commenting out for now because of Vercel injecting duplicate security headers
-/*           {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          }, */
           {
             key: 'Content-Security-Policy',
+            // Allow Warpcast (prod + preview) to embed the site
             value: "frame-ancestors 'self' https://*.farcaster.xyz",
-        },
+          },
         ],
       },
     ];
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  images: {
-    unoptimized: true,
-  },
-}
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+  images:   { unoptimized: true },
+};
 
-export default {
-  ...nextConfig,
-  experimental: {
-    allowIframeEmbedding: true,   // <-- turns off SAMEORIGIN
-  },
-  // …
-}
+export default nextConfig;
