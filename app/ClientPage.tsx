@@ -156,7 +156,8 @@ export default function ClientPage() {
       }
       
       let artist = oembedData.author_name || "";
-      if (detection.platform === "Apple Music" && oembedData.title) {
+      // Only parse artist from title if we don't already have an author_name
+      if (detection.platform === "Apple Music" && oembedData.title && !artist) {
         const byParts = oembedData.title.split(" by ");
         if (byParts.length > 1) {
           artist = byParts.pop()?.trim() || '';

@@ -73,8 +73,8 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           setUserState(statusData.user);
           setIsSDKReady(true);
         } else {
-          console.log('🔄 No existing session, initializing SDK...');
-          // If no session, try to authenticate with the Farcaster SDK
+          console.log('🔄 No existing session, checking for Farcaster user...');
+          // If no server session, try to authenticate with the Farcaster SDK
           await sdk.actions.ready();
           console.log('✅ SDK ready');
           setIsSDKReady(true);
@@ -84,7 +84,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
           console.log('📦 SDK context:', context);
           
           if (context?.user) {
-            console.log('👤 Found user in SDK context:', context.user);
+            console.log('👤 Found user in SDK context, attempting auto-sign-in:', context.user);
             const userData = {
               fid: context.user.fid,
               username: context.user.username || `user${context.user.fid}`,
@@ -104,7 +104,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             console.log('🔐 Session response status:', sessionRes.status);
             if (sessionRes.ok) {
               const sessionData = await sessionRes.json();
-              console.log('✅ Session created successfully:', sessionData);
+              console.log('✅ Auto-sign-in successful:', sessionData);
               setUserState(sessionData.user);
               setPlayButtons(sessionData.playButtons || []);
               
@@ -150,6 +150,7 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             }
           } else {
             console.log('ℹ️ No user in SDK context - user not logged into Farcaster');
+            // Don't set an error here as this is normal for users who haven't logged in yet
           }
         }
       } catch (err) {
@@ -194,7 +195,90 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated]); // This effect depends on the authentication state
 
   const signIn = async () => {
-    console.log("Sign in triggered");
+    console.log("🔐 Starting sign in process...");
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // First, check if we can get user data from the SDK context
+      console.log('🔍 Getting SDK context...');
+      const context = await sdk.context;
+      console.log('📦 SDK context:', context);
+      
+      if (context?.user) {
+        console.log('👤 Found user in SDK context:', context.user);
+        const userData = {
+          fid: context.user.fid,
+          username: context.user.username || `user${context.user.fid}`,
+          displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
+          pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+        };
+
+        console.log('🔐 Creating server session...');
+        // Create a new server-side session from the SDK context
+        const sessionRes = await fetch('/api/auth/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(userData),
+        });
+
+        console.log('🔐 Session response status:', sessionRes.status);
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          console.log('✅ Session created successfully:', sessionData);
+          setUserState(sessionData.user);
+          setPlayButtons(sessionData.playButtons || []);
+          
+          // Add a small delay to ensure the cookie is set
+          console.log('⏳ Waiting for cookie to be set...');
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          console.log('📚 Fetching play buttons...');
+          const fetchPlayButtons = async () => {
+            try {
+              const res = await fetch('/api/playbutton/all', { 
+                credentials: 'include',
+                headers: {
+                  'Accept': 'application/json',
+                }
+              });
+              console.log('📚 Play buttons response:', res.status, res.statusText);
+              if (res.ok) {
+                const data = await res.json();
+                const parsed = data.map((pb: any) => ({
+                  ...pb,
+                  createdAt: new Date(pb.createdAt),
+                }));
+                console.log('✅ Play buttons fetched:', parsed.length);
+                setPlayButtons(parsed);
+              } else {
+                const errorText = await res.text();
+                console.log('⚠️ Play buttons fetch failed:', res.status, errorText);
+                setPlayButtons([]);
+              }
+            } catch (err) {
+              console.error('❌ Failed to fetch play buttons:', err);
+              setPlayButtons([]);
+            }
+          };
+          await fetchPlayButtons();
+        } else {
+          console.error('❌ Failed to create session:', sessionRes.status);
+          const errorText = await sessionRes.text();
+          console.error('❌ Session error details:', errorText);
+          setError("Failed to create a session.");
+        }
+      } else {
+        console.log('ℹ️ No user in SDK context - user not logged into Farcaster');
+        setError("Please make sure you're logged into Farcaster and try again.");
+      }
+    } catch (err) {
+      console.error("❌ Sign in error:", err);
+      setError(`Sign in failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   const setUser = (user: FarcasterUser | null) => {

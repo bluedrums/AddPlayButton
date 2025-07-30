@@ -8,9 +8,14 @@ const publicRoutes = [
   { path: '/api/auth/farcaster', methods: ['POST'] },
   { path: '/api/auth/session', methods: ['GET'] },
   { path: '/api/auth/status', methods: ['GET'] },
-  { path: '/api/auth/csrf', methods: ['GET'] }, // <-- Make CSRF endpoint public
+  { path: '/api/auth/csrf', methods: ['GET'] },
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
+];
+
+// Define which routes are exempt from CSRF protection
+const csrfExemptRoutes = [
+  { path: '/api/auth/farcaster', methods: ['POST'] }, // Authentication endpoint
 ];
 
 export async function middleware(request: NextRequest) {
@@ -49,7 +54,12 @@ export async function middleware(request: NextRequest) {
     console.log(`✅ Middleware: Token valid for user ${fid}`);
     
     // CSRF Protection: Check for CSRF token on state-changing methods
-    if (['POST', 'PUT', 'DELETE'].includes(method)) {
+    // But exempt certain routes that have their own protection
+    const isCsrfExempt = csrfExemptRoutes.some(
+      (route) => pathname.startsWith(route.path) && route.methods.includes(method)
+    );
+
+    if (['POST', 'PUT', 'DELETE'].includes(method) && !isCsrfExempt) {
       const csrfTokenFromHeader = request.headers.get('X-CSRF-Token');
       const csrfCookie = request.cookies.get('csrf-token');
 
@@ -73,7 +83,7 @@ export async function middleware(request: NextRequest) {
     console.error('🚫 Middleware: Invalid token. Access denied.', error);
     const response = NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     response.cookies.delete('session');
-    response.cookies.delete('csrf-token'); // Also clear csrf-token on auth failure
+    response.cookies.delete('csrf-token');
     return response;
   }
 }
