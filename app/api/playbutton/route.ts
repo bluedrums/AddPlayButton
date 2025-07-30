@@ -4,36 +4,27 @@ import { sql } from '@vercel/postgres';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const fidStr = searchParams.get('fid'); // Read from query param
+    const fidStr = request.headers.get('x-user-fid'); // Read from header
     const id = searchParams.get('id');
 
     if (!fidStr || !id) {
-      return NextResponse.json({ error: 'Missing fid or id' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing authentication token or resource ID' }, { status: 400 });
     }
 
     const fid = Number(fidStr);
     if (isNaN(fid)) {
-      return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 400 });
     }
 
     const { rows } = await sql`
       SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
     `;
 
-    let playButtonRow = rows[0] as any;
-
-    // Fallback: if not found with fid, try by id only (public share)
     if (rows.length === 0) {
-      const fallback = await sql`
-        SELECT data FROM play_buttons WHERE id = ${id} LIMIT 1;
-      `;
-      if (fallback.rows.length === 0) {
-        return NextResponse.json({ error: 'Play button not found' }, { status: 404 });
-      }
-      playButtonRow = fallback.rows[0];
+      return NextResponse.json({ error: 'Play button not found or access denied' }, { status: 404 });
     }
 
-    const playButton = playButtonRow.data;
+    const playButton = rows[0].data;
 
     return NextResponse.json(playButton);
   } catch (error) {
@@ -106,4 +97,4 @@ export async function DELETE(request: Request) {
     console.error('Error in playbutton DELETE:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-} 
+}

@@ -20,20 +20,16 @@ export async function POST(request: NextRequest) {
         fid,
       })
 
-      // If we don't have a Warpcast API key, return mock data
+      // If we don't have a Warpcast API key, return a server error
       if (!process.env.WARPCAST_API_KEY) {
-        console.log("🎭 Using mock authentication (no API key)")
-        return NextResponse.json({
-          success: true,
-          user: {
-            fid: fid || 12345,
-            username: "demo_user",
-            displayName: "Demo User",
-            pfpUrl: "/placeholder-user.jpg",
-            custodyAddress: "0x742d35Cc6634C0532925a3b8D4C9db96c4b4d8b6",
-            verifications: [],
+        console.error("❌ WARPCAST_API_KEY is not set. Real authentication is disabled.")
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Server configuration error. Please contact the administrator.",
           },
-        })
+          { status: 500 }
+        )
       }
 
       console.log("🚀 Using real Farcaster authentication")

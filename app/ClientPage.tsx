@@ -16,6 +16,7 @@ import { sdk } from '@farcaster/miniapp-sdk';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { api } from "@/lib/api"
 
 interface PlayButton {
   id: string
@@ -59,8 +60,7 @@ export default function ClientPage() {
     const fid = params.get('fid');
     const playButtonId = params.get('playButton');
     if (fid && playButtonId) {
-      fetch(`/api/playbutton?fid=${fid}&id=${playButtonId}`)
-        .then(res => res.json())
+      api(`/api/playbutton?fid=${fid}&id=${playButtonId}`)
         .then(data => {
           if (data.error) {
             if (data.error === 'Play button not found') {
@@ -124,9 +124,7 @@ export default function ClientPage() {
 
   const fetchOembedData = async (endpoint: string): Promise<OembedData> => {
     try {
-      const res = await fetch(`/api/oembed?url=${encodeURIComponent(endpoint)}`)
-      if (!res.ok) throw new Error('Failed to fetch oEmbed data');
-      const data = await res.json();
+      const data = await api(`/api/oembed?url=${encodeURIComponent(endpoint)}`);
       return data;
     } catch (error) {
       console.error("oEmbed fetch error:", error)
@@ -192,36 +190,22 @@ export default function ClientPage() {
       setPlayButtons(updatedButtons)
       setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
       
-      // Store on server for persistence
-      const storeRes = await fetch('/api/playbutton', {
+      await api('/api/playbutton', {
         method: 'POST',
-        credentials: 'include', // Include cookies in the request
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        body: {
           id: newPlayButton.id,
           data: newPlayButton,
-        }),
+        },
       });
-
-      if (!storeRes.ok) {
-        toast.error('Failed to store play button data');
-        return;
-      }
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       let shareText = `🎵 ${newPlayButton.title}`;
-/*       if (newPlayButton.artist) {
-        shareText += ` by ${newPlayButton.artist}`;
-      } */
       shareText += ` on ${newPlayButton.platform}`;
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
       const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
       
-      // Use the share URL as the embed - this will trigger Farcaster to fetch the meta tags from the dynamic HTML
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
         embeds: [frameUrl] 
@@ -229,7 +213,6 @@ export default function ClientPage() {
       
       if (sharingResult.cast) {
         toast.success('Cast published! The miniapp card should appear in feeds.');
-        // Removed storage cast to avoid dual casts
       } else {
         toast.info('Cast canceled');
       }
@@ -247,12 +230,8 @@ export default function ClientPage() {
       const updatedButtons = playButtons.filter((pb) => pb.id !== id);
       setPlayButtons(updatedButtons);
       
-      await fetch(`/api/playbutton?id=${id}`, {
-        method: 'DELETE',
-        credentials: 'include', // Include cookies in the request
-        headers: {
-          'x-user-fid': user?.fid ? String(user.fid) : '',
-        },
+      await api(`/api/playbutton?id=${id}`, {
+        method: 'DELETE'
       });
       
       toast.success('Play button removed!');
@@ -369,9 +348,6 @@ export default function ClientPage() {
           toast.success(`Opening Coinbase Wallet... 💜`);
         }
       } else if (walletType === "walletconnect") {
-        // WalletConnect via Uniswap
-        // This link pre-fills a swap to send exactly 1 USDC on the Base network 
-        // to the recipient address. The user can use any token in their wallet to pay.
         const encodedRecipient = encodeURIComponent(recipientAddress);
         const usdcAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
         const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=${usdcAddress}&exactAmount=1&recipient=${encodedRecipient}`;
@@ -444,8 +420,6 @@ export default function ClientPage() {
         ) : (
           null
         )}
-
-        {/* {isAuthenticated && signerStatus === 'pending' && <Alert className="mb-4"><AlertDescription>Please approve the signer to enable casting: <Button variant="link" onClick={() => window.open(signerApprovalUrl || '', '_blank')}>Approve Signer</Button></AlertDescription></Alert>} */}
 
         <Card className="mb-8">
           <CardHeader>
@@ -540,7 +514,6 @@ export default function ClientPage() {
                 </Button>
               </div>
               
-              {/* USDC Address Display */}
               <div className="flex justify-center">
                 <div className="w-60">
                   <p className="text-xs font-medium text-gray-700 mb-1">USDC Address (Base):</p>
@@ -574,7 +547,6 @@ export default function ClientPage() {
         {playButtons.length === 0 && <Card><CardContent className="text-center py-12"><Music className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-semibold text-gray-900 mb-2">No play buttons yet</h3><p className="text-gray-600">Add your first music or video link to get started!</p></CardContent></Card>}
       </div>
       
-      {/* Credits Footer */}
       <footer className="mt-16 py-8 border-t border-gray-200">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center space-y-2">
@@ -599,4 +571,4 @@ export default function ClientPage() {
       </footer>
     </div>
   );
-} 
+}
