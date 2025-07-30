@@ -5,7 +5,7 @@ export const config = createConfig({
   chains: [mainnet, base, optimism],
   transports: {
     [mainnet.id]: http(),
-    [base.id]: http(),
-    [optimism.id]: http(),
+    [base.id]: http('https://mainnet.base.org'),
+    [optimism.id]: http('https://mainnet.optimism.io'),
   },
 }) 
