@@ -147,6 +147,7 @@ export default function ClientPage() {
       
       if (detection.platform === "Apple Music") {
         const metadata = await api(`/api/metadata?url=${encodeURIComponent(url)}`);
+        console.log('Apple Music metadata:', metadata);
         oembedData.title = metadata.title;
         imageUrl = metadata.imageUrl;
       } else if (detection.oembedEndpoint) {
@@ -166,6 +167,7 @@ export default function ClientPage() {
       const suggestedTitle = oembedData.title || `My ${detection.platform} Mix`;
 
       setTitle(suggestedTitle)
+      console.log('Setting cover image:', { imageUrl, platform: detection.platform });
       setCoverImage(imageUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`);
       
       return { 
@@ -215,10 +217,16 @@ export default function ClientPage() {
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       
       let cleanTitle = newPlayButton.title;
+      
+      // Remove any existing "by <artist>" from title
       if (newPlayButton.artist && cleanTitle.toLowerCase().includes(newPlayButton.artist.toLowerCase())) {
         const regex = new RegExp(` by ${newPlayButton.artist}`, 'i');
         cleanTitle = cleanTitle.replace(regex, '');
       }
+      
+      // Remove any existing "on <platform>" from title
+      const platformRegex = new RegExp(` on ${newPlayButton.platform}`, 'i');
+      cleanTitle = cleanTitle.replace(platformRegex, '');
 
       let shareText = `🎵 ${cleanTitle}`;
       if (newPlayButton.artist) {
