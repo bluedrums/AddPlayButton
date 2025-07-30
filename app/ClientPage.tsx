@@ -20,6 +20,18 @@ import { pay, getPaymentStatus } from '@base-org/account';
 import { BasePayButton } from '@base-org/account-ui/react';
 import { useAccount } from 'wagmi';
 
+// ---------------------------------------------------------------------------
+// Ensure the Farcaster mini-app handshake fires the moment the bundle loads
+// (WAY before React mounts or any provider logic runs).
+if (typeof window !== 'undefined') {
+  try {
+    sdk.actions.ready();
+  } catch {
+    /* ignore duplicate-ready calls */
+  }
+}
+// ---------------------------------------------------------------------------
+
 interface PlayButton {
   id: string
   url: string
@@ -52,12 +64,6 @@ export default function ClientPage() {
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
   const { address, isConnected } = useAccount()
-
-  useEffect(() => {
-    if (isSDKReady) {
-      sdk.actions.ready();
-    }
-  }, [isSDKReady]);
 
   useEffect(() => {
     const fid = params.get('fid');
