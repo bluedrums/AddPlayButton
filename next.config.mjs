@@ -9,16 +9,6 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'encrypted-media=(), fullscreen=(), autoplay=()',
           },
-          // Allow embedding in Warpcast mini-app iframe
-          // commenting out for now because of Vercel injecting duplicate security headers
-/*           {
-            key: 'X-Frame-Options',
-            value: 'ALLOWALL',
-          }, */
-          {
-            key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' https://*.farcaster.xyz",
-        },
         ],
       },
     ];
@@ -34,10 +24,4 @@ const nextConfig = {
   },
 }
 
-export default {
-  ...nextConfig,
-  experimental: {
-    allowIframeEmbedding: true,   // <-- turns off SAMEORIGIN
-  },
-  // …
-}
+export default nextConfig
