@@ -514,7 +514,7 @@ export default function ClientPage() {
                     <DropdownMenuContent align="start">
                       <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>Farcaster Wallet</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>Coinbase Wallet</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>WalletConnect</DropdownMenuItem>
+                      {/* <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>WalletConnect</DropdownMenuItem> */}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
