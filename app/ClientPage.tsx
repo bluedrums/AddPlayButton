@@ -143,16 +143,29 @@ export default function ClientPage() {
       if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, or Vimeo links.")
       
       let oembedData: OembedData = {};
-      if (detection.oembedEndpoint) {
+      let imageUrl: string | undefined;
+      
+      if (detection.platform === "Apple Music") {
+        const metadata = await api(`/api/metadata?url=${encodeURIComponent(url)}`);
+        oembedData.title = metadata.title;
+        imageUrl = metadata.imageUrl;
+      } else if (detection.oembedEndpoint) {
         oembedData = await fetchOembedData(detection.oembedEndpoint);
+        imageUrl = oembedData.thumbnail_url;
+      }
+      
+      let artist = oembedData.author_name || "";
+      if (detection.platform === "Apple Music" && oembedData.title) {
+        const byParts = oembedData.title.split(" by ");
+        if (byParts.length > 1) {
+          artist = byParts.pop()?.trim() || '';
+          oembedData.title = byParts.join(" by ").trim();
+        }
       }
       
       const suggestedTitle = oembedData.title || `My ${detection.platform} Mix`;
-      const artist = oembedData.author_name || "";
-      const imageUrl = oembedData.thumbnail_url; // this can be string or undefined
 
       setTitle(suggestedTitle)
-      // Set cover image for UI preview, with a fallback
       setCoverImage(imageUrl || `${process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz'}/ThePlayButton.png`);
       
       return { 
@@ -160,7 +173,7 @@ export default function ClientPage() {
         embedUrl: detection.embedUrl, 
         suggestedTitle, 
         artist, 
-        coverImage: imageUrl // Return the actual image URL (or undefined)
+        coverImage: imageUrl
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Validation failed. Please enter a valid URL."
@@ -200,7 +213,17 @@ export default function ClientPage() {
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
-      let shareText = `🎵 ${newPlayButton.title}`;
+      
+      let cleanTitle = newPlayButton.title;
+      if (newPlayButton.artist && cleanTitle.toLowerCase().includes(newPlayButton.artist.toLowerCase())) {
+        const regex = new RegExp(` by ${newPlayButton.artist}`, 'i');
+        cleanTitle = cleanTitle.replace(regex, '');
+      }
+
+      let shareText = `🎵 ${cleanTitle}`;
+      if (newPlayButton.artist) {
+        shareText += ` by ${newPlayButton.artist}`;
+      }
       shareText += ` on ${newPlayButton.platform}`;
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
