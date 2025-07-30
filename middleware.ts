@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
-import { nanoid } from 'nanoid';
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 
@@ -9,6 +8,7 @@ const publicRoutes = [
   { path: '/api/auth/farcaster', methods: ['POST'] },
   { path: '/api/auth/session', methods: ['GET'] },
   { path: '/api/auth/status', methods: ['GET'] },
+  { path: '/api/auth/csrf', methods: ['GET'] }, // <-- Make CSRF endpoint public
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
 ];
@@ -21,7 +21,7 @@ export async function middleware(request: NextRequest) {
 
   // Check if the route is public
   const isPublicRoute = publicRoutes.some(
-    (route) => pathname === route.path && route.methods.includes(method)
+    (route) => pathname.startsWith(route.path) && route.methods.includes(method)
   );
 
   if (isPublicRoute) {
@@ -47,15 +47,7 @@ export async function middleware(request: NextRequest) {
     }
 
     console.log(`✅ Middleware: Token valid for user ${fid}`);
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set('x-user-fid', fid.toString());
-
-    const response = NextResponse.next({
-      request: {
-        headers: requestHeaders,
-      },
-    });
-
+    
     // CSRF Protection: Check for CSRF token on state-changing methods
     if (['POST', 'PUT', 'DELETE'].includes(method)) {
       const csrfTokenFromHeader = request.headers.get('X-CSRF-Token');
@@ -66,22 +58,22 @@ export async function middleware(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
       }
     }
+    
+    // Pass user fid in headers for use in API routes
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-user-fid', fid.toString());
 
-    // Generate and set a new CSRF token for the next request
-    const newCsrfToken = nanoid();
-    response.cookies.set('csrf-token', newCsrfToken, {
-      httpOnly: false, // Must be accessible from the client
-      secure: true,
-      sameSite: 'none',
-      path: '/',
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
     });
 
-    return response;
   } catch (error) {
     console.error('🚫 Middleware: Invalid token. Access denied.', error);
     const response = NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     response.cookies.delete('session');
-    response.cookies.delete('csrf-token');
+    response.cookies.delete('csrf-token'); // Also clear csrf-token on auth failure
     return response;
   }
 }
