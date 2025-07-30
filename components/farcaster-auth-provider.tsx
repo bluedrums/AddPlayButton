@@ -102,9 +102,9 @@ function FarcasterAuthProviderInner({ children }: { children: React.ReactNode })
 
 export function FarcasterAuthProvider({ children }: { children: React.ReactNode }) {
   const config = {
-    rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "https://mainnet.optimism.io",
-    domain: process.env.NEXT_PUBLIC_APP_DOMAIN || "addplaybutton.xyz",
-    siweUri: process.env.NEXT_PUBLIC_APP_URL || "https://addplaybutton.xyz",
+    rpcUrl: "https://mainnet.optimism.io",
+    domain: "addplaybutton.xyz",
+    siweUri: "https://addplaybutton.xyz",
   }
 
   return (
