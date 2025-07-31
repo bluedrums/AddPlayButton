@@ -3,9 +3,12 @@ import "server-only";
 export const fetchPlayButton = async (fid: number, id: string) => {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-    const apiUrl = `${baseUrl}/api/playbutton?fid=${fid}&id=${id}`;
+    const apiUrl = `${baseUrl}/api/playbutton?id=${id}`;
     
     const response = await fetch(apiUrl, {
+      headers: {
+        'x-user-fid': fid.toString(),
+      },
       next: { revalidate: 10 } // Revalidate every 10 seconds
     });
     
