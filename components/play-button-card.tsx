@@ -10,7 +10,8 @@ import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
-import { sdk } from "@farcaster/miniapp-sdk"
+import { sdk } from "@farcaster/miniapp-sdk";
+import { buildShareText } from "@/lib/utils"
 
 interface PlayButton {
   id: string
@@ -51,23 +52,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     }
 
     try {
-      let shareText = playButton.title;
-
-      // Remove any existing "by <artist>" from title to avoid duplication
-      if (playButton.artist && shareText.toLowerCase().includes(playButton.artist.toLowerCase())) {
-        const regex = new RegExp(` by ${playButton.artist}`, 'i');
-        shareText = shareText.replace(regex, '');
-      }
-      
-      // Remove any existing "on <platform>" from title to avoid duplication
-      const platformRegex = new RegExp(` on ${playButton.platform}`, 'i');
-      shareText = shareText.replace(platformRegex, '');
-
-      // Now, construct the clean share text
-      if (playButton.artist) {
-        shareText += ` by ${playButton.artist}`;
-      }
-      shareText += ` on ${playButton.platform}`;
+      const shareText = buildShareText({ title: playButton.title, artist: playButton.artist, platform: playButton.platform });
       
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
       const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}?fid=${user.fid}`;

@@ -17,6 +17,7 @@ import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
+import { buildShareText } from "@/lib/utils";
 
 interface PlayButton {
   id: string
@@ -211,23 +212,7 @@ export default function ClientPage() {
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       
-      let cleanTitle = newPlayButton.title;
-      
-      // Remove any existing "by <artist>" from title
-      if (newPlayButton.artist && cleanTitle.toLowerCase().includes(newPlayButton.artist.toLowerCase())) {
-        const regex = new RegExp(` by ${newPlayButton.artist}`, 'i');
-        cleanTitle = cleanTitle.replace(regex, '');
-      }
-      
-      // Remove any existing "on <platform>" from title
-      const platformRegex = new RegExp(` on ${newPlayButton.platform}`, 'i');
-      cleanTitle = cleanTitle.replace(platformRegex, '');
-
-      let shareText = `🎵 ${cleanTitle}`;
-      if (newPlayButton.artist) {
-        shareText += ` by ${newPlayButton.artist}`;
-      }
-      shareText += ` on ${newPlayButton.platform}`;
+      const shareText = buildShareText({ title: newPlayButton.title, artist: newPlayButton.artist, platform: newPlayButton.platform, includeEmoji: true });
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
       const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
