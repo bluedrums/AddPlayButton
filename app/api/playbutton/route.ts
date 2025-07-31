@@ -18,13 +18,24 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Invalid authentication token' }, { status: 400 });
     }
 
-    const { rows } = await sql`
-      SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
-    `;
+    let rows;
+    if (fidStr) {
+      // Try fetching with user_fid first when provided
+      rows = (await sql`
+        SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
+      `).rows;
+    }
+
+    // Fallback to lookup by id only (public share) when header missing or nothing found
+    if (!fidStr || rows.length === 0) {
+      rows = (await sql`
+        SELECT data FROM play_buttons WHERE id = ${id} LIMIT 1;
+      `).rows;
+    }
 
     if (rows.length === 0) {
-      console.log(`No play button found for fid: ${fid} and id: ${id}`);
-      return NextResponse.json({ error: 'Play button not found or access denied' }, { status: 404 });
+      console.log(`No play button found for id: ${id}`);
+      return NextResponse.json({ error: 'Play button not found' }, { status: 404 });
     }
 
     const playButton = rows[0].data;
