@@ -280,10 +280,14 @@ export default function ClientPage() {
 
   const handleSignIn = async () => {
     try {
-      await signIn()
-      toast.success("Successfully signed in!")
+      const signedInUser = await signIn();
+      if (signedInUser) {
+        toast.success("Successfully signed in!");
+      } else {
+        toast.error("Sign in failed");
+      }
     } catch (error) {
-      toast.error("Failed to sign in")
+      toast.error("Failed to sign in");
     }
   }
 

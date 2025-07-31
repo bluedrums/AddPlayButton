@@ -6,7 +6,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
 // Define which routes are public (do not require authentication)
 const publicRoutes = [
   { path: '/api/auth/farcaster', methods: ['POST'] },
-  { path: '/api/auth/session', methods: ['GET'] },
+  { path: '/api/auth/session', methods: ['GET', 'POST'] },
   { path: '/api/auth/status', methods: ['GET'] },
   { path: '/api/auth/csrf', methods: ['GET'] },
   { path: '/api/oembed', methods: ['GET'] },
@@ -16,6 +16,7 @@ const publicRoutes = [
 // Define which routes are exempt from CSRF protection
 const csrfExemptRoutes = [
   { path: '/api/auth/farcaster', methods: ['POST'] }, // Authentication endpoint
+  { path: '/api/auth/session', methods: ['POST'] }, // Session creation
 ];
 
 export async function middleware(request: NextRequest) {
