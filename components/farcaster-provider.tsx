@@ -90,6 +90,8 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
               username: context.user.username || `user${context.user.fid}`,
               displayName: context.user.displayName || context.user.username || `User ${context.user.fid}`,
               pfpUrl: context.user.pfpUrl || "/placeholder-user.jpg",
+              custodyAddress: context.user.custodyAddress || "",
+              verifications: context.user.verifications || [],
             };
 
             console.log('🔐 Creating server session...');

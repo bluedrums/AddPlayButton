@@ -4,15 +4,7 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { AuthKitProvider, useSignIn } from "@farcaster/auth-kit"
 
-interface FarcasterUser {
-  fid: number
-  username: string
-  displayName: string
-  pfpUrl: string
-  bio?: string
-  followerCount?: number
-  followingCount?: number
-}
+import { FarcasterUser } from "@/lib/farcaster";
 
 interface FarcasterAuthContextType {
   user: FarcasterUser | null
