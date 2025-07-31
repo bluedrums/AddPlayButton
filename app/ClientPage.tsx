@@ -16,7 +16,6 @@ import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
-import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
 
 interface PlayButton {
