@@ -12,11 +12,11 @@ import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
-import { sdk } from '@farcaster/miniapp-sdk';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
+import { sdk } from '@farcaster/miniapp-sdk';
 
 interface PlayButton {
   id: string
@@ -49,12 +49,6 @@ export default function ClientPage() {
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
-
-  useEffect(() => {
-    if (isSDKReady) {
-      sdk.actions.ready();
-    }
-  }, [isSDKReady]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -295,7 +289,6 @@ export default function ClientPage() {
 
   const handleSignOut = async () => {
     await signOut();
-    setUser(null); // Explicitly clear user state on the client
   }
 
   const handleDonate = async (walletType: string = selectedWallet) => {
