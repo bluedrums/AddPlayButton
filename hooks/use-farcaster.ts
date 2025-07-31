@@ -11,6 +11,7 @@ export function useFarcaster() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
+  const [finishLoading, setFinishLoading] = useState(false);
 
   const signOut = useCallback(async () => {
     try {
@@ -52,16 +53,17 @@ export function useFarcaster() {
           setIsAuthenticated(true);
           return sessionRes.user;
         } else {
-          throw new Error('Failed to create a session.');
+          throw new Error(sessionRes.error || 'Failed to create a session.');
         }
       } else {
-        throw new Error("Please make sure you're logged into Farcaster and try again.");
+        // This is a normal case for users not logged into Farcaster
+        return null;
       }
     } catch (err) {
       const message = `Sign in failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
       console.error("❌ Sign in error:", err);
       setError(message);
-      signOut(); // Sign out if session creation fails
+      signOut();
       return null;
     } finally {
       setIsLoading(false);
@@ -80,10 +82,11 @@ export function useFarcaster() {
           console.log('✅ User already authenticated:', statusRes.user);
           setUser(statusRes.user);
           setIsAuthenticated(true);
+          await sdk.actions.ready();
           setIsSDKReady(true);
         } else {
-          console.log('🔄 No existing session, attempting auto-sign-in...');
-          await signIn();
+          console.log('🔄 No existing session, checking SDK...');
+          // Don't auto-sign-in here, wait for UI interaction
         }
       } catch (err) {
         console.error("❌ Initialization error:", err);
@@ -93,10 +96,20 @@ export function useFarcaster() {
       } finally {
         console.log('🏁 Initialization complete');
         setIsLoading(false);
+        setFinishLoading(true);
       }
     };
     initialize();
-  }, [signIn]);
+  }, []);
+
+  useEffect(() => {
+    const autoSignIn = async () => {
+        if (finishLoading && !isAuthenticated) {
+            await signIn();
+        }
+    }
+    autoSignIn();
+  }, [finishLoading, isAuthenticated, signIn])
 
   return { user, isAuthenticated, isLoading, error, signIn, signOut, isSDKReady, setUser };
 }
