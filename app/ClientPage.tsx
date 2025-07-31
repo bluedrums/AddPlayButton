@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift, ChevronDown } from "lucide-react"
-import { useFarcaster } from "@/components/farcaster-provider"
+import { useFarcaster } from "@/hooks/use-farcaster"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
@@ -38,7 +38,7 @@ interface OembedData {
 
 export default function ClientPage() {
   const params = useSearchParams();
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, isSDKReady, setUser, playButtons, setPlayButtons } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut } = useFarcaster()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -50,6 +50,32 @@ export default function ClientPage() {
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
+  const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
+
+  useEffect(() => {
+    const fetchPlayButtons = async () => {
+      if (isAuthenticated) {
+        try {
+          const res = await api('/api/playbutton/all');
+          if (res) {
+            const parsed = res.map((pb: any) => ({
+              ...pb,
+              createdAt: new Date(pb.createdAt),
+            }));
+            setPlayButtons(parsed);
+          } else {
+            setPlayButtons([]);
+            console.log('Could not fetch play buttons, maybe a new user?');
+          }
+        } catch (err) {
+          console.error('Failed to fetch play buttons:', err);
+        }
+      } else {
+        setPlayButtons([]);
+      }
+    };
+    fetchPlayButtons();
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -263,18 +289,7 @@ export default function ClientPage() {
     }
   }
 
-  const handleSignIn = async () => {
-    try {
-      const signedInUser = await signIn();
-      if (signedInUser) {
-        toast.success("Successfully signed in!");
-      } else {
-        toast.error("Sign in failed");
-      }
-    } catch (error) {
-      toast.error("Failed to sign in");
-    }
-  }
+
 
   const handleSignOut = async () => {
     await signOut();
@@ -379,7 +394,7 @@ export default function ClientPage() {
     }
   }
 
-  if (!isSDKReady || isLoading) return <SplashScreen />
+  if (isLoading) return <SplashScreen />
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
@@ -397,7 +412,7 @@ export default function ClientPage() {
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Add Play Button</h1>
-            <Avatar className="w-12 h-12 cursor-pointer" onClick={isAuthenticated ? handleSignOut : handleSignIn}>
+            <Avatar className="w-12 h-12 cursor-pointer" onClick={isAuthenticated ? signOut : signIn}>
               <AvatarImage src={user?.pfpUrl || '/placeholder-user.jpg'} alt={user?.displayName || 'User'} />
               <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
             </Avatar>
@@ -422,13 +437,13 @@ export default function ClientPage() {
                   <AvatarFallback><User className="w-8 h-8" /></AvatarFallback>
                 </Avatar>
               </div>
-              <Button onClick={handleSignIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
+              <Button onClick={signIn} disabled={isLoading} className="w-full bg-purple-600 hover:bg-purple-700">
                 {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>) : (<><User className="w-4 h-4 mr-2" />Get Started</>)}
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
               <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo mode will be used.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
-              {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1"><div>SDK Ready: {isSDKReady ? "Yes" : "No"}</div><div>Loading: {isLoading ? "Yes" : "No"}</div><div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div><div>User: {user ? user.username : "None"}</div><div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div><div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div></div>}
+              {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1"><div>Loading: {isLoading ? "Yes" : "No"}</div><div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div><div>User: {user ? user.username : "None"}</div><div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div><div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div></div>}
             </CardContent>
           </Card>
         ) : (

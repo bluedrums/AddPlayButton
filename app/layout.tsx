@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Ubuntu } from 'next/font/google';
 import "./globals.css"
-import { FarcasterProvider } from "@/components/farcaster-provider"
+import { NextNeynarProvider } from "@/components/neynar-provider"
 import { Toaster } from "@/components/ui/sonner"
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
@@ -33,10 +33,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={ubuntu.className}>
-        <FarcasterProvider>
+        <NextNeynarProvider>
           {children}
           <Toaster />
-        </FarcasterProvider>
+        </NextNeynarProvider>
       </body>
     </html>
   )
