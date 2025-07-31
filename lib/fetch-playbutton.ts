@@ -5,6 +5,8 @@ export const fetchPlayButton = async (fid: number, id: string) => {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const apiUrl = `${baseUrl}/api/playbutton?id=${id}`;
     
+    console.log(`fetchPlayButton: fetching ${apiUrl} with fid ${fid} in header`);
+
     const response = await fetch(apiUrl, {
       headers: {
         'x-user-fid': fid.toString(),
@@ -13,7 +15,7 @@ export const fetchPlayButton = async (fid: number, id: string) => {
     });
     
     if (!response.ok) {
-      console.error(`Failed to fetch play button. Status: ${response.status}`);
+      console.error(`Failed to fetch play button. Status: ${response.status}, Body: ${await response.text()}`);
       return null;
     }
     const data = await response.json();

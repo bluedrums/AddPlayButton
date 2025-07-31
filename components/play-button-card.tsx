@@ -51,7 +51,19 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     }
 
     try {
-      let shareText = `${playButton.title}`;
+      let shareText = playButton.title;
+
+      // Remove any existing "by <artist>" from title to avoid duplication
+      if (playButton.artist && shareText.toLowerCase().includes(playButton.artist.toLowerCase())) {
+        const regex = new RegExp(` by ${playButton.artist}`, 'i');
+        shareText = shareText.replace(regex, '');
+      }
+      
+      // Remove any existing "on <platform>" from title to avoid duplication
+      const platformRegex = new RegExp(` on ${playButton.platform}`, 'i');
+      shareText = shareText.replace(platformRegex, '');
+
+      // Now, construct the clean share text
       if (playButton.artist) {
         shareText += ` by ${playButton.artist}`;
       }

@@ -4,8 +4,10 @@ import { sql } from '@vercel/postgres';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const fidStr = request.headers.get('x-user-fid'); // Read from header
+    const fidStr = request.headers.get('x-user-fid');
     const id = searchParams.get('id');
+
+    console.log(`playbutton GET: fid from header: ${fidStr}, id from query: ${id}`);
 
     if (!fidStr || !id) {
       return NextResponse.json({ error: 'Missing authentication token or resource ID' }, { status: 400 });
@@ -21,10 +23,12 @@ export async function GET(request: Request) {
     `;
 
     if (rows.length === 0) {
+      console.log(`No play button found for fid: ${fid} and id: ${id}`);
       return NextResponse.json({ error: 'Play button not found or access denied' }, { status: 404 });
     }
 
     const playButton = rows[0].data;
+    console.log('Returning playButton data:', playButton);
 
     return NextResponse.json(playButton);
   } catch (error) {
