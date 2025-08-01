@@ -4,6 +4,14 @@ import { createContext, useContext, useState, useEffect } from "react"
 import type { FarcasterUser } from "@/lib/farcaster"
 import { useFarcaster as useFarcasterAuth } from "@/hooks/use-farcaster"
 import { api } from "@/lib/api"
+import { AuthKitProvider } from "@farcaster/auth-kit"
+import type { AuthKitConfig } from "@farcaster/auth-kit"
+
+const config: AuthKitConfig = {
+  rpcUrl: "https://mainnet.optimism.io",
+  domain: "addplaybutton.xyz",
+  siweUri: "https://addplaybutton.xyz/login",
+};
 
 interface PlayButton {
   id: string;
@@ -23,7 +31,6 @@ interface FarcasterContextType {
   error: string | null
   playButtons: PlayButton[];
   setPlayButtons: (buttons: PlayButton[]) => void;
-  signIn: () => Promise<FarcasterUser | null>
   signOut: () => void
   isSDKReady: boolean
   setUser: (user: FarcasterUser | null) => void;
@@ -36,7 +43,6 @@ const FarcasterContext = createContext<FarcasterContextType>({
   error: null,
   playButtons: [],
   setPlayButtons: () => {},
-  signIn: async () => null,
   signOut: () => {},
   isSDKReady: false,
   setUser: () => {},
@@ -46,8 +52,8 @@ export function useFarcaster() {
   return useContext(FarcasterContext)
 }
 
-export function FarcasterProvider({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, error, signIn, signOut, isSDKReady, setUser } = useFarcasterAuth();
+function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
+  const { user, isAuthenticated, isLoading, error, signOut, isSDKReady, setUser } = useFarcasterAuth();
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
 
   useEffect(() => {
@@ -63,7 +69,6 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
             setPlayButtons(parsed);
           } else {
             setPlayButtons([]);
-            console.log('Could not fetch play buttons, maybe a new user?');
           }
         } catch (err) {
           console.error('Failed to fetch play buttons:', err);
@@ -79,7 +84,6 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
     user,
     isAuthenticated,
     isLoading,
-    signIn,
     signOut,
     isSDKReady,
     setUser,
@@ -89,4 +93,12 @@ export function FarcasterProvider({ children }: { children: React.ReactNode }) {
   }
 
   return <FarcasterContext.Provider value={contextValue}>{children}</FarcasterContext.Provider>
+}
+
+export function FarcasterProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <AuthKitProvider config={config}>
+      <FarcasterProviderContent>{children}</FarcasterProviderContent>
+    </AuthKitProvider>
+  )
 }
