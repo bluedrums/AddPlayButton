@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing user data' }, { status: 400 });
     }
 
-    // Save user to the database
     await sql`
       INSERT INTO users (fid, username, display_name, pfp_url, custody_address, verifications)
       VALUES (${user.fid}, ${user.username}, ${user.displayName}, ${user.pfpUrl}, ${user.custodyAddress}, ${JSON.stringify(user.verifications || [])})
