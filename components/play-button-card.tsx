@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
-import { useFarcaster } from "@/components/farcaster-provider"
+import { useFarcaster } from "@/hooks/use-farcaster"
 import { toast } from "sonner"
 import { sdk } from "@farcaster/miniapp-sdk";
 import { buildShareText } from "@/lib/utils"
@@ -139,7 +139,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
+                    <DropdownMenuItem onClick={() => window.open(playButton..url, "_blank")}>
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Open Original
                     </DropdownMenuItem>
