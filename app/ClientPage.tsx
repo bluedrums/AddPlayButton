@@ -16,6 +16,7 @@ import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
+import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
 
 interface PlayButton {
@@ -228,10 +229,10 @@ export default function ClientPage() {
       
       await api('/api/playbutton', {
         method: 'POST',
-        body: {
+        body: JSON.stringify({
           id: newPlayButton.id,
           data: newPlayButton,
-        },
+        }),
       });
       
       // Create the shareable cast with the share page URL as embed
@@ -240,7 +241,7 @@ export default function ClientPage() {
       const shareText = buildShareText({ title: newPlayButton.title, artist: newPlayButton.artist, platform: newPlayButton.platform, includeEmoji: true });
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-      const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}?fid=${user?.fid}`;
+      const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}`;
       
       const sharingResult = await sdk.actions.composeCast({ 
         text: shareText, 
