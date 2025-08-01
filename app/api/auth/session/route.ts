@@ -2,10 +2,15 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { SignJWT } from 'jose';
 import { sql } from '@vercel/postgres';
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET_KEY);
-
 export async function POST(request: NextRequest) {
   try {
+    const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
+    if (!JWT_SECRET_KEY) {
+      console.error('JWT_SECRET_KEY is not set in the environment variables.');
+      return NextResponse.json({ error: 'Server configuration error: JWT secret is missing.' }, { status: 500 });
+    }
+    const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_KEY);
+
     const user = await request.json();
 
     if (!user || !user.fid) {
@@ -24,14 +29,12 @@ export async function POST(request: NextRequest) {
         verifications = EXCLUDED.verifications;
     `;
 
-    // Create a JWT session token
     const token = await new SignJWT({ fid: user.fid })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
       .setExpirationTime('24h')
       .sign(JWT_SECRET);
 
-    // Fetch the user's play buttons to return with the session
     const { rows } = await sql`SELECT data FROM play_buttons WHERE user_fid = ${user.fid};`;
     const playButtons = rows.map(row => row.data);
 
@@ -39,9 +42,9 @@ export async function POST(request: NextRequest) {
     response.cookies.set('session', token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'none', // allow cross-site iframe requests
+      sameSite: 'none',
       path: '/',
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
     });
 
     return response;
