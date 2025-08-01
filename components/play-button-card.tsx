@@ -139,7 +139,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => window.open(playButton..url, "_blank")}>
+                    <DropdownMenuItem onClick={() => window.open(playButton.url, "_blank")}>
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Open Original
                     </DropdownMenuItem>
