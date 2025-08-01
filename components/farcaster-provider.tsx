@@ -9,8 +9,8 @@ import type { AuthKitConfig } from "@farcaster/auth-kit"
 
 const config: AuthKitConfig = {
   rpcUrl: "https://mainnet.optimism.io",
-  domain: "addplaybutton.xyz",
-  siweUri: "https://addplaybutton.xyz/login",
+  domain: "www.addplaybutton.xyz",
+  siweUri: "https://www.addplaybutton.xyz/login",
 };
 
 interface PlayButton {
