@@ -9,6 +9,7 @@ const publicRoutes = [
   { path: '/api/auth/session', methods: ['GET', 'POST'] },
   { path: '/api/auth/status', methods: ['GET'] },
   { path: '/api/auth/csrf', methods: ['GET'] },
+  { path: '/api/auth/siwe', methods: ['GET'] },
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
 ];
