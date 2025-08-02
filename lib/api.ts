@@ -53,7 +53,7 @@ export const api = async (url: string, options: RequestInit = {}) => {
         try {
           const user = JSON.parse(storedUser);
           if (user.fid) {
-            fidHeader = { 'X-Farcaster-FID': user.fid.toString() };
+            fidHeader = { 'x-user-fid': user.fid.toString() };
           }
         } catch (err) {
           // Ignore parse errors

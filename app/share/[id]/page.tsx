@@ -16,6 +16,15 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
+    
+    console.log('PlayButton metadata generation:', { 
+      id, 
+      fid, 
+      hasCoverImage: !!playButtonData.coverImage,
+      coverImage: playButtonData.coverImage,
+      imageUrl,
+      playButtonData 
+    });
     // Point directly to the mini-app home so Warpcast keeps the user inside the in-app sheet.
     const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(encodedId)}`;
 
@@ -90,7 +99,14 @@ export default async function SharePage({ params, searchParams }: { params: { id
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>{playButton.title}</h1>
       <p>To use this play button, open the link in a Farcaster client.</p>
-      <img src={playButton.coverImage} alt={playButton.title} style={{ maxWidth: '100%' }} />
+      {playButton.coverImage ? (
+        <img src={playButton.coverImage} alt={playButton.title} style={{ maxWidth: '100%' }} />
+      ) : (
+        <p>No cover image available</p>
+      )}
+      <pre style={{ marginTop: '20px', padding: '10px', backgroundColor: '#f0f0f0', overflow: 'auto' }}>
+        {JSON.stringify(playButton, null, 2)}
+      </pre>
     </div>
   );
 } 
