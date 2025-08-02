@@ -10,6 +10,7 @@ export const api = async (url: string, options: RequestInit = {}) => {
     const mergedOptions: RequestInit = {
       ...defaultOptions,
       ...options,
+      credentials: 'include', // ensure cookies (session, csrf) are sent & accepted in third-party iframe
       headers: {
         ...defaultOptions.headers,
         ...options.headers,
