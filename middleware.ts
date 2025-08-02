@@ -17,6 +17,7 @@ const publicRoutes = [
 const csrfExemptRoutes = [
   { path: '/api/auth/farcaster', methods: ['POST'] }, // Authentication endpoint
   { path: '/api/auth/session', methods: ['POST'] }, // Session creation
+  { path: '/api/auth/signout', methods: ['POST'] }, // Signout doesn't need CSRF
 ];
 
 export async function middleware(request: NextRequest) {
@@ -70,11 +71,25 @@ export async function middleware(request: NextRequest) {
     if (['POST', 'PUT', 'DELETE'].includes(method) && !isCsrfExempt) {
       const csrfTokenFromHeader = request.headers.get('X-CSRF-Token');
       const csrfCookie = request.cookies.get('csrf-token');
+      
+      console.log('🔐 CSRF check:', {
+        path: pathname,
+        method,
+        headerToken: csrfTokenFromHeader,
+        cookieToken: csrfCookie?.value,
+        isExempt: isCsrfExempt
+      });
 
       if (!csrfTokenFromHeader || !csrfCookie || csrfTokenFromHeader !== csrfCookie.value) {
-        console.error('🚫 Middleware: CSRF token validation failed.');
+        console.error('🚫 Middleware: CSRF token validation failed.', {
+          hasHeader: !!csrfTokenFromHeader,
+          hasCookie: !!csrfCookie,
+          match: csrfTokenFromHeader === csrfCookie?.value
+        });
         return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
       }
+      
+      console.log('✅ CSRF token validated');
     }
     
     // Pass user fid in headers for use in API routes

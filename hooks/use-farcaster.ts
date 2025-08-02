@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { FarcasterUser } from '@/lib/farcaster';
-import { api } from '@/lib/api';
+import { api, clearCsrfToken } from '@/lib/api';
 import { sdk } from '@farcaster/miniapp-sdk';
 
 export function useFarcaster() {
@@ -68,6 +68,7 @@ export function useFarcaster() {
   const signOut = useCallback(async () => {
     try {
       await api('/api/auth/signout', { method: 'POST' });
+      clearCsrfToken(); // Clear CSRF token cache after signout
     } catch (error) {
       console.error('Sign out failed:', error);
     } finally {
