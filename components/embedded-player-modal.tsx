@@ -15,6 +15,7 @@ import {
   Volume2,
   VolumeX,
   Maximize2,
+  Minimize2,
   ImageIcon,
   Sparkles,
 } from "lucide-react"
@@ -50,12 +51,18 @@ export function EmbeddedPlayerModal({
   const [isMuted, setIsMuted] = useState(false)
   const [copied, setCopied] = useState(false)
   const [isFullOverlay, setIsFullOverlay] = useState(false); // New state for full-overlay mode
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   // Reset state when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setIsMuted(false)
       setCopied(false)
+      setIsFullscreen(false)
+      // Exit fullscreen when modal closes
+      if (isFullscreen) {
+        handleExitFullscreen()
+      }
     }
   }, [isOpen])
 
@@ -66,6 +73,76 @@ export function EmbeddedPlayerModal({
       setIsFullOverlay(false);
     }
   }, [isOpen]);
+
+  // Handle ESC key to exit fullscreen
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullscreen) {
+        handleExitFullscreen()
+      }
+    }
+
+    if (isOpen && isFullscreen) {
+      document.addEventListener('keydown', handleKeyDown)
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isOpen, isFullscreen]);
+
+  // Handle fullscreen functionality using native browser API
+  const handleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        // Request fullscreen on the modal container
+        const modalElement = document.getElementById('player-modal-container')
+        if (modalElement && modalElement.requestFullscreen) {
+          await modalElement.requestFullscreen()
+          setIsFullscreen(true)
+          toast.success("Entered fullscreen mode")
+        } else {
+          toast.error("Fullscreen not supported")
+        }
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+          setIsFullscreen(false)
+          toast.success("Exited fullscreen mode")
+        }
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error)
+      toast.error("Fullscreen not available")
+    }
+  }
+
+  const handleExitFullscreen = async () => {
+    try {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+        setIsFullscreen(false)
+      }
+    } catch (error) {
+      console.error("Exit fullscreen error:", error)
+    }
+  }
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+    }
+  }, [])
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -118,6 +195,7 @@ export function EmbeddedPlayerModal({
     <>
       {isOpen && (
         <div
+          id="player-modal-container"
           className={cn(
             "fixed inset-0 z-50 flex items-center justify-center bg-black", // Always have a black background
           )}
@@ -128,10 +206,26 @@ export function EmbeddedPlayerModal({
               "relative w-full h-full" // Full width and height
             )}
           >
-            {/* Close button */}
-            <Button onClick={onClose} className="absolute top-2 right-2 h-8 w-8 p-0 text-white z-10 bg-black/30 hover:bg-black/50">
-              <X className="w-6 h-6" />
-            </Button>
+            {/* Control buttons */}
+            <div className="absolute top-2 right-2 flex gap-2 z-10">
+              {/* Fullscreen button */}
+              <Button 
+                onClick={handleFullscreen} 
+                className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50"
+                title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="w-5 h-5" />
+                ) : (
+                  <Maximize2 className="w-5 h-5" />
+                )}
+              </Button>
+              
+              {/* Close button */}
+              <Button onClick={onClose} className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50">
+                <X className="w-6 h-6" />
+              </Button>
+            </div>
             
             {/* Embedded Player - takes up the whole space */}
             <div className="w-full h-full">

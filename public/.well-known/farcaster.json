@@ -37,7 +37,7 @@
     },
     "layout": {
       "orientation": "portrait",
-      "fullscreen": false,
+      "fullscreen": true,
       "statusBarStyle": "default",
       "maxWidth": "768px",
       "padding": "16px"
