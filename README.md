@@ -1,30 +1,55 @@
-# AddPlayButton
+# Add Play Button - Farcaster MiniApp
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A Farcaster MiniApp that transforms music and video links into interactive play buttons. Create shareable cards for Spotify, Apple Music, YouTube, Vimeo, and SoundCloud that play directly in the Farcaster miniapp window.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/rainonme/v0-add-play-button)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/C31pyc7uZsK)
+## 🎵 Features
 
-## Overview
+- **Multi-Platform Support**: Works with Spotify, Apple Music, YouTube, Vimeo, and SoundCloud
+- **Embedded Playback**: Music and videos play directly within Farcaster without leaving the app
+- **Shareable Cards**: Create beautiful, interactive cards that your followers can engage with
+- **Farcaster Integration**: Seamless casting and sharing within the Farcaster ecosystem
+- **Mobile Optimized**: Responsive design that works perfectly on mobile devices
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## 🚀 Live Demo
 
-## Deployment
+**[https://addplaybutton.xyz](https://addplaybutton.xyz)**
 
-Your project is live at:
+## 🛠️ Tech Stack
 
-**[https://vercel.com/rainonme/v0-add-play-button](https://vercel.com/rainonme/v0-add-play-button)**
+- **Framework**: Next.js 14 with TypeScript
+- **Authentication**: Farcaster Auth Kit
+- **UI**: Radix UI + Tailwind CSS
+- **Database**: Neon Postgres
+- **Deployment**: Vercel
 
-## Build your app
+## 📱 How It Works
 
-Continue building your app on:
+1. **Paste a Link**: Enter any Spotify, Apple Music, YouTube, Vimeo, or SoundCloud URL
+2. **Customize**: Add a title, description, and cover image
+3. **Create Card**: Generate an interactive play button card
+4. **Share**: Cast your card to Farcaster for your followers to enjoy
 
-**[https://v0.dev/chat/projects/C31pyc7uZsK](https://v0.dev/chat/projects/C31pyc7uZsK)**
+### Farcaster MiniApp Requirements
 
-## How It Works
+- ✅ Serves `/.well-known/farcaster.json` manifest
+- ✅ Includes proper metadata tags (`fc:miniapp`, `fc:frame`)
+- ✅ Mobile-responsive design
+- ✅ Farcaster authentication integration
+- ✅ Casting functionality
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+## 📞 Support
+
+- **Website**: [https://addplaybutton.xyz](https://addplaybutton.xyz)
+- **Farcaster**: [@addplaybutton](https://warpcast.com/addplaybutton)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/add-play-button/issues)
+- **Development** [https://rainonmeproductions.com] (https://rainonmeproductions.com)
+
+## 🙏 Acknowledgments
+
+- Built with [Farcaster](https://farcaster.xyz) and [Neynar](https://neynar.com)
+- UI components from [Radix UI](https://radix-ui.com)
+- Icons from [Lucide React](https://lucide.dev and https://t.me/voidrainbow)
+
+---
+
+Made with ❤️ for the Farcaster community
