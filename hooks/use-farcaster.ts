@@ -12,19 +12,19 @@ export function useFarcaster() {
   const [error, setError] = useState<string | null>(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
 
-  const { signIn: connect, isConnected, isConnecting, isError, error: authError, isSuccess, data } = useSignIn({
+  const { signIn: connect, isConnected, isPolling, isError, error: authError, isSuccess, data } = useSignIn({
     onSuccess: async (data) => {
       try {
         const res = await api('/api/auth/farcaster', {
           method: 'POST',
-          body: {
+          body: JSON.stringify({
             action: 'verify',
             message: data.message,
             signature: data.signature,
             nonce: data.nonce,
             domain: window.location.hostname,
             fid: data.fid,
-          },
+          }),
         });
         if (res.success) {
           setUser(res.user);
@@ -72,7 +72,7 @@ export function useFarcaster() {
   return { 
     user, 
     isAuthenticated, 
-    isLoading: isLoading || isConnecting, 
+    isLoading: isLoading || isPolling, 
     error: error || (isError ? authError?.message : null),
     signIn: connect, 
     signOut, 
