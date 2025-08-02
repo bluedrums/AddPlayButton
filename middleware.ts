@@ -36,10 +36,17 @@ export async function middleware(request: NextRequest) {
   }
 
   console.log('🔒 Middleware: Protected route, checking authentication');
+  console.log('🍪 All cookies:', request.cookies.getAll());
   const sessionCookie = request.cookies.get('session');
 
   if (!sessionCookie) {
     console.log('🚫 Middleware: No session cookie found. Access denied.');
+    console.log('📍 Request context:', {
+      origin: request.headers.get('origin'),
+      referer: request.headers.get('referer'),
+      host: request.headers.get('host'),
+      cookie: request.headers.get('cookie')
+    });
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 

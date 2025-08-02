@@ -14,8 +14,8 @@ export async function GET(request: NextRequest) {
     response = NextResponse.json({ csrfToken });
     response.cookies.set('csrf-token', csrfToken, {
       httpOnly: false, // Must be readable by the client-side script
-      secure: process.env.NODE_ENV !== 'development', // Use secure cookies in production
-      sameSite: 'strict', // Strictest protection
+      secure: true, // Always true for iframe context
+      sameSite: 'none', // Required for cross-site iframe context
       path: '/',
     });
   } else {

@@ -21,6 +21,11 @@ export async function POST(request: NextRequest) {
     // Handle mini-app authentication
     if (action === "miniapp-auth") {
       console.log("🔐 Mini-app authentication request for fid:", fid)
+      console.log("📍 Request headers:", {
+        origin: request.headers.get('origin'),
+        referer: request.headers.get('referer'),
+        host: request.headers.get('host')
+      })
       
       if (!fid || !username) {
         return NextResponse.json(
@@ -61,9 +66,19 @@ export async function POST(request: NextRequest) {
       const response = NextResponse.json({ success: true, user })
       response.cookies.set("session", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        secure: true, // Always true for iframe context
+        sameSite: "none", // Required for cross-site iframe context
+        path: "/",
         maxAge: 60 * 60 * 24 * 7, // 7 days
+      })
+      
+      console.log("🍪 Session cookie set with token:", token.substring(0, 20) + "...")
+      console.log("🍪 Cookie settings:", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "none",
+        path: "/",
+        domain: response.headers.get('set-cookie')
       })
       
       return response

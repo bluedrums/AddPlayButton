@@ -49,8 +49,10 @@ export function useFarcaster() {
       });
       
       if (res.success) {
+        console.log('✅ Authentication successful, user:', res.user);
         setUser(res.user);
         setIsAuthenticated(true);
+        setError(null);
       } else {
         throw new Error(res.error || 'Failed to authenticate.');
       }
