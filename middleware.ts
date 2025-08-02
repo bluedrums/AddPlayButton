@@ -11,6 +11,8 @@ const publicRoutes = [
   { path: '/api/auth/csrf', methods: ['GET'] },
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
+  { path: '/api/playbutton', methods: ['GET'] }, // Public for share page SSR
+  { path: '/api/metadata', methods: ['GET'] }, // Public for fetching metadata
 ];
 
 // Define which routes are exempt from CSRF protection
@@ -30,6 +32,12 @@ export async function middleware(request: NextRequest) {
   const isPublicRoute = publicRoutes.some(
     (route) => pathname.startsWith(route.path) && route.methods.includes(method)
   );
+
+  // Also allow share pages to be accessed without authentication
+  if (pathname.startsWith('/share/')) {
+    console.log('✅ Middleware: Share page, allowing access');
+    return NextResponse.next();
+  }
 
   if (isPublicRoute) {
     console.log('✅ Middleware: Public route, allowing access');
