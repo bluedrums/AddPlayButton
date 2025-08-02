@@ -12,8 +12,24 @@ export function useFarcaster() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
+  const [nonce, setNonce] = useState<string | undefined>(undefined);
 
+  // Fetch nonce on mount
+  useEffect(() => {
+    const fetchNonce = async () => {
+      try {
+        const res = await api('/api/auth/siwe');
+        setNonce(res.nonce);
+      } catch (err) {
+        console.error('Failed to fetch nonce:', err);
+      }
+    };
+    fetchNonce();
+  }, []);
+
+  // Update useSignIn to use nonce
   const { signIn: connect, isConnected, isPolling, isError, error: authError, isSuccess, data } = useSignIn({
+    nonce: nonce || undefined,
     onSuccess: async (data) => {
       try {
         const res = await api('/api/auth/farcaster', {
