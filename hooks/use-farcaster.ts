@@ -28,8 +28,7 @@ export function useFarcaster() {
   }, []);
 
   // Update useSignIn to use nonce
-  const { signIn: connect, isConnected, isPolling, isError, error: authError, isSuccess, data } = useSignIn({
-    nonce: nonce || undefined,
+  const { signIn: connect, isPolling, isError, error: authError, data } = useSignIn({
     onSuccess: async (data) => {
       try {
         const res = await api('/api/auth/farcaster', {
@@ -97,7 +96,7 @@ export function useFarcaster() {
     error: error || (isError ? authError?.message : null),
     signIn: connect, 
     signOut, 
-    isSDKReady: isSuccess,
+    isSDKReady,
     setUser
   };
 }
