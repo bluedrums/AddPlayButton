@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { FarcasterUser } from '@/lib/farcaster';
 import { api } from '@/lib/api';
 import { useSignIn } from '@farcaster/auth-kit';
+import { sdk } from '@farcaster/miniapp-sdk';
 
 export function useFarcaster() {
   const [user, setUser] = useState<FarcasterUser | null>(null);
@@ -67,6 +68,10 @@ export function useFarcaster() {
       }
     };
     initialize();
+  }, []);
+
+  useEffect(() => {
+    sdk.actions.ready().then(() => setIsSDKReady(true)).catch(console.error);
   }, []);
   
   return { 
