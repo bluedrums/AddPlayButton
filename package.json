@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@farcaster/auth-kit": "^0.2.2",
+
     "@farcaster/miniapp-sdk": "^0.1.8",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",

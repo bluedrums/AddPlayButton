@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { FarcasterUser } from '@/lib/farcaster';
 import { api } from '@/lib/api';
-import { useSignIn } from '@farcaster/auth-kit';
 import { sdk } from '@farcaster/miniapp-sdk';
 
 export function useFarcaster() {
@@ -12,50 +11,57 @@ export function useFarcaster() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
-  const [nonce, setNonce] = useState<string | undefined>(undefined);
 
-  // Fetch nonce on mount
-  useEffect(() => {
-    const fetchNonce = async () => {
-      try {
-        const res = await api('/api/auth/siwe');
-        setNonce(res.nonce);
-      } catch (err) {
-        console.error('Failed to fetch nonce:', err);
-      }
-    };
-    fetchNonce();
-  }, []);
+  const signIn = useCallback(async () => {
+    console.log('signIn called, isSDKReady:', isSDKReady);
+    
+    if (!isSDKReady) {
+      console.error('Cannot sign in: SDK not ready');
+      setError('Authentication service not ready. Please try again.');
+      return;
+    }
 
-  // Update useSignIn to use nonce
-  const { signIn: connect, isPolling, isError, error: authError } = useSignIn({
-    nonce: nonce || undefined,
-    onSuccess: async (data) => {
-      try {
-        const res = await api('/api/auth/farcaster', {
-          method: 'POST',
-          body: JSON.stringify({
-            action: 'verify',
-            message: data.message,
-            signature: data.signature,
-            nonce: data.nonce,
-            domain: window.location.hostname,
-            fid: data.fid,
-          }),
-        });
-        if (res.success) {
-          setUser(res.user);
-          setIsAuthenticated(true);
-        } else {
-          throw new Error(res.error || 'Failed to verify signature.');
-        }
-      } catch (err) {
-        const message = `Verification failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-        console.error("❌ Verification error:", err);
-        setError(message);
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // For mini-apps, we need to use the SDK's authentication flow
+      console.log('Getting user context from SDK...');
+      const context = await sdk.context;
+      console.log('SDK context:', context);
+      
+      if (!context?.user) {
+        throw new Error('No user context available from Farcaster');
       }
-    },
-  });
+
+      // Verify with our backend
+      const res = await api('/api/auth/farcaster', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'miniapp-auth',
+          fid: context.user.fid,
+          username: context.user.username,
+          displayName: context.user.displayName,
+          pfpUrl: context.user.pfpUrl,
+          // Include any other context data that might be useful
+          context: context
+        }),
+      });
+      
+      if (res.success) {
+        setUser(res.user);
+        setIsAuthenticated(true);
+      } else {
+        throw new Error(res.error || 'Failed to authenticate.');
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Authentication failed';
+      console.error("❌ Authentication error:", err);
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isSDKReady]);
 
   const signOut = useCallback(async () => {
     try {
@@ -87,17 +93,31 @@ export function useFarcaster() {
   }, []);
 
   useEffect(() => {
-    sdk.actions.ready().then(() => setIsSDKReady(true)).catch(console.error);
+    sdk.actions.ready()
+      .then(() => {
+        console.log('SDK is ready');
+        setIsSDKReady(true);
+      })
+      .catch((err) => {
+        console.error('SDK ready error:', err);
+        setError('Failed to initialize Farcaster SDK');
+      });
   }, []);
 
+  // Auto sign-in when SDK is ready and user is not authenticated
+  useEffect(() => {
+    if (isSDKReady && !isAuthenticated && !isLoading && !error) {
+      console.log('Auto-signing in...');
+      signIn();
+    }
+  }, [isSDKReady, isAuthenticated, isLoading, error, signIn]);
 
-  
   return { 
     user, 
     isAuthenticated, 
-    isLoading: isLoading || isPolling, 
-    error: error || (isError ? authError?.message : null),
-    signIn: connect, 
+    isLoading, 
+    error,
+    signIn, 
     signOut, 
     isSDKReady,
     setUser

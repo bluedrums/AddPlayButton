@@ -16,7 +16,58 @@ export async function POST(request: NextRequest) {
     const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_KEY);
 
     const body = await request.json()
-    const { action, message, signature, nonce, domain, fid } = body
+    const { action, message, signature, nonce, domain, fid, username, displayName, pfpUrl, context } = body
+
+    // Handle mini-app authentication
+    if (action === "miniapp-auth") {
+      console.log("🔐 Mini-app authentication request for fid:", fid)
+      
+      if (!fid || !username) {
+        return NextResponse.json(
+          { success: false, error: "Missing required user data from mini-app context" },
+          { status: 400 }
+        )
+      }
+
+      // Create user data from mini-app context
+      const user = {
+        fid,
+        username,
+        displayName: displayName || username,
+        pfpUrl: pfpUrl || null,
+        custodyAddress: context?.user?.custodyAddress || null,
+        verifications: context?.user?.verifications || [],
+      }
+
+      // Create JWT token
+      const token = await new SignJWT({ fid: user.fid })
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("7d")
+        .sign(JWT_SECRET)
+
+      // Store user in database
+      await sql`
+        INSERT INTO users (fid, username, display_name, pfp_url, custody_address, verifications)
+        VALUES (${user.fid}, ${user.username}, ${user.displayName}, ${user.pfpUrl}, ${user.custodyAddress}, ${JSON.stringify(user.verifications || [])})
+        ON CONFLICT (fid)
+        DO UPDATE SET
+          username = EXCLUDED.username,
+          display_name = EXCLUDED.display_name,
+          pfp_url = EXCLUDED.pfp_url,
+          custody_address = EXCLUDED.custody_address,
+          verifications = EXCLUDED.verifications;
+      `
+      
+      const response = NextResponse.json({ success: true, user })
+      response.cookies.set("session", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60 * 60 * 24 * 7, // 7 days
+      })
+      
+      return response
+    }
 
     if (action === "verify") {
       const verificationResponse = await fetch("https://api.warpcast.com/v2/auth", {
