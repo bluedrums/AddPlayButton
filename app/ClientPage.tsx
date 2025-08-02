@@ -421,7 +421,7 @@ export default function ClientPage() {
             <div className="w-12 h-12 rounded-full overflow-hidden">
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Add Play Button</h1>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-[-1px]">Add Play Button</h1>
             <Avatar className="w-12 h-12 cursor-pointer" onClick={isAuthenticated ? signOut : signIn}>
               <AvatarImage src={user?.pfpUrl || '/placeholder-user.jpg'} alt={user?.displayName || 'User'} />
               <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
@@ -611,17 +611,15 @@ export default function ClientPage() {
         </Card>
 
         {playButtons.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Video className="w-5 h-5" />
-                Your Play Buttons ({playButtons.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <Video className="w-5 h-5" />
+              Your Play Buttons ({playButtons.length})
+            </h2>
+            <div className="space-y-4">
               {playButtons.map((playButton) => <PlayButtonCard key={playButton.id} playButton={playButton} onRemove={handleRemovePlayButton} />)}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {playButtons.length === 0 && <Card><CardContent className="text-center py-12"><Music className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-semibold text-gray-900 mb-2">No play buttons yet</h3><p className="text-gray-600">Add your first music or video link to get started!</p></CardContent></Card>}
