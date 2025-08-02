@@ -44,6 +44,22 @@ export const api = async (url: string, options: RequestInit = {}) => {
         console.error('Failed to get CSRF token:', error);
       }
     }
+    
+    // In mini-app context, include user FID from sessionStorage as backup
+    let fidHeader = {};
+    if (typeof window !== 'undefined') {
+      const storedUser = sessionStorage.getItem('farcaster_user');
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          if (user.fid) {
+            fidHeader = { 'X-Farcaster-FID': user.fid.toString() };
+          }
+        } catch (err) {
+          // Ignore parse errors
+        }
+      }
+    }
   
     const mergedOptions: RequestInit = {
       ...defaultOptions,
@@ -52,6 +68,7 @@ export const api = async (url: string, options: RequestInit = {}) => {
       headers: {
         ...defaultOptions.headers,
         ...csrfHeader,
+        ...fidHeader,
         ...options.headers,
       },
     };

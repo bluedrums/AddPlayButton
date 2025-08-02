@@ -53,6 +53,12 @@ export function useFarcaster() {
         setUser(res.user);
         setIsAuthenticated(true);
         setError(null);
+        
+        // Store auth state in sessionStorage as backup for iframe context
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('farcaster_user', JSON.stringify(res.user));
+          sessionStorage.setItem('farcaster_authenticated', 'true');
+        }
       } else {
         throw new Error(res.error || 'Failed to authenticate.');
       }
@@ -69,6 +75,12 @@ export function useFarcaster() {
     try {
       await api('/api/auth/signout', { method: 'POST' });
       clearCsrfToken(); // Clear CSRF token cache after signout
+      
+      // Clear sessionStorage
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('farcaster_user');
+        sessionStorage.removeItem('farcaster_authenticated');
+      }
     } catch (error) {
       console.error('Sign out failed:', error);
     } finally {
@@ -79,18 +91,24 @@ export function useFarcaster() {
 
   useEffect(() => {
     const initialize = async () => {
-      setIsLoading(true);
-      try {
-        const statusRes = await api('/api/auth/status');
-        if (statusRes.isAuthenticated) {
-          setUser(statusRes.user);
-          setIsAuthenticated(true);
+      // Try to restore auth state from sessionStorage first
+      if (typeof window !== 'undefined') {
+        const storedUser = sessionStorage.getItem('farcaster_user');
+        const storedAuth = sessionStorage.getItem('farcaster_authenticated');
+        
+        if (storedUser && storedAuth === 'true') {
+          try {
+            const user = JSON.parse(storedUser);
+            console.log('🔄 Restored auth state from sessionStorage:', user.fid);
+            setUser(user);
+            setIsAuthenticated(true);
+          } catch (err) {
+            console.error('Failed to parse stored user:', err);
+          }
         }
-      } catch (err) {
-        // Not logged in is the default state
-      } finally {
-        setIsLoading(false);
       }
+      
+      setIsLoading(false);
     };
     initialize();
   }, []);
@@ -109,11 +127,15 @@ export function useFarcaster() {
 
   // Auto sign-in when SDK is ready and user is not authenticated
   useEffect(() => {
-    if (isSDKReady && !isAuthenticated && !isLoading && !error) {
+    if (isSDKReady && !isAuthenticated && !isLoading && !error && !user) {
       console.log('Auto-signing in...');
-      signIn();
+      // Add a small delay to ensure everything is initialized
+      const timer = setTimeout(() => {
+        signIn();
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [isSDKReady, isAuthenticated, isLoading, error, signIn]);
+  }, [isSDKReady, isAuthenticated, isLoading, error, user, signIn]);
 
   return { 
     user, 

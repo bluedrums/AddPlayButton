@@ -28,12 +28,41 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
         images: [imageUrl],
       },
       other: {
-        "fc:frame": "vNext",
-        "fc:frame:image": imageUrl,
-        "fc:frame:post_url": `${baseUrl}/api/cast?id=${id}`,
-        "fc:frame:button:1": "Play",
-        "fc:frame:button:1:action": "post",
-        "fc:frame:button:1:target": `${baseUrl}/api/cast?id=${id}`,
+        // Consolidated Mini App embed (new spec)
+        "fc:miniapp": JSON.stringify({
+          version: "1",
+          imageUrl,
+          button: {
+            title: "Play",
+            action: {
+              type: "launch_frame",
+              name: "Add Play Button",
+              url: miniAppUrl,
+            },
+          },
+        }),
+        // Duplicate under fc:frame for backward-compatibility with older clients
+        "fc:frame": JSON.stringify({
+          version: "1",
+          imageUrl,
+          button: {
+            title: "Play",
+            action: {
+              type: "launch_frame",
+              name: "Add Play Button",
+              url: miniAppUrl,
+            },
+          },
+        }),
+
+        // Optional OpenFrame / XMTP tags to support cross-protocol previews
+        "of:accepts:farcaster": "vNext",
+        "of:accepts:xmtp": "2024-02-01",
+        "of:image": imageUrl,
+        "of:image:aspect_ratio": "1.91:1",
+        "of:button:1": "Play",
+        "of:button:1:action": "link",
+        "of:button:1:target": miniAppUrl,
       }
     };
   } catch (error) {

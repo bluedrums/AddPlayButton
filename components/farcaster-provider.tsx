@@ -50,27 +50,35 @@ function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const fetchPlayButtons = async () => {
-      if (isAuthenticated) {
+      if (isAuthenticated && user) {
+        // Add a small delay to ensure cookies are set
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         try {
-          const res = await api('/api/playbutton/all');
+          console.log('📋 Fetching play buttons for user:', user.fid);
+          const res = await api('/api/playbutton/all', {
+            method: 'GET',
+          });
           if (res) {
             const parsed = res.map((pb: any) => ({
               ...pb,
               createdAt: new Date(pb.createdAt),
             }));
+            console.log('✅ Fetched play buttons:', parsed.length);
             setPlayButtons(parsed);
           } else {
             setPlayButtons([]);
           }
         } catch (err) {
           console.error('Failed to fetch play buttons:', err);
+          setPlayButtons([]);
         }
       } else {
         setPlayButtons([]);
       }
     };
     fetchPlayButtons();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
   const contextValue: FarcasterContextType = {
     user,

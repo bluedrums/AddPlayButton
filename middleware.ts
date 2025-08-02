@@ -39,6 +39,22 @@ export async function middleware(request: NextRequest) {
   console.log('🔒 Middleware: Protected route, checking authentication');
   console.log('🍪 All cookies:', request.cookies.getAll());
   const sessionCookie = request.cookies.get('session');
+  const farcasterFID = request.headers.get('X-Farcaster-FID');
+
+  // In mini-app context, accept FID header as authentication if session cookie is missing
+  if (!sessionCookie && farcasterFID) {
+    console.log('🔐 Using Farcaster FID header for authentication:', farcasterFID);
+    
+    // Pass user fid in headers for use in API routes
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-user-fid', farcasterFID);
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+  }
 
   if (!sessionCookie) {
     console.log('🚫 Middleware: No session cookie found. Access denied.');
@@ -46,7 +62,8 @@ export async function middleware(request: NextRequest) {
       origin: request.headers.get('origin'),
       referer: request.headers.get('referer'),
       host: request.headers.get('host'),
-      cookie: request.headers.get('cookie')
+      cookie: request.headers.get('cookie'),
+      farcasterFID: farcasterFID
     });
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
