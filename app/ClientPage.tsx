@@ -451,7 +451,7 @@ export default function ClientPage() {
                 {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>) : (<><User className="w-4 h-4 mr-2" />Log In</>)}
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
-              <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're testing outside of Farcaster, a demo mode will be used.</AlertDescription></Alert>
+              <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're trying this outside of Farcaster, find us in the Farcaster/Base app store.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
               {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1"><div>Loading: {isLoading ? "Yes" : "No"}</div><div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div><div>User: {user ? user.username : "None"}</div><div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div><div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div></div>}
             </CardContent>
@@ -463,7 +463,7 @@ export default function ClientPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="w-5 h-5" />Add New Play Button</CardTitle>
-            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, SoundCloud, or Vimeo. Share and drive traffic.</CardDescription>
+            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, SoundCloud, or Vimeo. Share and drive traffic everywhere.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -629,10 +629,10 @@ export default function ClientPage() {
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="text-center space-y-2">
             <p className="text-xs text-gray-500">
-              I'm just a dude makin' stuff for creators. <a href="https://farcaster.xyz/derekhoiem" target="_blank">@derekhoiem</a>
+              I'm just a dude makin' stuff for creators. <a href="https://farcaster.xyz/derekhoiem" className="text-gray-500 hover:text-gray-700 underline" target="_blank">@derekhoiem</a>
             </p>
             <p className="text-xs text-gray-500">              
-              <a href="https://github.com/bluedrums/AddPlayButton-Feedback/issues" target="_blank">Send me product feedback/bugs</a>
+              <a href="https://github.com/bluedrums/AddPlayButton-Feedback/issues" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Send me product feedback/bugs</a>
             </p>
             <p className="text-xs text-gray-500">
               No, we're not training AI. No, we don't sell your info.
@@ -643,7 +643,7 @@ export default function ClientPage() {
               <a href="https://www.rainonmeproductions.com/terms-of-use" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Terms of Use</a>
             </div>
             <p className="text-xs text-gray-400">
-              © 2025<a href="https://www.rainonmeproductions.com" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Rain On Me Productions LLC</a>
+              © 2025 <a href="https://www.rainonmeproductions.com" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Rain On Me Productions LLC</a>
             </p>
           </div>
         </div>
