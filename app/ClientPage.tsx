@@ -51,6 +51,7 @@ export default function ClientPage() {
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
+  const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     const fetchPlayButtons = async () => {
@@ -101,6 +102,15 @@ export default function ClientPage() {
         });
     }
   }, [params]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (urlValidationTimeout) {
+        clearTimeout(urlValidationTimeout);
+      }
+    };
+  }, [urlValidationTimeout]);
 
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
@@ -458,7 +468,41 @@ export default function ClientPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="url-input" className="text-sm font-medium text-gray-700">Music or Video URL <span className="text-red-500">*</span></label>
-              <Input id="url-input" placeholder="" value={url} onChange={(e) => setUrl(e.target.value)} className="w-full" disabled={isValidating} onBlur={() => url.trim() && validateUrl(url)} />
+              <Input 
+                id="url-input" 
+                placeholder="" 
+                value={url} 
+                onChange={(e) => {
+                  const newUrl = e.target.value;
+                  setUrl(newUrl);
+                  
+                  // Clear existing timeout
+                  if (urlValidationTimeout) {
+                    clearTimeout(urlValidationTimeout);
+                  }
+                  
+                  // Set new timeout for 200ms
+                  if (newUrl.trim()) {
+                    const timeout = setTimeout(() => {
+                      validateUrl(newUrl);
+                    }, 200);
+                    setUrlValidationTimeout(timeout);
+                  }
+                }} 
+                className="w-full" 
+                disabled={isValidating} 
+                onBlur={() => {
+                  // Clear timeout on blur to avoid duplicate validation
+                  if (urlValidationTimeout) {
+                    clearTimeout(urlValidationTimeout);
+                    setUrlValidationTimeout(null);
+                  }
+                  // Still validate on blur if there's a URL
+                  if (url.trim()) {
+                    validateUrl(url);
+                  }
+                }} 
+              />
             </div>
 
             {isValidating && <div className="flex items-center justify-center text-gray-500"><Loader2 className="w-4 h-4 mr-2 animate-spin" /><span>Fetching details...</span></div>}
@@ -567,10 +611,17 @@ export default function ClientPage() {
         </Card>
 
         {playButtons.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2"><Video className="w-5 h-5" />Your Play Buttons ({playButtons.length})</h2>
-            {playButtons.map((playButton) => <PlayButtonCard key={playButton.id} playButton={playButton} onRemove={handleRemovePlayButton} />)}
-          </div>
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Video className="w-5 h-5" />
+                Your Play Buttons ({playButtons.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {playButtons.map((playButton) => <PlayButtonCard key={playButton.id} playButton={playButton} onRemove={handleRemovePlayButton} />)}
+            </CardContent>
+          </Card>
         )}
 
         {playButtons.length === 0 && <Card><CardContent className="text-center py-12"><Music className="w-12 h-12 text-gray-400 mx-auto mb-4" /><h3 className="text-lg font-semibold text-gray-900 mb-2">No play buttons yet</h3><p className="text-gray-600">Add your first music or video link to get started!</p></CardContent></Card>}
@@ -581,7 +632,8 @@ export default function ClientPage() {
           <div className="text-center space-y-2">
             <p className="text-xs text-gray-500">
               I'm just a dude makin' stuff for creators. <a href="https://farcaster.xyz/derekhoiem" target="_blank">@derekhoiem</a>
-              <br></br>
+            </p>
+            <p className="text-xs text-gray-500">              
               <a href="https://github.com/bluedrums/AddPlayButton-Feedback/issues" target="_blank">Send me product feedback/bugs</a>
             </p>
             <p className="text-xs text-gray-500">
