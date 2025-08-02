@@ -12,7 +12,6 @@ export function useFarcaster() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSDKReady, setIsSDKReady] = useState(false);
-  const [autoTried, setAutoTried] = useState(false);
   const [nonce, setNonce] = useState<string | undefined>(undefined);
 
   // Fetch nonce on mount
@@ -30,6 +29,7 @@ export function useFarcaster() {
 
   // Update useSignIn to use nonce
   const { signIn: connect, isPolling, isError, error: authError } = useSignIn({
+    nonce: nonce || undefined,
     onSuccess: async (data) => {
       try {
         const res = await api('/api/auth/farcaster', {
@@ -90,13 +90,7 @@ export function useFarcaster() {
     sdk.actions.ready().then(() => setIsSDKReady(true)).catch(console.error);
   }, []);
 
-  // Automatically attempt QuickAuth once the SDK is ready and we're not authenticated yet.
-  useEffect(() => {
-    if (!autoTried && isSDKReady && !isAuthenticated && !isLoading && !isPolling) {
-      setAutoTried(true);
-      connect();
-    }
-  }, [autoTried, isSDKReady, isAuthenticated, isLoading, isPolling, connect]);
+
   
   return { 
     user, 

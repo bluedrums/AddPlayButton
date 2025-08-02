@@ -1,18 +1,11 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
-import { generateNonce, SiweMessage } from 'siwe';
+import { generateNonce } from 'siwe';
 
+// This endpoint simply returns a fresh nonce for QuickAuth / SIWE. The client-side
+// AuthKit library will build the full SIWE message itself once it has the nonce.
 export async function GET() {
   const nonce = generateNonce();
-  const message = new SiweMessage({
-    domain: process.env.NEXT_PUBLIC_APP_DOMAIN || 'www.addplaybutton.xyz',
-    uri: 'https://www.addplaybutton.xyz/login',
-    statement: 'Sign in to Add Play Button',
-    version: '1',
-    chainId: 10, // Optimism chain
-    nonce,
-  });
-
-  return NextResponse.json({ message: message.prepareMessage(), nonce });
+  return NextResponse.json({ nonce });
 } 
