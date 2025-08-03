@@ -17,10 +17,16 @@ export async function GET(request: Request) {
     const html = await response.text();
     
     // Simple regex patterns that were likely working before
-    const imageUrlMatch = html.match(/<meta property="og:image" content="(.*?)"/);
+    const imageUrlMatch = html.match(/<meta\s+(?:name|property)="og:image"\s+content="(.*?)"/);
     const imageUrl = imageUrlMatch ? imageUrlMatch[1] : null;
-    const titleMatch = html.match(/<meta property="og:title" content="(.*?)"/);
-    const title = titleMatch ? titleMatch[1] : null;
+
+    let titleMatch = html.match(/<meta\s+(?:name|property)="og:title"\s+content="(.*?)"/);
+    let title = titleMatch ? titleMatch[1] : null;
+
+    if (!title) {
+      titleMatch = html.match(/<title>(.*?)<\/title>/);
+      title = titleMatch ? titleMatch[1] : null;
+    }
     
     console.log('Metadata API result:', { imageUrl, title, url });
     return NextResponse.json({ imageUrl, title });

@@ -20,9 +20,9 @@
     "description": "Transform your music and video links into interactive play buttons for Farcaster. Support for Spotify, Apple Music, YouTube, and SoundCloud.",
     "longDescription": "Transform your music and video links into interactive play buttons in Farcaster. Simply paste a Spotify, Apple Music, YouTube, or SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly.",
     "version": "1.0.0",
-    "author": "Add Play Button Team",
+    "author": "Derek Hoiem",
     "website": "https://addplaybutton.xyz",
-    "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud"],
+    "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud", "vimeo"],
     "category": "entertainment",
     "language": "en",
     "region": "global"
@@ -98,7 +98,7 @@
         "description": "Add music/video play buttons to your cast",
         "icon": "music",
         "url": "https://addplaybutton.xyz",
-        "aboutUrl": "https://addplaybutton.xyz/about",
+        "aboutUrl": "https://rainonmeproductions.com/addplaybutton",
         "actionType": "post"
       }
     }
@@ -124,7 +124,9 @@
         "https://embed.music.apple.com",
         "https://soundcloud.com",
         "https://w.soundcloud.com",
-        "https://www.youtube.com"
+        "https://www.youtube.com",
+        "https://vimeo.com",
+        "https://player.vimeo.com"
       ]
     },
     "permissions": {
