@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift, ChevronDown } from "lucide-react"
-import { useFarcaster } from "@/hooks/use-farcaster"
+import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
@@ -38,7 +38,7 @@ interface OembedData {
 
 export default function ClientPage() {
   const params = useSearchParams();
-  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut } = useFarcaster()
+  const { user, isAuthenticated, isLoading, error: authError, signIn, signOut, playButtons, setPlayButtons, refreshPlayButtons } = useFarcaster()
   const [url, setUrl] = useState("")
   const [title, setTitle] = useState("")
   const [coverImage, setCoverImage] = useState<string | null>(null)
@@ -50,33 +50,7 @@ export default function ClientPage() {
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
-  const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
   const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
-
-  useEffect(() => {
-    const fetchPlayButtons = async () => {
-      if (isAuthenticated) {
-        try {
-          const res = await api('/api/playbutton/all');
-          if (res) {
-            const parsed = res.map((pb: any) => ({
-              ...pb,
-              createdAt: new Date(pb.createdAt),
-            }));
-            setPlayButtons(parsed);
-          } else {
-            setPlayButtons([]);
-            console.log('Could not fetch play buttons, maybe a new user?');
-          }
-        } catch (err) {
-          console.error('Failed to fetch play buttons:', err);
-        }
-      } else {
-        setPlayButtons([]);
-      }
-    };
-    fetchPlayButtons();
-  }, [isAuthenticated]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -239,10 +213,8 @@ export default function ClientPage() {
         coverImage: validated.coverImage, // Use directly from validation result
         createdAt: new Date() 
       }
-      const updatedButtons = [newPlayButton, ...playButtons]
-      setPlayButtons(updatedButtons)
-      setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
       
+      // Save to database first
       await api('/api/playbutton', {
         method: 'POST',
         body: JSON.stringify({
@@ -250,6 +222,10 @@ export default function ClientPage() {
           data: newPlayButton,
         }),
       });
+      
+      // Clear form and refresh the list from database
+      setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
+      await refreshPlayButtons();
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
@@ -280,12 +256,12 @@ export default function ClientPage() {
       const playButton = playButtons.find(pb => pb.id === id);
       if (!playButton) return;
       
-      const updatedButtons = playButtons.filter((pb) => pb.id !== id);
-      setPlayButtons(updatedButtons);
-      
       await api(`/api/playbutton?id=${id}`, {
         method: 'DELETE'
       });
+      
+      // Refresh the list from database
+      await refreshPlayButtons();
       
       toast.success('Play button removed!');
     } catch (error) {
@@ -417,7 +393,10 @@ export default function ClientPage() {
       {activePlayButton && (
         <EmbeddedPlayerModal
           isOpen={isPlayerModalOpen}
-          onClose={() => setIsPlayerModalOpen(false)}
+          onClose={() => {
+            setIsPlayerModalOpen(false);
+            refreshPlayButtons();
+          }}
           playButton={activePlayButton}
         />
       )}
