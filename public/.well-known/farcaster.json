@@ -10,7 +10,7 @@
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
     "homeUrl": "https://addplaybutton.xyz",
     "imageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
-    "screenshotUrls": ["https://addplaybutton.xyz/screenshot1.png", "https://addplaybutton.xyz/screenshot2.png", "https://addplaybutton.xyz/screenshot3.png", "https://addplaybutton.xyz/screenshot4.png"],
+    "screenshotUrls": ["https://www.addplaybutton.xyz/screenshot1.png", "https://www.addplaybutton.xyz/screenshot2.png", "https://www.addplaybutton.xyz/screenshot3.png", "https://www.addplaybutton.xyz/screenshot4.png"],
     "buttonTitle": "Add Play Button",
     "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6"
@@ -24,7 +24,7 @@
     "author": "Derek Hoiem",
     "website": "https://addplaybutton.xyz",
     "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud", "vimeo", "mixcloud"],
-    "category": "art-creativity",
+    "category": "entertainment",
     "language": "en",
     "region": "global"
   },
@@ -168,7 +168,6 @@
   "legal": {
     "privacyPolicy": "https://addplaybutton.xyz/privacy",
     "termsOfService": "https://addplaybutton.xyz/terms",
-    "license": "MIT"
   },
   "build": {
     "timestamp": "2025-01-12T12:56:30.000Z",
