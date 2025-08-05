@@ -1,7 +1,7 @@
 {
   "name": "Add Play Button",
   "short_name": "Add Play Button",
-  "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, and SoundCloud.",
+  "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#9333ea",

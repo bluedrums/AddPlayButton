@@ -413,7 +413,7 @@ export default function ClientPage() {
             </Avatar>
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, and SoundCloud.
+            Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.
           </p>
         </div>
 
@@ -448,7 +448,7 @@ export default function ClientPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="w-5 h-5" />Add New Play Button</CardTitle>
-            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, SoundCloud, or Vimeo. Share and drive traffic everywhere.</CardDescription>
+            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud. Share and drive traffic everywhere.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
