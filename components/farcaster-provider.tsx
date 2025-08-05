@@ -62,14 +62,17 @@ function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
         const res = await api('/api/playbutton/all', {
           method: 'GET',
         });
+        console.log('📊 Raw API response:', res);
         if (res) {
           const parsed = res.map((pb: any) => ({
             ...pb,
             createdAt: new Date(pb.createdAt),
           }));
           console.log('✅ Refreshed play buttons:', parsed.length);
+          console.log('📋 Play button IDs:', parsed.map((pb: any) => pb.id));
           setPlayButtons(parsed);
         } else {
+          console.log('⚠️ No response from API');
           setPlayButtons([]);
         }
       } catch (err) {

@@ -88,6 +88,12 @@ export default function ClientPage() {
     };
   }, [urlValidationTimeout]);
 
+  // Debug: Log play buttons state
+  useEffect(() => {
+    console.log('🔵 Current play buttons in ClientPage:', playButtons.length);
+    console.log('🔵 Play button IDs:', playButtons.map(pb => pb.id));
+  }, [playButtons]);
+
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
     if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
@@ -256,18 +262,26 @@ export default function ClientPage() {
 
   const handleRemovePlayButton = async (id: string) => {
     try {
+      console.log('🗑️ Removing play button with ID:', id);
       const playButton = playButtons.find(pb => pb.id === id);
-      if (!playButton) return;
+      if (!playButton) {
+        console.error('⚠️ Play button not found in local state:', id);
+        return;
+      }
       
-      await api(`/api/playbutton?id=${id}`, {
+      console.log('📡 Calling DELETE API for ID:', id);
+      const deleteResult = await api(`/api/playbutton?id=${id}`, {
         method: 'DELETE'
       });
+      console.log('✅ Delete API response:', deleteResult);
       
       // Refresh the list from database
+      console.log('🔄 Refreshing play buttons after delete...');
       await refreshPlayButtons();
       
       toast.success('Play button removed!');
     } catch (error) {
+      console.error('❌ Error removing play button:', error);
       toast.error('Failed to remove play button');
     }
   }
@@ -281,6 +295,32 @@ export default function ClientPage() {
     } catch (error) {
       console.error("Failed to copy link:", error)
       toast.error("Failed to copy link")
+    }
+  }
+
+  const debugCheckDatabase = async () => {
+    try {
+      console.log('🔍 Checking database state...');
+      const debugData = await api('/api/debug-playbuttons');
+      console.log('📋 Database debug data:', debugData);
+      console.log('📊 DB total:', debugData.totalCount, 'Local total:', playButtons.length);
+      
+      // Check for missing IDs
+      const localIds = new Set(playButtons.map(pb => pb.id));
+      const dbIds = new Set(debugData.playButtons.map((pb: any) => pb.dbId));
+      
+      const missingInLocal = Array.from(dbIds).filter(id => !localIds.has(id as string));
+      const missingInDb = Array.from(localIds).filter(id => !dbIds.has(id));
+      
+      console.log('🔴 Missing in local state:', missingInLocal);
+      console.log('🔴 Missing in database:', missingInDb);
+      
+      if (missingInLocal.length > 0 || debugData.totalCount !== playButtons.length) {
+        console.log('⚠️ State mismatch detected! Refreshing...');
+        await refreshPlayButtons();
+      }
+    } catch (error) {
+      console.error('❌ Debug check failed:', error);
     }
   }
 
@@ -465,7 +505,23 @@ export default function ClientPage() {
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
               <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're trying this outside of Farcaster, find us in the Farcaster/Base app store.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
-              {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1"><div>Loading: {isLoading ? "Yes" : "No"}</div><div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div><div>User: {user ? user.username : "None"}</div><div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div><div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div></div>}
+              {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
+                <div>Loading: {isLoading ? "Yes" : "No"}</div>
+                <div>Authenticated: {isAuthenticated ? "Yes" : "No"}</div>
+                <div>User: {user ? user.username : "None"}</div>
+                <div>FID: {user ? user.fid : "None"}</div>
+                <div>Play Buttons: {playButtons.length}</div>
+                <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
+                <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={debugCheckDatabase}
+                  className="mt-2 w-full"
+                >
+                  Check Database
+                </Button>
+              </div>}
             </CardContent>
           </Card>
         ) : (

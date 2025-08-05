@@ -89,23 +89,29 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  console.log('Received DELETE /api/playbutton request');
   try {
     const { searchParams } = new URL(request.url);
     const fidStr = request.headers.get('x-user-fid');
     const id = searchParams.get('id');
+    console.log('🗑️ DELETE request - FID:', fidStr, 'ID:', id);
 
     if (!fidStr || !id) {
+      console.error('❌ Missing FID or ID');
       return NextResponse.json({ error: 'Missing fid or id' }, { status: 400 });
     }
 
     const fid = Number(fidStr);
     if (isNaN(fid)) {
+      console.error('❌ Invalid FID:', fidStr);
       return NextResponse.json({ error: 'Invalid fid' }, { status: 400 });
     }
 
-    await sql`
+    console.log('📋 Deleting play button - FID:', fid, 'ID:', id);
+    const result = await sql`
       DELETE FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
     `;
+    console.log('✅ Delete result:', result);
 
     return NextResponse.json({ success: true });
   } catch (error) {
