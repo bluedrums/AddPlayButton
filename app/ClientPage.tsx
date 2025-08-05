@@ -150,6 +150,9 @@ export default function ClientPage() {
     if (cleanUrl.includes("soundcloud.com")) {
       return { platform: "SoundCloud", embedUrl: `https://w.soundcloud.com/player/?url=${encodeURIComponent(cleanUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`, oembedEndpoint: `https://soundcloud.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
+    if (cleanUrl.includes("mixcloud.com")) {
+      return { platform: "Mixcloud", embedUrl: `https://www.mixcloud.com/widget/iframe/?feed=${encodeURIComponent(cleanUrl)}&hide_cover=1&autoplay=1` }
+    }
     return null
   }
 
@@ -171,16 +174,19 @@ export default function ClientPage() {
     setTitle("")
     try {
       const detection = detectPlatform(url)
-      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, or Vimeo links.")
+      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, Vimeo, or Mixcloud links.")
       
       let oembedData: OembedData = {};
       let imageUrl: string | undefined;
       
-      if (detection.platform === "Apple Music") {
+      if (detection.platform === "Apple Music" || detection.platform === "Mixcloud") {
         const metadata = await api(`/api/metadata?url=${encodeURIComponent(url)}`);
-        console.log('Apple Music metadata:', metadata);
+        console.log(`${detection.platform} metadata:`, metadata);
         oembedData.title = metadata.title;
         imageUrl = metadata.imageUrl;
+        if (metadata.artist) {
+          oembedData.author_name = metadata.artist;
+        }
       } else if (detection.oembedEndpoint) {
         oembedData = await fetchOembedData(detection.oembedEndpoint);
         imageUrl = oembedData.thumbnail_url;
