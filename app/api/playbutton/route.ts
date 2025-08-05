@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -95,6 +99,7 @@ export async function DELETE(request: Request) {
     const fidStr = request.headers.get('x-user-fid');
     const id = searchParams.get('id');
     console.log('🗑️ DELETE request - FID:', fidStr, 'ID:', id);
+    console.log('🔍 ID type:', typeof id, 'ID length:', id?.length);
 
     if (!fidStr || !id) {
       console.error('❌ Missing FID or ID');
@@ -108,12 +113,37 @@ export async function DELETE(request: Request) {
     }
 
     console.log('📋 Deleting play button - FID:', fid, 'ID:', id);
+    
+    // First, check if the record exists
+    const { rows: checkRows } = await sql`
+      SELECT id, user_fid FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
+    `;
+    console.log('🔍 Found records before delete:', checkRows.length, checkRows);
+    
+    if (checkRows.length === 0) {
+      console.error('❌ No record found to delete!');
+      return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+    }
+    
+    // Now delete the record
     const result = await sql`
       DELETE FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
     `;
     console.log('✅ Delete result:', result);
+    console.log('📊 Rows affected:', result.rowCount);
+    
+    // Verify deletion
+    const { rows: verifyRows } = await sql`
+      SELECT id FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
+    `;
+    console.log('🔍 Records after delete:', verifyRows.length);
+    
+    if (verifyRows.length > 0) {
+      console.error('❌ Record still exists after delete!');
+      return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+    }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, deleted: result.rowCount });
   } catch (error) {
     console.error('Error in playbutton DELETE:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

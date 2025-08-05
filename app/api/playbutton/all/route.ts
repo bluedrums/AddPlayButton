@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0; // Disable caching completely
+export const fetchCache = 'force-no-store';
 
 export async function GET(request: Request) {
   console.log('Received GET /api/playbutton/all request');
@@ -28,7 +30,12 @@ export async function GET(request: Request) {
 
     const playButtons = rows.map(row => row.data);
 
-    return NextResponse.json(playButtons);
+    const response = NextResponse.json(playButtons);
+    // Add cache control headers to prevent any caching
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    response.headers.set('Pragma', 'no-cache');
+    response.headers.set('Expires', '0');
+    return response;
   } catch (error) {
     console.error('Error in playbutton GET_ALL:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

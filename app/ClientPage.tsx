@@ -300,23 +300,25 @@ export default function ClientPage() {
 
   const debugCheckDatabase = async () => {
     try {
-      console.log('🔍 Checking database state...');
-      const debugData = await api('/api/debug-playbuttons');
-      console.log('📋 Database debug data:', debugData);
-      console.log('📊 DB total:', debugData.totalCount, 'Local total:', playButtons.length);
+      console.log('🔍 Checking database state with cache bust...');
+      const cacheBustData = await api('/api/cache-bust');
+      console.log('📋 Fresh database query:', cacheBustData);
+      console.log('📊 DB count:', cacheBustData.count, 'DB records:', cacheBustData.records, 'Local total:', playButtons.length);
       
       // Check for missing IDs
       const localIds = new Set(playButtons.map(pb => pb.id));
-      const dbIds = new Set(debugData.playButtons.map((pb: any) => pb.dbId));
+      const dbIds = new Set(cacheBustData.data.map((pb: any) => pb.id));
       
       const missingInLocal = Array.from(dbIds).filter(id => !localIds.has(id as string));
       const missingInDb = Array.from(localIds).filter(id => !dbIds.has(id));
       
       console.log('🔴 Missing in local state:', missingInLocal);
       console.log('🔴 Missing in database:', missingInDb);
+      console.log('📝 Database records:', cacheBustData.data);
       
-      if (missingInLocal.length > 0 || debugData.totalCount !== playButtons.length) {
-        console.log('⚠️ State mismatch detected! Refreshing...');
+      if (missingInLocal.length > 0 || cacheBustData.count !== playButtons.length) {
+        console.log('⚠️ State mismatch detected! Count:', cacheBustData.count, 'vs Local:', playButtons.length);
+        console.log('🔄 Force refreshing...');
         await refreshPlayButtons();
       }
     } catch (error) {
@@ -513,14 +515,28 @@ export default function ClientPage() {
                 <div>Play Buttons: {playButtons.length}</div>
                 <div>Domain: {typeof window !== "undefined" ? window.location.hostname : "N/A"}</div>
                 <div>In Frame: {typeof window !== "undefined" && window.self !== window.top ? "Yes" : "No"}</div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  onClick={debugCheckDatabase}
-                  className="mt-2 w-full"
-                >
-                  Check Database
-                </Button>
+                <div className="flex gap-2 mt-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={debugCheckDatabase}
+                    className="flex-1"
+                  >
+                    Check DB
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={async () => {
+                      console.log('🧹 Force clearing and refreshing...');
+                      setPlayButtons([]);
+                      await refreshPlayButtons();
+                    }}
+                    className="flex-1"
+                  >
+                    Force Refresh
+                  </Button>
+                </div>
               </div>}
             </CardContent>
           </Card>

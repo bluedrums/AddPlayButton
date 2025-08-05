@@ -72,9 +72,17 @@ export const api = async (url: string, options: RequestInit = {}) => {
         ...options.headers,
       },
     };
+    
+    // Add timestamp to URL to prevent caching for GET requests
+    let finalUrl = url;
+    if (!options.method || options.method === 'GET') {
+      finalUrl = url.includes('?') 
+        ? `${url}&_t=${Date.now()}` 
+        : `${url}?_t=${Date.now()}`;
+    }
   
     try {
-      const response = await fetch(url, mergedOptions);
+      const response = await fetch(finalUrl, mergedOptions);
   
       if (!response.ok) {
         // Attempt to parse error response, otherwise use status text
