@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift, ChevronDown } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
@@ -51,6 +52,7 @@ export default function ClientPage() {
   const [isDonating, setIsDonating] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
   const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -408,10 +410,34 @@ export default function ClientPage() {
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 tracking-[-1px]">Add Play Button</h1>
-            <Avatar className="w-12 h-12 cursor-pointer" onClick={isAuthenticated ? signOut : signIn}>
-              <AvatarImage src={user?.pfpUrl || '/placeholder-user.jpg'} alt={user?.displayName || 'User'} />
-              <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
-            </Avatar>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Avatar className="w-12 h-12 cursor-pointer">
+                    <AvatarImage src={user?.pfpUrl || '/placeholder-user.jpg'} alt={user?.displayName || 'User'} />
+                    <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5 text-sm text-gray-700">
+                    <div className="font-medium">{user?.displayName}</div>
+                    <div className="text-gray-500">@{user?.username}</div>
+                  </div>
+                  <DropdownMenuItem 
+                    onClick={() => setShowLogoutDialog(true)}
+                    className="text-red-600 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Log Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Avatar className="w-12 h-12 cursor-pointer" onClick={signIn}>
+                <AvatarImage src={'/placeholder-user.jpg'} alt={'User'} />
+                <AvatarFallback><User className="w-6 h-6" /></AvatarFallback>
+              </Avatar>
+            )}
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.
@@ -634,6 +660,29 @@ export default function ClientPage() {
           </div>
         </div>
       </footer>
+
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Log Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to log out of your Farcaster account?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                signOut();
+                setShowLogoutDialog(false);
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Log Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

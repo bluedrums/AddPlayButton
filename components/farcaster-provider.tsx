@@ -24,7 +24,7 @@ interface FarcasterContextType {
   playButtons: PlayButton[];
   setPlayButtons: (buttons: PlayButton[]) => void;
   refreshPlayButtons: () => Promise<void>;
-  signIn: () => Promise<void>
+  signIn: () => Promise<void>;
   signOut: () => void
   isSDKReady: boolean
   setUser: (user: FarcasterUser | null) => void;
