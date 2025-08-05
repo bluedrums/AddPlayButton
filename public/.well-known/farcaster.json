@@ -7,22 +7,22 @@
   "frame": {
     "version": "1",
     "name": "Add Play Button",
-    "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
-    "homeUrl": "https://addplaybutton.xyz",
-    "imageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
+    "iconUrl": "https://www.addplaybutton.xyz/appicon.jpg",
+    "homeUrl": "https://www.addplaybutton.xyz",
+    "imageUrl": "https://www.addplaybutton.xyz/ThePlayButton.png",
     "screenshotUrls": ["https://www.addplaybutton.xyz/screenshot1.png", "https://www.addplaybutton.xyz/screenshot2.png", "https://www.addplaybutton.xyz/screenshot3.png", "https://www.addplaybutton.xyz/screenshot4.png"],
     "buttonTitle": "Add Play Button",
-    "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
+    "splashImageUrl": "https://www.addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6"
   },
   "metadata": {
     "name": "Add Play Button",
-    "shortName": "PlayButton",
+    "shortName": "AddPlayButton",
     "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
     "longDescription": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly within the miniapp window.",
     "version": "1.0.0",
     "author": "Derek Hoiem",
-    "website": "https://addplaybutton.xyz",
+    "website": "https://www.addplaybutton.xyz",
     "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud", "vimeo", "mixcloud"],
     "category": "entertainment",
     "language": "en",
@@ -98,7 +98,7 @@
         "name": "Add Play Button",
         "description": "Add music/video play buttons to your cast",
         "icon": "music",
-        "url": "https://addplaybutton.xyz",
+        "url": "https://www.addplaybutton.xyz",
         "aboutUrl": "https://rainonmeproductions.com/addplaybutton",
         "actionType": "post"
       }
@@ -161,13 +161,13 @@
     "methods": []
   },
   "support": {
-    "email": "support@addplaybutton.xyz",
-    "documentation": "https://addplaybutton.xyz/docs",
+    "email": "https://github.com/bluedrums/AddPlayButton-Feedback/issues",
+    "documentation": "https://rainonmeproductions.com/addplaybutton",
     "community": "https://warpcast.com/~/channel/addplaybutton"
   },
   "legal": {
-    "privacyPolicy": "https://addplaybutton.xyz/privacy",
-    "termsOfService": "https://addplaybutton.xyz/terms",
+    "privacyPolicy": "https://rainonmeproductions.com/privacy-policy",
+    "termsOfService": "https://rainonmeproductions.com/terms-of-service",
   },
   "build": {
     "timestamp": "2025-01-12T12:56:30.000Z",
