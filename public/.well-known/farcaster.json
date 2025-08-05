@@ -1,9 +1,12 @@
 {
-  "accountAssociation": {
-    "header": "eyJmaWQiOjM2MjEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgyY2Q4NWEwOTMyNjFmNTkyNzA4MDRBNkVBNjk3Q2VBNENlQkVjYWZFIn0",
-    "payload": "eyJkb21haW4iOiJhZGRwbGF5YnV0dG9uLnh5eiJ9",
-    "signature": "MHgwZmJiYWIwODg3YTU2MDFiNDU3MzVkOTQ5MDRjM2Y1NGUxMzVhZTQxOGEzMWQ5ODNhODAzZmZlYWNlZWMyZDYzNWY4ZTFjYWU4M2NhNTAwOTMzM2FmMTc1NDlmMDY2YTVlOWUwNTljNmZiNDUxMzg0Njk1NzBhODNiNjcyZWJjZTFi"
-  },
+  {
+    "accountAssociation": {
+      "header": "eyJmaWQiOjMzNjEwMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNiNkI3NDkwYTFmN0MxZTY1Q0M1M2JBQzRDOTJEMTlGZDVkMTU3YzUifQ",
+      "payload": "eyJkb21haW4iOiJhZGRwbGF5YnV0dG9uLnh5eiJ9",
+      "signature": "MHgxZTI0NDU4YTcxNDVhYWRhMjA1ODUxMWUwOWE0NzBkYWMyYTljM2JmNDdlMDFmNTE4MWE2ZmNiN2JlZTdmNTI4NTZkYjZiZjFhMDg3YmI2YmUwMGI3ZGE0NTkzYTAyNDkyYzYyNGIxMjBjMjk2MzU4MDZlMGQyM2NjM2U3Y2JkZDFj"
+    }
+  }
+  
   "frame": {
     "version": "1",
     "name": "Add Play Button",
