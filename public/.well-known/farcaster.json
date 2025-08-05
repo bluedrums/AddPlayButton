@@ -10,6 +10,7 @@
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
     "homeUrl": "https://addplaybutton.xyz",
     "imageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
+    "screenshotUrls": ["https://addplaybutton.xyz/screenshot1.png", "https://addplaybutton.xyz/screenshot2.png", "https://addplaybutton.xyz/screenshot3.png", "https://addplaybutton.xyz/screenshot4.png"],
     "buttonTitle": "Add Play Button",
     "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6"
@@ -17,13 +18,13 @@
   "metadata": {
     "name": "Add Play Button",
     "shortName": "PlayButton",
-    "description": "Transform your music and video links into interactive play buttons for Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
-    "longDescription": "Transform your music and video links into interactive play buttons in Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly.",
+    "description": "Transform your music and video links to play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
+    "longDescription": "Transform your music and video links to play in the miniapp window without leaving Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly within the miniapp window.",
     "version": "1.0.0",
     "author": "Derek Hoiem",
     "website": "https://addplaybutton.xyz",
-    "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud", "vimeo"],
-    "category": "entertainment",
+    "keywords": ["farcaster", "music", "video", "spotify", "youtube", "apple-music", "soundcloud", "vimeo", "mixcloud"],
+    "category": "art-creativity",
     "language": "en",
     "region": "global"
   },
