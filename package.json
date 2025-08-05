@@ -9,7 +9,6 @@
     "lint": "next lint"
   },
   "dependencies": {
-
     "@farcaster/miniapp-sdk": "^0.1.8",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
@@ -39,6 +38,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@vercel/analytics": "^1.5.0",
     "@vercel/og": "^0.7.2",
     "@vercel/postgres": "^0.10.0",
     "@walletconnect/modal": "^2.7.0",

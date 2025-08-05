@@ -4,6 +4,7 @@ import { Ubuntu } from 'next/font/google';
 import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
 import { Toaster } from "@/components/ui/sonner"
+import { Analytics } from '@vercel/analytics/react';
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -35,6 +36,7 @@ export default function RootLayout({
       <body className={ubuntu.className}>
         <FarcasterProvider>
           {children}
+          <Analytics />
           <Toaster />
         </FarcasterProvider>
       </body>
