@@ -18,8 +18,8 @@
   "metadata": {
     "name": "Add Play Button",
     "shortName": "PlayButton",
-    "description": "Transform your music and video links to play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
-    "longDescription": "Transform your music and video links to play in the miniapp window without leaving Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly within the miniapp window.",
+    "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.",
+    "longDescription": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly within the miniapp window.",
     "version": "1.0.0",
     "author": "Derek Hoiem",
     "website": "https://addplaybutton.xyz",

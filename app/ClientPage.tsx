@@ -626,6 +626,7 @@ export default function ClientPage() {
               Support the App!
             </CardTitle>
             <CardDescription>
+              Keep this app free!
             </CardDescription>
           </CardHeader>
           <CardContent>
