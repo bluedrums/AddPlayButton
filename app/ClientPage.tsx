@@ -184,6 +184,9 @@ export default function ClientPage() {
         console.log(`${detection.platform} metadata:`, metadata);
         oembedData.title = metadata.title;
         imageUrl = metadata.imageUrl;
+        if (metadata.artist) {
+          oembedData.author_name = metadata.artist;
+        }
       } else if (detection.oembedEndpoint) {
         oembedData = await fetchOembedData(detection.oembedEndpoint);
         imageUrl = oembedData.thumbnail_url;
