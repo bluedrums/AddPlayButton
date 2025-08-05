@@ -208,8 +208,8 @@ export function EmbeddedPlayerModal({
           >
             {/* Control buttons */}
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
-              {/* Fullscreen button */}
-              <Button 
+              {/* Fullscreen button - disabled for now */}
+{/*               <Button 
                 onClick={handleFullscreen} 
                 className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50"
                 title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
@@ -219,7 +219,7 @@ export function EmbeddedPlayerModal({
                 ) : (
                   <Maximize2 className="w-5 h-5" />
                 )}
-              </Button>
+              </Button> */}
               
               {/* Close button */}
               <Button onClick={onClose} className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50">

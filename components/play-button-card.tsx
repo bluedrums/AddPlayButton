@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
-import { useFarcaster } from "@/hooks/use-farcaster"
+import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
 import { sdk } from "@farcaster/miniapp-sdk";
 import { buildShareText } from "@/lib/utils"
@@ -31,7 +31,7 @@ interface PlayButtonCardProps {
 
 export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
   const [showPlayer, setShowPlayer] = useState(false)
-  const { isAuthenticated, user } = useFarcaster()
+  const { isAuthenticated, user, refreshPlayButtons } = useFarcaster()
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(playButton.url)
@@ -181,7 +181,14 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       </Card>
 
       {/* Embedded Player Modal */}
-      <EmbeddedPlayerModal isOpen={showPlayer} onClose={() => setShowPlayer(false)} playButton={playButton} />
+      <EmbeddedPlayerModal 
+        isOpen={showPlayer} 
+        onClose={() => {
+          setShowPlayer(false);
+          refreshPlayButtons();
+        }} 
+        playButton={playButton} 
+      />
     </>
   )
 }

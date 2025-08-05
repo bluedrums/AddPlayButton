@@ -23,6 +23,8 @@ interface FarcasterContextType {
   error: string | null
   playButtons: PlayButton[];
   setPlayButtons: (buttons: PlayButton[]) => void;
+  refreshPlayButtons: () => Promise<void>;
+  signIn: () => Promise<void>
   signOut: () => void
   isSDKReady: boolean
   setUser: (user: FarcasterUser | null) => void;
@@ -35,6 +37,8 @@ const FarcasterContext = createContext<FarcasterContextType>({
   error: null,
   playButtons: [],
   setPlayButtons: () => {},
+  refreshPlayButtons: async () => {},
+  signIn: async () => {},
   signOut: () => {},
   isSDKReady: false,
   setUser: () => {},
@@ -45,51 +49,54 @@ export function useFarcaster() {
 }
 
 function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, error, signOut, isSDKReady, setUser } = useFarcasterAuth();
+  const { user, isAuthenticated, isLoading, error, signIn, signOut, isSDKReady, setUser } = useFarcasterAuth();
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
 
-  useEffect(() => {
-    const fetchPlayButtons = async () => {
-      if (isAuthenticated && user) {
-        // Add a small delay to ensure cookies are set
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        try {
-          console.log('📋 Fetching play buttons for user:', user.fid);
-          const res = await api('/api/playbutton/all', {
-            method: 'GET',
-          });
-          if (res) {
-            const parsed = res.map((pb: any) => ({
-              ...pb,
-              createdAt: new Date(pb.createdAt),
-            }));
-            console.log('✅ Fetched play buttons:', parsed.length);
-            setPlayButtons(parsed);
-          } else {
-            setPlayButtons([]);
-          }
-        } catch (err) {
-          console.error('Failed to fetch play buttons:', err);
+  const refreshPlayButtons = async () => {
+    if (isAuthenticated && user) {
+      // Add a small delay to ensure cookies are set
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      try {
+        console.log('🔄 Refreshing play buttons for user:', user.fid);
+        const res = await api('/api/playbutton/all', {
+          method: 'GET',
+        });
+        if (res) {
+          const parsed = res.map((pb: any) => ({
+            ...pb,
+            createdAt: new Date(pb.createdAt),
+          }));
+          console.log('✅ Refreshed play buttons:', parsed.length);
+          setPlayButtons(parsed);
+        } else {
           setPlayButtons([]);
         }
-      } else {
+      } catch (err) {
+        console.error('Failed to refresh play buttons:', err);
         setPlayButtons([]);
       }
-    };
-    fetchPlayButtons();
+    } else {
+      setPlayButtons([]);
+    }
+  };
+
+  useEffect(() => {
+    refreshPlayButtons();
   }, [isAuthenticated, user]);
 
   const contextValue: FarcasterContextType = {
     user,
     isAuthenticated,
     isLoading,
+    signIn,
     signOut,
     isSDKReady,
     setUser,
     error,
     playButtons,
     setPlayButtons,
+    refreshPlayButtons,
   }
 
   return <FarcasterContext.Provider value={contextValue}>{children}</FarcasterContext.Provider>
