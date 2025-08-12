@@ -17,5 +17,11 @@
     "buttonTitle": "🎵 Add Play Button",
     "splashImageUrl": "https://addplaybutton.xyz/splash.png",
     "splashBackgroundColor": "#8B5CF6"
+  },
+  "catalog": {
+    "public": true,
+    "categories": ["social", "utility", "entertainment"],
+    "description": "Add play buttons to your Farcaster posts to share music and audio content with your followers.",
+    "tags": ["music", "playlist", "audio", "social", "utility", "entertainment"]
   }
 }
