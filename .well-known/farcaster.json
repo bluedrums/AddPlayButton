@@ -21,7 +21,7 @@
   "catalog": {
     "public": true,
     "categories": ["social", "utility", "entertainment"],
-    "description": "Add play buttons to your Farcaster posts to share music and audio content with your followers.",
+    "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster.",
     "tags": ["music", "playlist", "audio", "social", "utility", "entertainment"]
   }
 }
