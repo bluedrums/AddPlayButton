@@ -58,7 +58,12 @@ export default function ClientPage() {
     const fid = params.get('fid');
     const playButtonId = params.get('playButton');
     if (fid && playButtonId) {
-      api(`/api/playbutton?fid=${fid}&id=${playButtonId}`)
+      // Pass FID in headers, not as query parameter
+      api(`/api/playbutton?id=${playButtonId}`, {
+        headers: {
+          'x-user-fid': fid
+        }
+      })
         .then(data => {
           if (data.error) {
             if (data.error === 'Play button not found') {
