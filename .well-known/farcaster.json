@@ -22,6 +22,6 @@
     "public": true,
     "categories": ["social", "utility", "entertainment"],
     "description": "Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster.",
-    "tags": ["music", "playlist", "audio", "social", "utility", "entertainment"]
+    "tags": ["music", "playlist", "audio", "social", "utility", "entertainment", "embed"]
   }
 }
