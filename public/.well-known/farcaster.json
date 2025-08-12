@@ -10,7 +10,6 @@
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
     "homeUrl": "https://addplaybutton.xyz",
     "imageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
-    //"screenshotUrls": ["https://addplaybutton.xyz/screenshot1.png", "https://addplaybutton.xyz/screenshot2.png", "https://addplaybutton.xyz/screenshot3.png", "https://addplaybutton.xyz/screenshot4.png"],
     "buttonTitle": "Add Play Button",
     "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6"
