@@ -169,9 +169,9 @@
     "termsOfService": "https://rainonmeproductions.com/terms-of-service"
   },
   "build": {
-    "timestamp": "2025-01-12T12:56:30.000Z",
+    "timestamp": "2025-08-12T20:16:30.000Z",
     "version": "1.0.0",
     "environment": "production"
   },
-  "repository": "https://github.com/addplaybutton/miniapp"
+  "repository": "https://github.com/bluedrums/AddPlayButton-Feedback"
 } 
