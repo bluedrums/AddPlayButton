@@ -197,7 +197,7 @@ export function EmbeddedPlayerModal({
         <div
           id="player-modal-container"
           className={cn(
-            "fixed inset-0 z-50 flex items-center justify-center bg-black", // Always have a black background
+            "fixed inset-0 z-50 flex items-center justify-center bg-black pb-safe", // Always have a black background
           )}
         >
           {/* Centered content wrapper */}
