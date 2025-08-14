@@ -1,0 +1,205 @@
+import { NextResponse } from 'next/server';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const origin = url.origin;
+  const host = url.host;
+
+  const manifest = {
+    accountAssociation: {
+      header: 'eyJmaWQiOjMzNjEwMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNiNkI3NDkwYTFmN0MxZTY1Q0M1M2JBQzRDOTJEMTlGZDVkMTU3YzUifQ',
+      payload: 'eyJkb21haW4iOiJhZGRwbGF5YnV0dG9uLnh5eiJ9',
+      signature:
+        'MHgxZTI0NDU4YTcxNDVhYWRhMjA1ODUxMWUwOWE0NzBkYWMyYTljM2JmNDdlMDFmNTE4MWE2ZmNiN2JlZTdmNTI4NTZkYjZiZjFhMDg3YmI2YmUwMGI3ZGE0NTkzYTAyNDkyYzYyNGIxMjBjMjk2MzU4MDZlMGQyM2NjM2U3Y2JkZDFj',
+    },
+    frame: {
+      version: '1',
+      name: 'Add Play Button',
+      iconUrl: `${origin}/appicon.jpg`,
+      homeUrl: origin,
+      imageUrl: `${origin}/ThePlayButton.png`,
+      buttonTitle: 'Add Play Button',
+      splashImageUrl: `${origin}/ThePlayButton.png`,
+      splashBackgroundColor: '#8B5CF6',
+    },
+    metadata: {
+      name: 'Add Play Button',
+      shortName: 'AddPlayButton',
+      description:
+        'Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.',
+      longDescription:
+        'Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Simply paste a Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud link and create engaging casts with embedded media players that your followers can interact with directly within the miniapp window.',
+      version: '1.0.0',
+      author: 'Derek Hoiem',
+      website: origin,
+      keywords: [
+        'farcaster',
+        'music',
+        'video',
+        'spotify',
+        'youtube',
+        'apple-music',
+        'soundcloud',
+        'vimeo',
+        'mixcloud',
+      ],
+      category: 'entertainment',
+      language: 'en',
+      region: 'global',
+    },
+    ui: {
+      theme: {
+        colorScheme: 'light',
+        primaryColor: '#8B5CF6',
+        backgroundColor: '#F8FAFC',
+        textColor: '#1F2937',
+        accentColor: '#7c3aed',
+      },
+      layout: {
+        orientation: 'portrait',
+        fullscreen: true,
+        statusBarStyle: 'default',
+        maxWidth: '768px',
+        padding: '16px',
+      },
+    },
+    permissions: {
+      camera: false,
+      microphone: false,
+      location: false,
+      notifications: true,
+      storage: true,
+      network: true,
+      clipboard: true,
+      identity: true,
+      cast: true,
+    },
+    features: {
+      casting: {
+        enabled: true,
+        types: ['text', 'image', 'link', 'embed'],
+      },
+      wallet: {
+        enabled: false,
+        required: false,
+      },
+      authentication: {
+        required: false,
+        methods: ['farcaster'],
+      },
+      sharing: {
+        enabled: true,
+        platforms: ['farcaster', 'twitter', 'copy-link'],
+      },
+      'media-embeds': true,
+      'url-validation': true,
+      'local-storage': true,
+    },
+    navigation: {
+      homeUrl: '/',
+      routes: [
+        {
+          path: '/',
+          name: 'Home',
+          description: 'Main app interface for adding play buttons',
+        },
+      ],
+    },
+    integrations: {
+      farcaster: {
+        version: 'v2',
+        features: ['frames', 'actions', 'composer'],
+        capabilities: ['cast', 'user-data', 'notifications'],
+      },
+      warpcast: {
+        composerAction: {
+          enabled: true,
+          name: 'Add Play Button',
+          description: 'Add music/video play buttons to your cast',
+          icon: 'music',
+          url: origin,
+          aboutUrl: 'https://rainonmeproductions.com/addplaybutton',
+          actionType: 'post',
+        },
+      },
+    },
+    security: {
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net'],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+        connectSrc: [
+          "'self'",
+          'https://api.farcaster.xyz',
+          'https://hub.farcaster.xyz',
+          'https://api.warpcast.com',
+          origin,
+        ],
+        mediaSrc: ["'self'", 'https:', 'blob:'],
+        frameSrc: [
+          "'self'",
+          'https://open.spotify.com',
+          'https://music.apple.com',
+          'https://embed.music.apple.com',
+          'https://soundcloud.com',
+          'https://w.soundcloud.com',
+          'https://www.youtube.com',
+          'https://vimeo.com',
+          'https://player.vimeo.com',
+        ],
+      },
+      permissions: {
+        autoplay: 'allowed',
+        fullscreen: 'allowed',
+      },
+      allowedDomains: [
+        'addplaybutton.xyz',
+        'open.spotify.com',
+        'music.apple.com',
+        'embed.music.apple.com',
+        'soundcloud.com',
+        'w.soundcloud.com',
+        'youtube.com',
+        'www.youtube.com',
+        'youtu.be',
+        host,
+      ],
+    },
+    performance: {
+      maxLoadTime: 3000,
+      maxMemoryUsage: '50MB',
+      cacheStrategy: 'stale-while-revalidate',
+      maxBundleSize: '2MB',
+    },
+    analytics: {
+      enabled: false,
+      provider: null,
+    },
+    monetization: {
+      enabled: false,
+      methods: [],
+    },
+    support: {
+      email: 'https://github.com/bluedrums/AddPlayButton-Feedback/issues',
+      documentation: 'https://rainonmeproductions.com/addplaybutton',
+      community: 'https://warpcast.com/~/channel/addplaybutton',
+    },
+    legal: {
+      privacyPolicy: 'https://rainonmeproductions.com/privacy-policy',
+      termsOfService: 'https://rainonmeproductions.com/terms-of-service',
+    },
+    build: {
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'production',
+    },
+    repository: 'https://github.com/bluedrums/AddPlayButton-Feedback',
+  };
+
+  return NextResponse.json(manifest);
+}
+
+
