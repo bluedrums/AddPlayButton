@@ -9,7 +9,7 @@
     "name": "Add Play Button",
     "homeUrl": "https://addplaybutton.xyz",
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
-    "splashImageUrl": "https://addplaybutton.xyz/appicon.png",
+    "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6",
     "subtitle": "Embed media in miniapp window",
     "description": "Create shareable cards for music video links that play in the miniapp window without leaving Farcaster. Supports Spotify,Apple Music,YouTube,SoundCloud,Mixcloud,Vimeo",
