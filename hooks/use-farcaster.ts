@@ -90,7 +90,7 @@ export function useFarcaster() {
   }, []);
 
   useEffect(() => {
-    const initialize = async () => {
+    const initialize = () => {
       // Try to restore auth state from sessionStorage first
       if (typeof window !== 'undefined') {
         const storedUser = sessionStorage.getItem('farcaster_user');
@@ -102,13 +102,12 @@ export function useFarcaster() {
             console.log('🔄 Restored auth state from sessionStorage:', user.fid);
             setUser(user);
             setIsAuthenticated(true);
+            setIsLoading(false); // Stop loading since we restored the session
           } catch (err) {
             console.error('Failed to parse stored user:', err);
           }
         }
       }
-      
-      setIsLoading(false);
     };
     initialize();
   }, []);
@@ -122,12 +121,13 @@ export function useFarcaster() {
       .catch((err) => {
         console.error('SDK ready error:', err);
         setError('Failed to initialize Farcaster SDK');
+        setIsLoading(false);
       });
   }, []);
 
   // Auto sign-in when SDK is ready and user is not authenticated
   useEffect(() => {
-    if (isSDKReady && !isAuthenticated && !isLoading && !error && !user) {
+    if (isSDKReady && !isAuthenticated && !error && !user) {
       console.log('Auto-signing in...');
       // Add a small delay to ensure everything is initialized
       const timer = setTimeout(() => {
@@ -135,7 +135,7 @@ export function useFarcaster() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isSDKReady, isAuthenticated, isLoading, error, user, signIn]);
+  }, [isSDKReady, isAuthenticated, error, user, signIn]);
 
   return { 
     user, 
