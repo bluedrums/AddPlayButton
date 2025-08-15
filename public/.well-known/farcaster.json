@@ -22,15 +22,5 @@
     "author": "Derek Hoiem",
     "website": "https://addplaybutton.xyz",
     "canonicalDomain": "addplaybutton.xyz"
-  },
-  "support": {
-    "email": "https://github.com/bluedrums/AddPlayButton-Feedback/issues",
-    "documentation": "https://rainonmeproductions.com/addplaybutton",
-    "community": "https://farcaster.com/~/channel/addplaybutton",
-    "repository": "https://github.com/bluedrums/AddPlayButton-Feedback",
-  },
-  "legal": {
-    "privacyPolicy": "https://rainonmeproductions.com/privacy-policy",
-    "termsOfService": "https://rainonmeproductions.com/terms-of-service",
   }
 }
