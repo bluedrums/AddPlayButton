@@ -2,10 +2,13 @@
     "accountAssociation": {
       "header": "eyJmaWQiOjMzNjEwMywidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDNiNkI3NDkwYTFmN0MxZTY1Q0M1M2JBQzRDOTJEMTlGZDVkMTU3YzUifQ",
       "payload": "eyJkb21haW4iOiJhZGRwbGF5YnV0dG9uLnh5eiJ9",
-      "signature": "MHgxZTI0NDU4YTcxNDVhYWRhMjA1ODUxMWUwOWE0NzBkYWMyYTljM2JmNDdlMDFmNTE4MWE2ZmNiN2JlZTdmNTI4NTZkYjZiZjFhMDg3YmI2YmUwMGI3ZGE0NTkzYTAyNDkyYzYyNGIxMjBjMjk2MzU4MDZlMGQyM2NjM2U3Y2JkZDFj"
+      "signature": "MHgxZTI0NDU4YTcxNDVhYWRhMjA1ODUxMWUwOWE0NzBkYWMyYTljM2JmNDdlMDFmNTE4MWE2ZmNiN2JlZTdmNTI4NTZkYjZiZjFhMDg3YmI2YmUwMGI3ZGE0NTkzYTAyNDkyYzYyNGIxMjBjMjk2MzU4MDZlMGQyM2NjM2U3Y2JkZDFj",
+      "baseBuilder": {
+        "allowedAddresses": ["0x6D0469744c20fc303a1b17cF833DEa48bf0eed3A"]
+    }
   },
-  "miniapp": {
-    "version": "1",
+  "frame": {
+    "version": "next",
     "name": "Add Play Button",
     "homeUrl": "https://addplaybutton.xyz",
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
