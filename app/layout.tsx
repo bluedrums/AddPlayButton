@@ -5,6 +5,7 @@ import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Analytics } from '@vercel/analytics/react';
+import { FarcasterSDKProvider } from "@/components/farcaster-sdk-provider";
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -36,9 +37,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={ubuntu.className}>
         <FarcasterProvider>
-          {children}
-          <Analytics />
-          <Toaster />
+          <FarcasterSDKProvider>
+            {children}
+            <Analytics />
+            <Toaster />
+          </FarcasterSDKProvider>
         </FarcasterProvider>
       </body>
     </html>
