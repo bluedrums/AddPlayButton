@@ -840,7 +840,7 @@ export default function ClientPage() {
 
         {playButtons.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
+            <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2 mb-4">
               <Video className="w-5 h-5" />
               Your Play Buttons ({playButtons.length})
             </h2>
