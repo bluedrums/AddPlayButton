@@ -26,7 +26,6 @@ interface FarcasterContextType {
   refreshPlayButtons: () => Promise<void>;
   signIn: () => Promise<void>;
   signOut: () => void
-  isSDKReady: boolean
   setUser: (user: FarcasterUser | null) => void;
 }
 
@@ -40,7 +39,6 @@ const FarcasterContext = createContext<FarcasterContextType>({
   refreshPlayButtons: async () => {},
   signIn: async () => {},
   signOut: () => {},
-  isSDKReady: false,
   setUser: () => {},
 })
 
@@ -49,7 +47,7 @@ export function useFarcaster() {
 }
 
 function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated, isLoading, error, signIn, signOut, isSDKReady, setUser } = useFarcasterAuth();
+  const { user, isAuthenticated, isLoading, error, signIn, signOut, setUser } = useFarcasterAuth();
   const [playButtons, setPlayButtons] = useState<PlayButton[]>([])
 
   const refreshPlayButtons = async () => {
@@ -94,7 +92,6 @@ function FarcasterProviderContent({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signOut,
-    isSDKReady,
     setUser,
     error,
     playButtons,

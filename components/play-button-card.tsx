@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music } from "lucide-react"
+import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music, Code } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
@@ -73,6 +73,13 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     }
   }
 
+  const handleCopyCode = () => {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+    const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}`;
+    navigator.clipboard.writeText(frameUrl);
+    toast.success("Embed code copied to clipboard!");
+  }
+
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
       month: "short",
@@ -105,30 +112,6 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg leading-tight truncate">{playButton.title}</h3>
                   {playButton.artist && <p className="text-gray-600 text-sm truncate mt-1">{playButton.artist}</p>}
-
-                  {/* Play and Cast buttons directly under title/artist */}
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      onClick={() => setShowPlayer(true)}
-                      className="bg-green-600 hover:bg-green-700 flex-1"
-                      size="sm"
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Play
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="flex-1 bg-transparent"
-                      size="sm"
-                      disabled={!isAuthenticated}
-                      title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
-                      onClick={handleCast}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Cast
-                    </Button>
-                  </div>
                 </div>
 
                 {/* More actions menu */}
@@ -157,6 +140,39 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                 </DropdownMenu>
               </div>
             </div>
+          </div>
+          
+          {/* Play, Cast, and Copy Code buttons aligned with cover art */}
+          <div className="flex justify-between mt-3">
+            <Button
+              onClick={() => setShowPlayer(true)}
+              className="bg-green-600 hover:bg-green-700"
+              size="sm"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Play
+            </Button>
+
+            <Button
+              variant="outline"
+              className="bg-transparent"
+              size="sm"
+              disabled={!isAuthenticated}
+              title={!isAuthenticated ? "Sign in to create casts" : "Create a cast"}
+              onClick={handleCast}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Cast
+            </Button>
+            <Button
+              variant="outline"
+              className="bg-transparent"
+              size="sm"
+              onClick={handleCopyCode}
+            >
+              <Code className="w-4 h-4 mr-2" />
+              Code
+            </Button>
           </div>
         </CardHeader>
 
