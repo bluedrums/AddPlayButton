@@ -7,7 +7,7 @@
   "baseBuilder": {
     "allowedAddresses": ["0x6D0469744c20fc303a1b17cF833DEa48bf0eed3A"]
   },
-  "miniapp": {
+  "frame": {
     "version": "1",
     "name": "Add Play Button",
     "homeUrl": "https://addplaybutton.xyz",
