@@ -222,10 +222,14 @@ export default function ClientPage() {
       const trackMatch = cleanUrl.match(/track\/([a-zA-Z0-9]+)/)
       const albumMatch = cleanUrl.match(/album\/([a-zA-Z0-9]+)/)
       const playlistMatch = cleanUrl.match(/playlist\/([a-zA-Z0-9]+)/)
+      const episodeMatch = cleanUrl.match(/episode\/([a-zA-Z0-9]+)/)
+      const showMatch = cleanUrl.match(/show\/([a-zA-Z0-9]+)/)
       const oembedUrl = `https://open.spotify.com/oembed?url=${encodeURIComponent(cleanUrl)}`
       if (trackMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/track/${trackMatch[1]}`, oembedEndpoint: oembedUrl }
       if (albumMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/album/${albumMatch[1]}`, oembedEndpoint: oembedUrl }
       if (playlistMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/playlist/${playlistMatch[1]}`, oembedEndpoint: oembedUrl }
+      if (episodeMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/episode/${episodeMatch[1]}`, oembedEndpoint: oembedUrl }
+      if (showMatch) return { platform: "Spotify", embedUrl: `https://open.spotify.com/embed/show/${showMatch[1]}`, oembedEndpoint: oembedUrl }
     }
     if (cleanUrl.includes("music.apple.com") || cleanUrl.includes("apple.co")) {
       // Apple Music does not have a public oEmbed API
@@ -237,6 +241,10 @@ export default function ClientPage() {
       else if (cleanUrl.includes("youtube.com/watch")) {
         const match = cleanUrl.match(/[?&]v=([^&]+)/)
         if (match) videoId = match[1]
+      }
+      else if (cleanUrl.includes("youtube.com/shorts")) {
+        const match = cleanUrl.match(/youtube\.com\/shorts\/([^?&]+)/);
+        if (match) videoId = match[1];
       }
       if (videoId) return { platform: "YouTube", embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=1`, oembedEndpoint: `https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json` }
     }
