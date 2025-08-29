@@ -815,7 +815,7 @@ export default function ClientPage() {
                   )}
                 </Button>
               </div>
-              <div className="flex justify-center">
+              <div className="flex justify-center hidden">
                 <Button
                   onClick={handleBaseDonate}
                   disabled={isDonating}
