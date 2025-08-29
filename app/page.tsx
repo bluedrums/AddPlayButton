@@ -3,7 +3,6 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-/*
 const fallbackEmbed = {
   version: '1',
   imageUrl: `${baseUrl}/ThePlayButton.png`,
@@ -12,7 +11,7 @@ const fallbackEmbed = {
     action: {
       type: 'launch_frame',
       name: 'Add Play Button',
-      url: `${baseUrl}?home`,
+      url: baseUrl,
     },
   },
 };
@@ -25,7 +24,6 @@ export const metadata: Metadata = {
     'fc:frame': JSON.stringify(fallbackEmbed),
   },
 };
-*/
 
 export default function Home({ searchParams }: { searchParams?: { debug?: string } }) {
   const showDebug = searchParams?.debug === 'env';
