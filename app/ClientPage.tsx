@@ -800,7 +800,7 @@ export default function ClientPage() {
                 <Button
                   onClick={() => handleDonate("farcaster")}
                   disabled={!isAuthenticated || isDonating}
-                  className="bg-purple-600 hover:bg-purple-700 w-60"
+                  className="bg-purple-600 hover:bg-purple-700 w-full"
                 >
                   {isDonating ? (
                     <>
@@ -819,7 +819,7 @@ export default function ClientPage() {
                 <Button
                   onClick={handleBaseDonate}
                   disabled={isDonating}
-                  className="bg-blue-600 hover:bg-blue-700 w-60"
+                  className="bg-blue-600 hover:bg-blue-700 w-full"
                 >
                   {isDonating ? (
                     <>
