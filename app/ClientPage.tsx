@@ -164,6 +164,58 @@ export default function ClientPage() {
     });
   }, []);
 
+  // Trigger "Add Mini App" dialog on first launch
+  useEffect(() => {
+    const triggerAddMiniAppDialog = async () => {
+      // Only show dialog if user is authenticated and it's their first visit
+      if (isAuthenticated && user && !isLoading) {
+        const hasSeenDialog = localStorage.getItem('addplaybutton-seen-dialog');
+
+        if (!hasSeenDialog) {
+          try {
+            console.log('🎯 Triggering Add Mini App dialog for first-time user');
+
+            // Small delay to ensure everything is ready
+            setTimeout(async () => {
+              try {
+                // Try the standard method first
+                if (sdk.actions.addMiniApp) {
+                  await sdk.actions.addMiniApp();
+                } else {
+                  // Fallback: try other possible method names
+                  console.log('Standard addMiniApp method not found, trying alternatives...');
+
+                  // Some SDK versions might use different method names
+                  if ((sdk.actions as any).showAddMiniApp) {
+                    await (sdk.actions as any).showAddMiniApp();
+                  } else if ((sdk.actions as any).openMiniAppDialog) {
+                    await (sdk.actions as any).openMiniAppDialog();
+                  } else {
+                    console.warn('Add Mini App dialog method not found in SDK');
+                  }
+                }
+
+                // Mark that user has seen the dialog
+                localStorage.setItem('addplaybutton-seen-dialog', 'true');
+                console.log('✅ Add Mini App dialog triggered successfully');
+
+              } catch (error) {
+                console.error('Failed to trigger Add Mini App dialog:', error);
+                // Still mark as seen to avoid repeated attempts
+                localStorage.setItem('addplaybutton-seen-dialog', 'true');
+              }
+            }, 1500); // Wait 1.5 seconds after app is ready
+
+          } catch (error) {
+            console.error('Error in addMiniApp dialog trigger:', error);
+          }
+        }
+      }
+    };
+
+    triggerAddMiniAppDialog();
+  }, [isAuthenticated, user, isLoading]);
+
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
     if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
