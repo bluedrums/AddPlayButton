@@ -11,7 +11,7 @@ const fallbackEmbed = {
     action: {
       type: 'launch_frame',
       name: 'Add Play Button',
-      url: baseUrl,
+      url: `${baseUrl}?home`,
     },
   },
 };
