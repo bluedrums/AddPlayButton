@@ -46,6 +46,7 @@ export default function Home({ searchParams }: { searchParams?: { debug?: string
           <strong>Environment Debug:</strong><br/>
           NEXT_PUBLIC_APP_URL: {process.env.NEXT_PUBLIC_APP_URL || 'NOT_SET'}<br/>
           NEXT_PUBLIC_USDC_ADDRESS: {process.env.NEXT_PUBLIC_USDC_ADDRESS ? 'SET' : 'NOT_SET'}<br/>
+          NEXT_PUBLIC_BASE_PROJECT_ID: {process.env.NEXT_PUBLIC_BASE_PROJECT_ID ? 'SET' : 'NOT_SET'}<br/>
           NODE_ENV: {process.env.NODE_ENV || 'NOT_SET'}
         </div>
       )}

@@ -420,6 +420,7 @@ export default function ClientPage() {
           currency: "USDC",
           chainId: 8453, // Base network
           reference: "AddPlayButton-Donation",
+          projectId: process.env.NEXT_PUBLIC_BASE_PROJECT_ID,
         };
 
         const result = await window.base.pay(paymentRequest);
@@ -431,7 +432,8 @@ export default function ClientPage() {
         }
       } else {
         // Fallback: Open Base Pay URL
-        const basePayUrl = `https://pay.coinbase.com/buy?appId=your-app-id&recipient=${recipientAddress}&amount=1&currency=USDC&chainId=8453`;
+        const projectId = process.env.NEXT_PUBLIC_BASE_PROJECT_ID || 'your-app-id';
+        const basePayUrl = `https://pay.coinbase.com/buy?appId=${projectId}&recipient=${recipientAddress}&amount=1&currency=USDC&chainId=8453`;
         await sdk.actions.openUrl(basePayUrl);
         toast.success('Opening Base Pay... 💙');
       }
