@@ -10,25 +10,25 @@
   "frame": {
     "version": "1",
     "name": "Add Play Button",
-    "homeUrl": "https://addplaybutton.xyz",
-    "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
-    "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
+    "homeUrl": "https://www.addplaybutton.xyz",
+    "iconUrl": "https://www.addplaybutton.xyz/appicon.jpg",
+    "splashImageUrl": "https://www.addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6",
     "subtitle": "Embed media in miniapp window",
     "description": "Create shareable cards for music video links that play in the miniapp window without leaving Farcaster. Supports Spotify,Apple Music,YouTube,SoundCloud,Mixcloud,Vimeo",
     "primaryCategory": "utility",
     "tags": ["music", "video", "media", "embed"],
-    "heroImageUrl": "https://addplaybutton.xyz/HeroImage.png",
+    "heroImageUrl": "https://www.addplaybutton.xyz/HeroImage.png",
     "screenshotUrls": [
-        "https://addplaybutton.xyz/screenshot1.png",
-        "https://addplaybutton.xyz/screenshot2.png",
-        "https://addplaybutton.xyz/screenshot3.png",
-        "https://addplaybutton.xyz/screenshot4.png"
+        "https://www.addplaybutton.xyz/screenshot1.png",
+        "https://www.addplaybutton.xyz/screenshot2.png",
+        "https://www.addplaybutton.xyz/screenshot3.png",
+        "https://www.addplaybutton.xyz/screenshot4.png"
     ],
     "tagline": "Embed media in miniapp window",
     "ogTitle": "Add Play Button",
     "ogDescription": "Embed media in a miniapp window without leaving Farcaster.",
-    "ogImageUrl": "https://addplaybutton.xyz/HeroImage.png",
-    "canonicalDomain": "addplaybutton.xyz"
+    "ogImageUrl": "https://www.addplaybutton.xyz/HeroImage.png",
+    "canonicalDomain": "www.addplaybutton.xyz"
   }
 }
