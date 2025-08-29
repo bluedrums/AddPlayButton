@@ -39,6 +39,7 @@ interface EmbeddedPlayerModalProps {
   playButton: PlayButton
   showCastSuccess?: boolean
   castUrl?: string
+  safeArea?: { top: number; bottom: number; left: number; right: number };
 }
 
 export function EmbeddedPlayerModal({
@@ -47,6 +48,7 @@ export function EmbeddedPlayerModal({
   playButton,
   showCastSuccess = false,
   castUrl,
+  safeArea = { top: 0, bottom: 0, left: 0, right: 0 },
 }: EmbeddedPlayerModalProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -84,10 +86,9 @@ export function EmbeddedPlayerModal({
 
     if (isOpen && isFullscreen) {
       document.addEventListener('keydown', handleKeyDown)
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
     }
   }, [isOpen, isFullscreen]);
 
@@ -135,14 +136,16 @@ export function EmbeddedPlayerModal({
       setIsFullscreen(!!document.fullscreenElement)
     }
 
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    if (isOpen) {
+      document.addEventListener('fullscreenchange', handleFullscreenChange)
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
 
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange)
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange)
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      }
     }
-  }, [])
+  }, [isOpen])
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -197,14 +200,18 @@ export function EmbeddedPlayerModal({
         <div
           id="player-modal-container"
           className={cn(
-            "fixed inset-0 z-50 flex items-center justify-center bg-black", // Always have a black background
+            "fixed inset-0 z-50 bg-black", // Always have a black background
           )}
         >
           {/* Centered content wrapper */}
           <div
-            className={cn(
-              "relative w-full h-full" // Full width and height
-            )}
+            className="relative w-full h-full"
+            style={{
+              marginTop: `${safeArea.top}px`,
+              marginBottom: `${safeArea.bottom + 10}px`,
+              marginLeft: `${safeArea.left}px`,
+              marginRight: `${safeArea.right}px`,
+            }}
           >
             {/* Control buttons */}
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
@@ -228,7 +235,7 @@ export function EmbeddedPlayerModal({
             </div>
             
             {/* Embedded Player - takes up the whole space */}
-            <div className="w-full h-full">
+            <div className="w-full h-full" style={{ height: '98%' }}>
               <iframe
                 src={playButton.embedUrl}
                 width="100%"

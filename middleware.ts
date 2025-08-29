@@ -13,6 +13,7 @@ const publicRoutes = [
   { path: '/api/user/casts', methods: ['GET'] },
   { path: '/api/playbutton', methods: ['GET'] }, // Public for share page SSR
   { path: '/api/metadata', methods: ['GET'] }, // Public for fetching metadata
+  { path: '/api/env-check', methods: ['GET'] }, // Public for environment variable checking
 ];
 
 // Define which routes are exempt from CSRF protection

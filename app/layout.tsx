@@ -24,6 +24,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "white" },
     { media: "(prefers-color-scheme: dark)", color: "black" },
   ],
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -34,11 +35,50 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={ubuntu.className}>
+        {/* Immediate splash screen - shows before React hydrates */}
+        <div 
+          id="initial-splash"
+          style={{
+            backgroundColor: '#8A63D2',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100vh',
+            width: '100vw',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            zIndex: 99999,
+            margin: 0,
+            padding: 0,
+          }}
+        >
+          <img 
+            src="/appicon.jpg" 
+            alt="App Icon" 
+            style={{
+              width: '128px',
+              height: '128px',
+              borderRadius: '24px'
+            }}
+          />
+        </div>
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            body { margin: 0; padding: 0; }
+            #initial-splash { display: flex !important; }
+          `
+        }} />
         <FarcasterProvider>
           {children}
           <Analytics />
           <Toaster />
         </FarcasterProvider>
+        {/* Base Pay SDK */}
+        <script
+          src="https://pay.coinbase.com/js/base.js"
+          async
+        />
       </body>
     </html>
   )

@@ -10,16 +10,9 @@ export function useFarcaster() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isSDKReady, setIsSDKReady] = useState(false);
-
+  const [minLoadingTime, setMinLoadingTime] = useState(false);
   const signIn = useCallback(async () => {
-    console.log('signIn called, isSDKReady:', isSDKReady);
-    
-    if (!isSDKReady) {
-      console.error('Cannot sign in: SDK not ready');
-      setError('Authentication service not ready. Please try again.');
-      return;
-    }
+    console.log('signIn called');
 
     try {
       setIsLoading(true);
@@ -66,10 +59,9 @@ export function useFarcaster() {
       const message = err instanceof Error ? err.message : 'Authentication failed';
       console.error("❌ Authentication error:", err);
       setError(message);
-    } finally {
-      setIsLoading(false);
+      // Don't set isLoading to false here - let the minimum loading time logic handle it
     }
-  }, [isSDKReady]);
+  }, []);
 
   const signOut = useCallback(async () => {
     try {
@@ -89,6 +81,14 @@ export function useFarcaster() {
     }
   }, []);
 
+  // Ensure minimum loading time to prevent flashing
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinLoadingTime(true);
+    }, 800); // Show splash for at least 800ms
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const initialize = () => {
       // Try to restore auth state from sessionStorage first
@@ -102,7 +102,7 @@ export function useFarcaster() {
             console.log('🔄 Restored auth state from sessionStorage:', user.fid);
             setUser(user);
             setIsAuthenticated(true);
-            setIsLoading(false); // Stop loading since we restored the session
+            // Don't set loading to false immediately - wait for minimum time
           } catch (err) {
             console.error('Failed to parse stored user:', err);
           }
@@ -112,22 +112,9 @@ export function useFarcaster() {
     initialize();
   }, []);
 
+  // Auto sign-in when component mounts and user is not authenticated
   useEffect(() => {
-    sdk.actions.ready()
-      .then(() => {
-        console.log('SDK is ready');
-        setIsSDKReady(true);
-      })
-      .catch((err) => {
-        console.error('SDK ready error:', err);
-        setError('Failed to initialize Farcaster SDK');
-        setIsLoading(false);
-      });
-  }, []);
-
-  // Auto sign-in when SDK is ready and user is not authenticated
-  useEffect(() => {
-    if (isSDKReady && !isAuthenticated && !error && !user) {
+    if (!isAuthenticated && !error && !user) {
       console.log('Auto-signing in...');
       // Add a small delay to ensure everything is initialized
       const timer = setTimeout(() => {
@@ -135,7 +122,14 @@ export function useFarcaster() {
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isSDKReady, isAuthenticated, error, user, signIn]);
+  }, []);
+
+  // Only stop loading when minimum time has passed AND auth state is resolved
+  useEffect(() => {
+    if (minLoadingTime && (isAuthenticated || error || (!user && !isAuthenticated))) {
+      setIsLoading(false);
+    }
+  }, [minLoadingTime, isAuthenticated, error, user]);
 
   return { 
     user, 
@@ -144,7 +138,6 @@ export function useFarcaster() {
     error,
     signIn, 
     signOut, 
-    isSDKReady,
     setUser
   };
 }

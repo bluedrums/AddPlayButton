@@ -25,10 +25,33 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Home() {
+export default function Home({ searchParams }: { searchParams?: { debug?: string } }) {
+  const showDebug = searchParams?.debug === 'env';
+
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ClientPage />
-    </Suspense>
+    <div>
+      {showDebug && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          right: '10px',
+          background: 'black',
+          color: 'white',
+          padding: '10px',
+          borderRadius: '5px',
+          fontSize: '12px',
+          zIndex: 9999,
+          maxWidth: '300px'
+        }}>
+          <strong>Environment Debug:</strong><br/>
+          NEXT_PUBLIC_APP_URL: {process.env.NEXT_PUBLIC_APP_URL || 'NOT_SET'}<br/>
+          NEXT_PUBLIC_USDC_ADDRESS: {process.env.NEXT_PUBLIC_USDC_ADDRESS ? 'SET' : 'NOT_SET'}<br/>
+          NODE_ENV: {process.env.NODE_ENV || 'NOT_SET'}
+        </div>
+      )}
+      <Suspense fallback={<div>Loading...</div>}>
+        <ClientPage />
+      </Suspense>
+    </div>
   );
 }

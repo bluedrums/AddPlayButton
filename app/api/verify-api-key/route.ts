@@ -25,6 +25,8 @@ export async function GET(request: NextRequest) {
         debugInfo: {
           nodeEnv: process.env.NODE_ENV,
           hasEnvFile: !!process.env.NEXT_PUBLIC_APP_URL,
+          usdcAddress: process.env.NEXT_PUBLIC_USDC_ADDRESS ? 'SET' : 'NOT_SET',
+          appUrl: process.env.NEXT_PUBLIC_APP_URL,
         },
       })
     }

@@ -8,17 +8,31 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift, ChevronDown } from "lucide-react"
+import { Play, Music, Video, User, AlertCircle, Loader2, Settings, LogOut, Info, Upload, X, Gift } from "lucide-react"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
-import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
+
+// Base Pay API types
+declare global {
+  interface Window {
+    base?: {
+      pay: (request: {
+        recipient: string;
+        amount: string;
+        currency: string;
+        chainId: number;
+        reference?: string;
+      }) => Promise<{ success: boolean; error?: string; txHash?: string }>;
+    };
+  }
+}
 
 interface PlayButton {
   id: string
@@ -50,9 +64,21 @@ export default function ClientPage() {
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<string>("farcaster");
+
   const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+  const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+  const [safeArea, setSafeArea] = useState(defaultSafeArea);
+
+  // Call SDK ready when component mounts and authentication is resolved
+  useEffect(() => {
+    // Only call SDK ready when we're not loading anymore
+    if (!isLoading) {
+      sdk.actions.ready().catch(err => {
+        console.error('Failed to mark SDK as ready:', err);
+      });
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -84,6 +110,18 @@ export default function ClientPage() {
     }
   }, [params]);
 
+  // Remove splash screen when loading is complete
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('🔄 Loading complete, removing splash screen...');
+      const initialSplash = document.getElementById('initial-splash');
+      if (initialSplash) {
+        (initialSplash as HTMLElement).style.setProperty('display', 'none', 'important');
+        console.log('✅ Splash screen hidden');
+      }
+    }
+  }, [isLoading]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -93,11 +131,38 @@ export default function ClientPage() {
     };
   }, [urlValidationTimeout]);
 
+  // Get safe area insets asynchronously
+  useEffect(() => {
+    const getSafeAreaInsets = async () => {
+      try {
+        const context = await sdk.context;
+        if (context?.client?.safeAreaInsets && typeof context.client.safeAreaInsets.top === 'number') {
+          setSafeArea(context.client.safeAreaInsets);
+        }
+      } catch (error) {
+        console.warn('Failed to get safe area insets:', error);
+      }
+    };
+
+    getSafeAreaInsets();
+  }, []);
+
   // Debug: Log play buttons state
   useEffect(() => {
     console.log('🔵 Current play buttons in ClientPage:', playButtons.length);
     console.log('🔵 Play button IDs:', playButtons.map(pb => pb.id));
   }, [playButtons]);
+
+  // Debug SDK context
+  useEffect(() => {
+    sdk.context.then(context => {
+      console.log('SDK Context:', context);
+      console.log('User:', context?.user);
+      console.log('Client:', context?.client);
+    }).catch(err => {
+      console.error('SDK Context Error:', err);
+    });
+  }, []);
 
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
@@ -337,7 +402,49 @@ export default function ClientPage() {
     await signOut();
   }
 
-  const handleDonate = async (walletType: string = selectedWallet) => {
+  const handleBaseDonate = async () => {
+    setIsDonating(true);
+    try {
+      const recipientAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
+      if (!recipientAddress) {
+        toast.error("Donation address is not configured.");
+        setIsDonating(false);
+        return;
+      }
+
+      // Check if Base Pay is available
+      if (typeof window !== "undefined" && window.base && window.base.pay) {
+        const paymentRequest = {
+          recipient: recipientAddress,
+          amount: "1", // 1 USDC
+          currency: "USDC",
+          chainId: 8453, // Base network
+          reference: "AddPlayButton-Donation",
+        };
+
+        const result = await window.base.pay(paymentRequest);
+
+        if (result.success) {
+          toast.success('Payment sent via Base Pay! 💙');
+        } else {
+          throw new Error(result.error || 'Payment failed');
+        }
+      } else {
+        // Fallback: Open Base Pay URL
+        const basePayUrl = `https://pay.coinbase.com/buy?appId=your-app-id&recipient=${recipientAddress}&amount=1&currency=USDC&chainId=8453`;
+        await sdk.actions.openUrl(basePayUrl);
+        toast.success('Opening Base Pay... 💙');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to process payment.';
+      console.error('Base Pay error:', error);
+      toast.error(message);
+    } finally {
+      setIsDonating(false);
+    }
+  }
+
+  const handleDonate = async (walletType: string) => {
     if (!isAuthenticated || !user) {
       toast.error("Please sign in to donate");
       return;
@@ -357,7 +464,7 @@ export default function ClientPage() {
         if (!provider) {
           throw new Error("Farcaster Wallet provider not available.");
         }
-        
+
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || !accounts[0]) {
           throw new Error("Could not connect to Farcaster Wallet.");
@@ -366,7 +473,7 @@ export default function ClientPage() {
 
         const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
         const amount = 1000000; // 1 USDC (6 decimals)
-        
+
         const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
         const paddedAmount = amount.toString(16).padStart(64, '0');
         const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
@@ -377,7 +484,7 @@ export default function ClientPage() {
           value: '0x0' as `0x${string}`,
           data: txData as `0x${string}`,
         };
-        
+
         await provider.request({
           method: 'eth_sendTransaction',
           params: [txParams],
@@ -402,7 +509,7 @@ export default function ClientPage() {
             const paddedAmount = amount.toString(16).padStart(64, '0');
             const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
             const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
-            
+
             await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
             toast.success('Payment sent via Coinbase Wallet! 💜');
           } catch (switchError: any) {
@@ -436,7 +543,8 @@ export default function ClientPage() {
     }
   }
 
-  if (isLoading) return <SplashScreen />
+  // Don't render anything while loading - the initial splash is already showing
+  if (isLoading) return null
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
@@ -448,6 +556,7 @@ export default function ClientPage() {
             refreshPlayButtons();
           }}
           playButton={activePlayButton}
+          safeArea={safeArea}
         />
       )}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -630,36 +739,12 @@ export default function ClientPage() {
               <Gift className="w-5 h-5" />
               Support the App!
             </CardTitle>
-            <CardDescription>
-              Keep this app free!
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-center">
-                <div className="w-60">
-                  <label className="block mb-2 text-sm font-medium text-gray-700">Wallet:</label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 w-full flex justify-between">
-                        {selectedWallet === "farcaster" && "Farcaster Wallet"}
-                        {selectedWallet === "coinbase" && "Coinbase Wallet"}
-                        {selectedWallet === "walletconnect" && "WalletConnect"}
-                        <ChevronDown className="w-3 h-3 ml-1 shrink-0" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem onClick={() => setSelectedWallet("farcaster")}>Farcaster Wallet</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedWallet("coinbase")}>Coinbase Wallet</DropdownMenuItem>
-                      {/* <DropdownMenuItem onClick={() => setSelectedWallet("walletconnect")}>WalletConnect</DropdownMenuItem> */}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-              
-              <div className="flex justify-center">
-                <Button 
-                  onClick={() => handleDonate(selectedWallet)} 
+                <Button
+                  onClick={() => handleDonate("farcaster")}
                   disabled={!isAuthenticated || isDonating}
                   className="bg-purple-600 hover:bg-purple-700 w-60"
                 >
@@ -671,30 +756,29 @@ export default function ClientPage() {
                   ) : (
                     <>
                       <Gift className="w-4 h-4 mr-2" />
-                      Donate $1 USDC
+                      Donate $1 (Farcaster)
                     </>
                   )}
                 </Button>
               </div>
-              
               <div className="flex justify-center">
-                <div className="w-60">
-                  <p className="text-xs font-medium text-gray-700 mb-1">USDC Address (Base):</p>
-                  <code className="block text-xs bg-white p-2 rounded border font-mono break-all w-full text-left">
-                    {process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000"}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      navigator.clipboard.writeText(process.env.NEXT_PUBLIC_USDC_ADDRESS || "0x0000000000000000000000000000000000000000");
-                      toast.success("Address copied to clipboard");
-                    }}
-                    className="text-xs w-full mt-2"
-                  >
-                    Copy
-                  </Button>
-                </div>
+                <Button
+                  onClick={handleBaseDonate}
+                  disabled={isDonating}
+                  className="bg-blue-600 hover:bg-blue-700 w-60"
+                >
+                  {isDonating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Gift className="w-4 h-4 mr-2" />
+                      Donate $1 (Base)
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </CardContent>
