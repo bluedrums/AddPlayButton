@@ -70,6 +70,66 @@ export default function ClientPage() {
   const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
   const [safeArea, setSafeArea] = useState(defaultSafeArea);
 
+  // Deep link handling via SDK context
+  useEffect(() => {
+    const handleDeepLink = async () => {
+      try {
+        const context = await sdk.context;
+        let frameUrl: string | undefined;
+
+        if (context.location?.type === 'cast_embed') {
+          frameUrl = context.location.embed;
+        } else if (context.location?.type === 'cast_share' && context.location.cast.embeds) {
+          for (const embed of context.location.cast.embeds) {
+            if (typeof embed === 'string' && embed.startsWith('http')) {
+              frameUrl = embed;
+              break;
+            }
+            if (typeof embed === 'object' && embed !== null && 'url' in embed && typeof (embed as any).url === 'string') {
+              frameUrl = (embed as any).url;
+              break;
+            }
+          }
+        }
+
+        if (frameUrl) {
+          console.log('Found frameUrl for deep linking:', frameUrl);
+          const url = new URL(frameUrl);
+          const pathSegments = url.pathname.split('/').filter(Boolean); // e.g., ['share', 'some-id']
+          
+          if (pathSegments[0] === 'share' && pathSegments[1]) {
+            const playButtonId = decodeURIComponent(pathSegments[1]);
+            const fid = context.user?.fid;
+            
+            if (playButtonId && fid) {
+              console.log(`Deep link details: playButtonId=${playButtonId}, fid=${fid}`);
+              
+              // Pass FID in headers, not as query parameter
+              const data = await api(`/api/playbutton?id=${playButtonId}`, {
+                headers: { 'x-user-fid': String(fid) }
+              });
+
+              if (data.error) {
+                if (data.error === 'Play button not found') {
+                  toast.error('This play button was not found. It may have been deleted.');
+                } else {
+                  toast.error(data.error);
+                }
+              } else {
+                const pb = {...data, createdAt: new Date(data.createdAt)};
+                setActivePlayButton(pb);
+                setIsPlayerModalOpen(true);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to handle deep link from SDK context:', error);
+      }
+    };
+    handleDeepLink();
+  }, []);
+
   // Call SDK ready when component mounts and authentication is resolved
   useEffect(() => {
     // Only call SDK ready when we're not loading anymore
@@ -84,6 +144,9 @@ export default function ClientPage() {
     const fid = params.get('fid');
     const playButtonId = params.get('playButton');
     if (fid && playButtonId) {
+      // This logic is now handled by the SDK context deep link effect.
+      // Kept for backward compatibility or direct URL access with params.
+      console.log('Query param-based deep link found (fallback).');
       // Pass FID in headers, not as query parameter
       api(`/api/playbutton?id=${playButtonId}`, {
         headers: {

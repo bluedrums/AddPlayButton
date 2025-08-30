@@ -26,8 +26,10 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
       playButtonData 
     });
     // Point directly to the mini-app home so Warpcast keeps the user inside the in-app sheet.
-    const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(encodedId)}`;
+    // const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(encodedId)}`;
+    const miniAppUrl = baseUrl;
 
+    
     return {
       title: playButtonData.title,
       description: `Play "${playButtonData.title}" using the Add Play Button mini-app`,

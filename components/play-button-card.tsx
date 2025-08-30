@@ -55,7 +55,7 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       const shareText = buildShareText({ title: playButton.title, artist: playButton.artist, platform: playButton.platform });
       
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-      const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}?fid=${user.fid}`;
+      const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}`;
 
       const { cast } = await sdk.actions.composeCast({ 
         text: shareText, 
