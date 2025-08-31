@@ -5,26 +5,17 @@ import type { Metadata } from 'next';
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/HeroImage.png`;
 
-const frame = {
-  version: '1',
-  imageUrl,
-  button: {
-    title: 'Open App',
-    action: {
-      type: 'miniapp',  // ← critical
-      url: baseUrl,  
-    },
-  },
-};
-
 const fallbackEmbed = {
   version: '1',
   imageUrl,
   button: {
-    title: 'Open App',
+    title: 'Add Play Button',
     action: {
       type: 'launch_frame',
-      url: `${baseUrl}?from=frame`,
+      name: 'Add Play Button',
+      splashImageUrl: `${baseUrl}/ThePlayButton.png`,
+      splashBackgroundColor: '#8B5CF6',
+      url: `${baseUrl}?home`,
     },
   },
 };
