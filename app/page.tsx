@@ -3,15 +3,17 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-const fallbackEmbed = {
+const imageUrl = `${baseUrl}/HeroImage.png`;
+
+const frameEmbed = {
   version: '1',
-  imageUrl: `${baseUrl}/ThePlayButton.png`,
+  imageUrl,
   button: {
-    title: 'Open',
+    title: 'Open App',
     action: {
       type: 'launch_frame',
       name: 'Add Play Button',
-      url: `${baseUrl}`,
+      url: baseUrl,
     },
   },
 };
@@ -20,8 +22,14 @@ export const metadata: Metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    'fc:miniapp': JSON.stringify(fallbackEmbed),
-    'fc:frame': JSON.stringify(fallbackEmbed),
+    // Reverting to the JSON blob method used on the working /share page
+    "fc:miniapp": JSON.stringify(frameEmbed),
+    "fc:frame": JSON.stringify(frameEmbed),
+
+    // Open Graph for other platforms
+    'og:title': 'Add Play Button',
+    'og:description': 'Create shareable play buttons for music and video links.',
+    'og:image': imageUrl,
   },
 };
 
