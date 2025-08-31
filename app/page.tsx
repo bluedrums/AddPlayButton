@@ -36,9 +36,9 @@ export const metadata: Metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    // Reverting to the JSON blob method used on the working /share page
-    "fc:miniapp": JSON.stringify(frameEmbed),
-    "fc:frame": JSON.stringify(frameEmbed),
+    // Use fallbackEmbed which has the query parameter fix
+    "fc:miniapp": JSON.stringify(fallbackEmbed),
+    "fc:frame": JSON.stringify(fallbackEmbed),
 
     // Open Graph for other platforms
     'og:title': 'Add Play Button',
