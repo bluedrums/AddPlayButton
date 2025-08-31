@@ -8,6 +8,24 @@ import { Analytics } from '@vercel/analytics/react';
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
+// Add default Mini-App embed for global pages
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
+const imageUrl = `${baseUrl}/ThePlayButton.png`;
+const embed = {
+  version: '1',
+  imageUrl,
+  button: {
+    title: 'Add Play Button',
+    action: {
+      type: 'launch_frame',
+      name: 'Add Play Button',
+      url: `${baseUrl}?home`,               // any URL ≠ current page
+      splashImageUrl: imageUrl,
+      splashBackgroundColor: '#8B5CF6',
+    },
+  },
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Add Play Button",
@@ -34,6 +52,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="fc:miniapp" content={JSON.stringify(embed)} />
+        <meta name="fc:frame"   content={JSON.stringify(embed)} />
+      </head>
       <body className={ubuntu.className}>
         {/* Immediate splash screen - shows before React hydrates */}
         <div 
