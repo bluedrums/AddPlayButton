@@ -11,8 +11,8 @@ const frame = {
   button: {
     title: 'Open App',
     action: {
-      type: 'miniapp',          // ← critical
-      url: `${baseUrl}?start`,  // ← makes target ≠ current URL
+      type: 'miniapp',  // ← critical
+      url: baseUrl,  
     },
   },
 };
