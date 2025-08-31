@@ -5,14 +5,32 @@ import type { Metadata } from 'next';
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/HeroImage.png`; // Using the more descriptive hero image
 
+// This JSON blob is for the fc:miniapp tag, ensuring client compatibility
+const miniAppEmbed = {
+  version: '1',
+  imageUrl,
+  button: {
+    title: 'Open App',
+    action: {
+      type: 'launch_frame',
+      name: 'Add Play Button',
+      url: baseUrl,
+    },
+  },
+};
+
 export const metadata: Metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    // Farcaster Frame metadata
+    // The special miniapp tag, which is required for detection.
+    'fc:miniapp': JSON.stringify(miniAppEmbed),
+
+    // Standard Farcaster Frame tags for modern clients.
     'fc:frame': 'vNext',
     'fc:frame:image': imageUrl,
     'fc:frame:button:1': 'Open App',
+    // This is the key fix: it tells the button to open the Mini App context.
     'fc:frame:button:1:action': 'miniapp',
     'fc:frame:button:1:target': baseUrl,
 
