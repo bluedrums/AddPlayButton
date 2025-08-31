@@ -5,28 +5,28 @@ import type { Metadata } from 'next';
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/HeroImage.png`;
 
-const frameEmbed = {
-  version: '1',
-  imageUrl,
-  button: {
-    title: 'Open App',
-    action: {
-      type: 'launch_frame',
-      name: 'Add Play Button',
-      url: baseUrl,
-    },
-  },
-};
-
 export const metadata: Metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    // Reverting to the JSON blob method used on the working /share page
-    "fc:miniapp": JSON.stringify(frameEmbed),
-    "fc:frame": JSON.stringify(frameEmbed),
+    // --- The Correct Farcaster Frame Meta Tags for a Mini App ---
 
-    // Open Graph for other platforms
+    // Specifies the Frame version. 'vNext' is the current standard.
+    'fc:frame': 'vNext',
+
+    // The image to display on the Frame preview card.
+    'fc:frame:image': imageUrl,
+
+    // The text for the first button.
+    'fc:frame:button:1': 'Open App',
+
+    // This is the critical tag. It tells the client to launch a Mini App.
+    'fc:frame:button:1:action': 'miniapp',
+
+    // The URL of the Mini App to open when the button is clicked.
+    'fc:frame:button:1:target': baseUrl,
+
+    // --- Open Graph tags for rich previews on other platforms (e.g., Twitter, Discord) ---
     'og:title': 'Add Play Button',
     'og:description': 'Create shareable play buttons for music and video links.',
     'og:image': imageUrl,
