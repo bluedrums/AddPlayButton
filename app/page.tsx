@@ -17,12 +17,31 @@ const frame = {
   },
 };
 
-export const metadata = {
+const fallbackEmbed = {
+  version: '1',
+  imageUrl,
+  button: {
+    title: 'Open App',
+    action: {
+      type: 'launch_frame',
+      url: `${baseUrl}?from=frame`,
+    },
+  },
+};
+
+export const metadata: Metadata = {
   title: 'Add Play Button',
-  description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
+  description:
+    'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    'fc:frame': JSON.stringify(frame),
-    'fc:miniapp': JSON.stringify(frame),
+    // use the object that contains the ?from=frame query parameter
+    'fc:miniapp': JSON.stringify(fallbackEmbed),
+    'fc:frame':   JSON.stringify(fallbackEmbed),
+
+    // OG for other platforms
+    'og:title':       'Add Play Button',
+    'og:description': 'Create shareable play buttons for music and video links.',
+    'og:image':       imageUrl,
   },
 };
 
