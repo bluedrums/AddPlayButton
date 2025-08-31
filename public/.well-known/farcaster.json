@@ -12,6 +12,8 @@
     "name": "Add Play Button",
     "homeUrl": "https://addplaybutton.xyz",
     "iconUrl": "https://addplaybutton.xyz/appicon.jpg",
+    "imageUrl": "https://addplaybutton.xyz/HeroImage.png",
+    "buttonTitle": "Open App",
     "splashImageUrl": "https://addplaybutton.xyz/ThePlayButton.png",
     "splashBackgroundColor": "#8B5CF6",
     "subtitle": "Embed media in miniapp window",
