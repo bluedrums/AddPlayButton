@@ -5,45 +5,24 @@ import type { Metadata } from 'next';
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/HeroImage.png`;
 
-const frameEmbed = {
+const frame = {
   version: '1',
   imageUrl,
   button: {
     title: 'Open App',
     action: {
-      type: 'launch_frame',
-      name: 'Add Play Button',
-      url: baseUrl,
+      type: 'miniapp',          // ← critical
+      url: `${baseUrl}?start`,  // ← makes target ≠ current URL
     },
   },
 };
 
-const fallbackEmbed = {
-  version: '1',
-  imageUrl: `${baseUrl}/ThePlayButton.png`,
-  button: {
-    title: 'Open',
-    action: {
-      type: 'launch_frame',
-      name: 'Add Play Button',
-      // The fix: Add a query parameter to make the target URL unique.
-      url: `${baseUrl}?from=frame`,
-    },
-  },
-};
-
-export const metadata: Metadata = {
+export const metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
   other: {
-    // Use fallbackEmbed which has the query parameter fix
-    "fc:miniapp": JSON.stringify(fallbackEmbed),
-    "fc:frame": JSON.stringify(fallbackEmbed),
-
-    // Open Graph for other platforms
-    'og:title': 'Add Play Button',
-    'og:description': 'Create shareable play buttons for music and video links.',
-    'og:image': imageUrl,
+    'fc:frame': JSON.stringify(frame),
+    'fc:miniapp': JSON.stringify(frame),
   },
 };
 
