@@ -18,6 +18,20 @@ const frameEmbed = {
   },
 };
 
+const fallbackEmbed = {
+  version: '1',
+  imageUrl: `${baseUrl}/ThePlayButton.png`,
+  button: {
+    title: 'Open',
+    action: {
+      type: 'launch_frame',
+      name: 'Add Play Button',
+      // The fix: Add a query parameter to make the target URL unique.
+      url: `${baseUrl}?from=frame`,
+    },
+  },
+};
+
 export const metadata: Metadata = {
   title: 'Add Play Button',
   description: 'Create shareable play buttons for Spotify, Apple Music, YouTube, and more.',
