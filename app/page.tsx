@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import type { Metadata } from 'next';
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
-const imageUrl = `${baseUrl}/HeroImage.png`;
+const imageUrl = `${baseUrl}/ThePlayButton.png`;
 
 const fallbackEmbed = {
   version: '1',
@@ -13,7 +13,7 @@ const fallbackEmbed = {
     action: {
       type: 'launch_frame',
       name: 'Add Play Button',
-      splashImageUrl: `${baseUrl}/ThePlayButton.png`,
+      splashImageUrl: `${baseUrl}/appicon.jpg`,
       splashBackgroundColor: '#8B5CF6',
       url: `${baseUrl}?home`,
     },
