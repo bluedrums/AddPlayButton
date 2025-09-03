@@ -52,10 +52,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <meta name="fc:miniapp" content={JSON.stringify(embed)} />
-        <meta name="fc:frame"   content={JSON.stringify(embed)} />
-      </head>
       <body className={ubuntu.className}>
         {/* Immediate splash screen - shows before React hydrates */}
         <div 
