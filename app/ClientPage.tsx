@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
 
 // Base Pay API types
 declare global {
@@ -69,6 +70,7 @@ export default function ClientPage() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
   const [safeArea, setSafeArea] = useState(defaultSafeArea);
+  const { setFrameReady } = useMiniKit();
 
   // Deep link handling via SDK context
   useEffect(() => {
@@ -134,11 +136,14 @@ export default function ClientPage() {
   useEffect(() => {
     // Only call SDK ready when we're not loading anymore
     if (!isLoading) {
+      // For Farcaster clients
       sdk.actions.ready().catch(err => {
-        console.error('Failed to mark SDK as ready:', err);
+        console.error('Failed to mark Farcaster SDK as ready:', err);
       });
+      // For Base/OnchainKit clients
+      setFrameReady();
     }
-  }, [isLoading]);
+  }, [isLoading, setFrameReady]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -587,12 +592,12 @@ export default function ClientPage() {
       if (walletType === "farcaster") {
         const provider = await sdk.wallet.getEthereumProvider();
         if (!provider) {
-          throw new Error("Farcaster Wallet provider not available.");
+          throw new Error("Wallet provider not available.");
         }
 
         const accounts = await provider.request({ method: 'eth_requestAccounts' });
         if (!accounts || !accounts[0]) {
-          throw new Error("Could not connect to Farcaster Wallet.");
+          throw new Error("Could not connect to wallet.");
         }
         const fromAddress = accounts[0];
 
@@ -615,7 +620,7 @@ export default function ClientPage() {
           params: [txParams],
         });
 
-        toast.success('Payment sent via Farcaster Wallet! 💜');
+        toast.success('Payment sent via your wallet! 💜');
 
       } else if (walletType === "coinbase") {
         const { ethereum } = window as any;
@@ -721,7 +726,7 @@ export default function ClientPage() {
             )}
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.
+            Create shareable cards for music and video links that play in the miniapp window without leaving Base/Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.
           </p>
         </div>
 
@@ -730,9 +735,9 @@ export default function ClientPage() {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <User className="w-5 h-5" />
-                Connect with Farcaster
+                Connect with Base/Farcaster
               </CardTitle>
-              <CardDescription>Get started with your Farcaster account to create and share play buttons</CardDescription>
+              <CardDescription>Get started with your Base/Farcaster account to create and share play buttons</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
@@ -744,7 +749,7 @@ export default function ClientPage() {
                 {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>) : (<><User className="w-4 h-4 mr-2" />Log In</>)}
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
-              <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're trying this outside of Farcaster, find us in the Farcaster/Base app store.</AlertDescription></Alert>
+              <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within the Base app or a Farcaster client. If you're trying this outside of those, find us in the Farcaster or Base mini app store.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
               {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
                 <div>Loading: {isLoading ? "Yes" : "No"}</div>

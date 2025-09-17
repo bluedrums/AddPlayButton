@@ -100,7 +100,7 @@ export default async function SharePage({ params, searchParams }: { params: { id
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>{playButton.title}</h1>
-      <p>To use this play button, open the link in a Farcaster client.</p>
+      <p>To use this play button, open the link in the Base app or a Farcaster client.</p>
       {playButton.coverImage ? (
         <img src={playButton.coverImage} alt={playButton.title} style={{ maxWidth: '100%' }} />
       ) : (

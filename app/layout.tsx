@@ -5,6 +5,7 @@ import "./globals.css"
 import { FarcasterProvider } from "@/components/farcaster-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Analytics } from '@vercel/analytics/react';
+import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -29,10 +30,10 @@ const embed = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Add Play Button",
-  description: "Create interactive Farcaster casts for music and video links",
+  description: "Create interactive casts for music and video links",
   openGraph: {
     title: "Add Play Button",
-    description: "Create interactive Farcaster casts for music and video links",
+    description: "Create interactive casts for music and video links",
     images: [`/ThePlayButton.png`],
   },
 };
@@ -87,11 +88,13 @@ export default function RootLayout({
             #initial-splash { display: flex !important; }
           `
         }} />
-        <FarcasterProvider>
-          {children}
-          <Analytics />
-          <Toaster />
-        </FarcasterProvider>
+        <MiniKitProvider>
+          <FarcasterProvider>
+            {children}
+            <Analytics />
+            <Toaster />
+          </FarcasterProvider>
+        </MiniKitProvider>
         {/* Base Pay SDK */}
         <script
           src="https://pay.coinbase.com/js/base.js"

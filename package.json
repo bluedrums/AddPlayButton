@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@farcaster/miniapp-sdk": "^0.1.8",
-    "@hookform/resolvers": "^3.9.1",
+    "@coinbase/onchainkit": "^0.11.3",
+    "@farcaster/miniapp-sdk": "^0.1.10",
+    "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -49,30 +50,30 @@
     "ethers": "^6.15.0",
     "input-otp": "latest",
     "lucide-react": "^0.454.0",
-    "next": "14.2.16",
+    "next": "^14.2.32",
     "next-themes": "latest",
-    "react": "^18",
+    "react": "^18.3.1",
     "react-day-picker": "latest",
-    "react-dom": "^18",
+    "react-dom": "^18.3.1",
     "react-hook-form": "latest",
     "react-resizable-panels": "latest",
     "recharts": "latest",
     "sonner": "latest",
-    "tailwind-merge": "^2.5.5",
+    "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "latest",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.4.16",
-    "dotenv": "^17.2.1",
-    "eslint": "^8.51.0",
+    "@types/node": "^20.19.16",
+    "@types/react": "^18.3.24",
+    "@types/react-dom": "^18.3.7",
+    "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.2",
+    "eslint": "^8.57.1",
     "eslint-config-next": "14.0.0",
-    "postcss": "^8.5",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2"
   }
 }
