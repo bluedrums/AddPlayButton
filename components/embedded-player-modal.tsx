@@ -18,6 +18,8 @@ import {
   Minimize2,
   ImageIcon,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -33,13 +35,25 @@ interface PlayButton {
   createdAt: Date
 }
 
+interface PlaylistContext {
+  playlist: {
+    id: number
+    name: string
+    play_buttons?: PlayButton[]
+  } | null
+  currentIndex: number
+  onTrackChange: (index: number) => void
+  isFromCast?: boolean
+}
+
 interface EmbeddedPlayerModalProps {
   isOpen: boolean
   onClose: () => void
   playButton: PlayButton
   showCastSuccess?: boolean
   castUrl?: string
-  safeArea?: { top: number; bottom: number; left: number; right: number };
+  safeArea?: { top: number; bottom: number; left: number; right: number }
+  playlistContext?: PlaylistContext
 }
 
 export function EmbeddedPlayerModal({
@@ -49,6 +63,7 @@ export function EmbeddedPlayerModal({
   showCastSuccess = false,
   castUrl,
   safeArea = { top: 0, bottom: 0, left: 0, right: 0 },
+  playlistContext,
 }: EmbeddedPlayerModalProps) {
   const [isMuted, setIsMuted] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -66,7 +81,7 @@ export function EmbeddedPlayerModal({
         handleExitFullscreen()
       }
     }
-  }, [isOpen])
+  }, [isOpen, isFullscreen])
 
   useEffect(() => {
     if (isOpen) {
@@ -175,6 +190,47 @@ export function EmbeddedPlayerModal({
     }
   }
 
+  // Playlist navigation functions
+  const goToNextTrack = () => {
+    if (!playlistContext) return
+
+    const { playlist, currentIndex, onTrackChange } = playlistContext
+    if (!playlist || currentIndex >= playlist.play_buttons.length - 1) return
+
+    const nextIndex = currentIndex + 1
+    onTrackChange(nextIndex)
+  }
+
+  const goToPreviousTrack = () => {
+    if (!playlistContext) return
+
+    const { currentIndex, onTrackChange } = playlistContext
+    if (currentIndex <= 0) return
+
+    const prevIndex = currentIndex - 1
+    onTrackChange(prevIndex)
+  }
+
+  // Handle automatic track progression when current track ends
+  useEffect(() => {
+    if (!playlistContext) return
+
+    const { playlist, currentIndex } = playlistContext
+    if (!playlist || !playlist.play_buttons || currentIndex >= playlist.play_buttons.length - 1) return
+
+    // For a more sophisticated implementation, you could:
+    // 1. Listen to iframe events (if supported by the platform)
+    // 2. Use platform-specific APIs to detect track end
+    // 3. Use audio context or media queries
+    // For now, we'll use a reasonable timeout based on typical song length
+    const autoAdvanceTimeout = setTimeout(() => {
+      console.log('Auto-advancing to next track after timeout')
+      goToNextTrack()
+    }, 240000) // Auto-advance after 4 minutes (adjust based on your needs)
+
+    return () => clearTimeout(autoAdvanceTimeout)
+  }, [playlistContext, playButton.id]) // Re-run when track changes
+
   const toggleFullOverlay = () => {
     setIsFullOverlay(!isFullOverlay);
   };
@@ -215,9 +271,21 @@ export function EmbeddedPlayerModal({
           >
             {/* Control buttons */}
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex gap-2 z-10">
+              {/* Previous track button - only show if playlist context exists */}
+              {playlistContext && (
+                <Button
+                  onClick={goToPreviousTrack}
+                  disabled={playlistContext.currentIndex <= 0}
+                  className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Previous track"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </Button>
+              )}
+
               {/* Fullscreen button - disabled for now */}
-{/*               <Button 
-                onClick={handleFullscreen} 
+{/*               <Button
+                onClick={handleFullscreen}
                 className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50"
                 title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               >
@@ -227,11 +295,23 @@ export function EmbeddedPlayerModal({
                   <Maximize2 className="w-5 h-5" />
                 )}
               </Button> */}
-              
+
               {/* Close button */}
               <Button onClick={onClose} className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50">
                 <X className="w-6 h-6" />
               </Button>
+
+              {/* Next track button - only show if playlist context exists */}
+              {playlistContext && (
+                <Button
+                  onClick={goToNextTrack}
+                  disabled={!playlistContext.playlist || playlistContext.currentIndex >= playlistContext.playlist.play_buttons.length - 1}
+                  className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Next track"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </Button>
+              )}
             </div>
             
             {/* Embedded Player - takes up the whole space */}

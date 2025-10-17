@@ -1,11 +1,9 @@
-import type React from "react"
+import React from "react"
 import type { Metadata, Viewport } from "next"
 import { Ubuntu } from 'next/font/google';
 import "./globals.css"
-import { FarcasterProvider } from "@/components/farcaster-provider"
-import { Toaster } from "@/components/ui/sonner"
-import { Analytics } from '@vercel/analytics/react';
-import { MiniKitProvider } from "@coinbase/onchainkit/minikit";
+import { Providers } from "@/components/providers";
+import { MainNav } from '@/components/main-nav';
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -52,8 +50,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={ubuntu.className}>
+    <html lang="en" className="h-full">
+      <body className={`${ubuntu.className} h-full`}>
         {/* Immediate splash screen - shows before React hydrates */}
         <div 
           id="initial-splash"
@@ -88,13 +86,12 @@ export default function RootLayout({
             #initial-splash { display: flex !important; }
           `
         }} />
-        <MiniKitProvider>
-          <FarcasterProvider>
-            {children}
-            <Analytics />
-            <Toaster />
-          </FarcasterProvider>
-        </MiniKitProvider>
+        <div id="app-container" className="h-full">
+            <Providers>
+              {children}
+              <MainNav />
+            </Providers>
+        </div>
         {/* Base Pay SDK */}
         <script
           src="https://pay.coinbase.com/js/base.js"

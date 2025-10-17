@@ -19,6 +19,8 @@ import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
 import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PlaylistCombobox } from "@/components/playlist-combobox";
 
 // Base Pay API types
 declare global {
@@ -46,6 +48,12 @@ interface PlayButton {
   createdAt: Date
 }
 
+interface Playlist {
+    id: number;
+    name: string;
+    play_buttons?: PlayButton[];
+}
+
 interface OembedData {
   title?: string
   author_name?: string
@@ -65,6 +73,15 @@ export default function ClientPage() {
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
   const [isDonating, setIsDonating] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [addToPlaylist, setAddToPlaylist] = useState(false);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+  const [playlistContext, setPlaylistContext] = useState<{
+    playlist: Playlist | null;
+    currentIndex: number;
+    isFromCast: boolean;
+  } | null>(null);
+
 
   const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
@@ -102,10 +119,10 @@ export default function ClientPage() {
           if (pathSegments[0] === 'share' && pathSegments[1]) {
             const playButtonId = decodeURIComponent(pathSegments[1]);
             const fid = context.user?.fid;
-            
+
             if (playButtonId && fid) {
               console.log(`Deep link details: playButtonId=${playButtonId}, fid=${fid}`);
-              
+
               // Pass FID in headers, not as query parameter
               const data = await api(`/api/playbutton?id=${playButtonId}`, {
                 headers: { 'x-user-fid': String(fid) }
@@ -121,6 +138,47 @@ export default function ClientPage() {
                 const pb = {...data, createdAt: new Date(data.createdAt)};
                 setActivePlayButton(pb);
                 setIsPlayerModalOpen(true);
+              }
+            }
+          } else if (pathSegments[0] === 'playlists') {
+            // Handle playlist playback initiation from cast embed
+            const fid = context.user?.fid;
+
+            if (fid) {
+              console.log(`Playlist playback initiated from cast: fid=${fid}`);
+
+              try {
+                // Fetch user's playlists
+                const playlistsData = await api('/api/playlists');
+
+                if (playlistsData && playlistsData.length > 0) {
+                  // Use the first playlist (or most recently created)
+                  const playlistToPlay = playlistsData[0];
+
+                  if (playlistToPlay.play_buttons && playlistToPlay.play_buttons.length > 0) {
+                    const firstTrack = playlistToPlay.play_buttons[0];
+
+                    // Set up playlist context
+                    setPlaylistContext({
+                      playlist: playlistToPlay,
+                      currentIndex: 0,
+                      isFromCast: true
+                    });
+
+                    // Set the active play button to the first track
+                    setActivePlayButton(firstTrack);
+                    setIsPlayerModalOpen(true);
+
+                    toast.success(`Playing playlist: ${playlistToPlay.name}`);
+                  } else {
+                    toast.error('This playlist is empty. Add some tracks first!');
+                  }
+                } else {
+                  toast.error('No playlists found. Create a playlist first!');
+                }
+              } catch (error) {
+                console.error('Failed to fetch playlists for playback:', error);
+                toast.error('Failed to load playlist');
               }
             }
           }
@@ -284,6 +342,21 @@ export default function ClientPage() {
     triggerAddMiniAppDialog();
   }, [isAuthenticated, user, isLoading]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+        fetchPlaylists();
+    }
+  }, [isAuthenticated]);
+
+  const fetchPlaylists = async () => {
+    try {
+      const data = await api('/api/playlists');
+      setPlaylists(data);
+    } catch (error) {
+      console.error('Failed to fetch playlists:', error);
+    }
+  };
+
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
     if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
@@ -422,7 +495,7 @@ export default function ClientPage() {
       }
       
       // Save to database first
-      await api('/api/playbutton', {
+      const savedPlayButton = await api('/api/playbutton', {
         method: 'POST',
         body: JSON.stringify({
           id: newPlayButton.id,
@@ -430,8 +503,19 @@ export default function ClientPage() {
         }),
       });
       
+      // Add to playlist if selected
+      if (addToPlaylist && selectedPlaylistId) {
+        await api('/api/playlists/add-button', {
+            method: 'POST',
+            body: JSON.stringify({
+                playlist_id: selectedPlaylistId,
+                play_button_id: newPlayButton.id,
+            }),
+        });
+      }
+
       // Clear form and refresh the list from database
-      setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
+      setUrl(""); setTitle(""); setCoverImage(null); setValidationError(""); setAddToPlaylist(false); setSelectedPlaylistId(null);
       await refreshPlayButtons();
       
       // Create the shareable cast with the share page URL as embed
@@ -529,6 +613,26 @@ export default function ClientPage() {
   const handleSignOut = async () => {
     await signOut();
   }
+
+  // Handle playlist track changes
+  const handlePlaylistTrackChange = (newIndex: number) => {
+    if (!playlistContext || !playlistContext.playlist) return;
+
+    const { playlist } = playlistContext;
+
+    if (newIndex >= 0 && playlist.play_buttons && newIndex < playlist.play_buttons.length) {
+      const newTrack = playlist.play_buttons[newIndex];
+
+      // Update playlist context
+      setPlaylistContext({
+        ...playlistContext,
+        currentIndex: newIndex
+      });
+
+      // Update active play button
+      setActivePlayButton(newTrack);
+    }
+  };
 
   const handleBaseDonate = async () => {
     setIsDonating(true);
@@ -673,20 +777,29 @@ export default function ClientPage() {
     }
   }
 
-  // Don't render anything while loading - the initial splash is already showing
-  if (isLoading) return null
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
       {activePlayButton && (
         <EmbeddedPlayerModal
           isOpen={isPlayerModalOpen}
           onClose={() => {
             setIsPlayerModalOpen(false);
             refreshPlayButtons();
+            // Reset playlist context when modal closes
+            setPlaylistContext(null);
           }}
           playButton={activePlayButton}
           safeArea={safeArea}
+          playlistContext={playlistContext ? {
+            playlist: playlistContext.playlist ? {
+              id: playlistContext.playlist.id,
+              name: playlistContext.playlist.name,
+              play_buttons: playlistContext.playlist.play_buttons || []
+            } : null,
+            currentIndex: playlistContext.currentIndex,
+            onTrackChange: handlePlaylistTrackChange,
+            isFromCast: playlistContext.isFromCast
+          } : undefined}
         />
       )}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -859,6 +972,31 @@ export default function ClientPage() {
               {isValidating ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Validating...</>) : (<><Play className="w-4 h-4 mr-2" />Add Play Button</>)}
             </Button>
             {validationError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{validationError}</AlertDescription></Alert>}
+            
+            {title && playlists.length > 0 && (
+              <div className="space-y-2 pt-4">
+                <div className="flex items-center space-x-2">
+                    <Checkbox
+                        id="add-to-playlist"
+                        checked={addToPlaylist}
+                        onCheckedChange={(checked) => setAddToPlaylist(Boolean(checked))}
+                    />
+                    <label
+                        htmlFor="add-to-playlist"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Add to Playlist
+                    </label>
+                </div>
+                {addToPlaylist && (
+                    <PlaylistCombobox
+                        playlists={playlists}
+                        selectedPlaylistId={selectedPlaylistId}
+                        onSelect={setSelectedPlaylistId}
+                    />
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -937,6 +1075,9 @@ export default function ClientPage() {
             </p>
             <p className="text-xs text-gray-500">              
               <a href="https://github.com/bluedrums/AddPlayButton-Feedback/issues" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Send me product feedback/bugs</a>
+            </p>
+            <p className="text-xs text-gray-500">
+              <a href="https://www.figma.com/community/plugin/1229731653276353355" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Icons and logo by R4IN80W for 480 Design</a>
             </p>
             <p className="text-xs text-gray-500">
               No, we're not training AI. No, we don't sell your info.

@@ -1,17 +1,28 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music, Code } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
+import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music, Code, ListMusic, PlusCircle } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
 import { sdk } from "@farcaster/miniapp-sdk";
 import { buildShareText } from "@/lib/utils"
+import { api } from "@/lib/api"
+import { PlaylistCombobox } from "./playlist-combobox"
+import { PlayButtonCombobox } from "./play-button-combobox"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+  } from "@/components/ui/dialog"
+  
 
 interface PlayButton {
   id: string
@@ -24,6 +35,11 @@ interface PlayButton {
   createdAt: Date
 }
 
+interface Playlist {
+    id: number;
+    name: string;
+}
+
 interface PlayButtonCardProps {
   playButton: PlayButton
   onRemove?: (id: string) => void
@@ -32,6 +48,24 @@ interface PlayButtonCardProps {
 export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
   const [showPlayer, setShowPlayer] = useState(false)
   const { isAuthenticated, user, refreshPlayButtons } = useFarcaster()
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [showAddToPlaylistDialog, setShowAddToPlaylistDialog] = useState(false);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchPlaylists();
+    }
+  }, [isAuthenticated]);
+
+  const fetchPlaylists = async () => {
+    try {
+      const data = await api('/api/playlists');
+      setPlaylists(data);
+    } catch (error) {
+      console.error('Failed to fetch playlists:', error);
+    }
+  };
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(playButton.url)
@@ -44,6 +78,27 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       toast.success("Play button removed")
     }
   }
+
+  const handleAddToPlaylist = async () => {
+    if (!selectedPlaylistId) {
+        toast.error('Please select a playlist.');
+        return;
+    }
+    try {
+        await api('/api/playlists/add-button', {
+            method: 'POST',
+            body: JSON.stringify({
+                playlist_id: selectedPlaylistId,
+                play_button_id: playButton.id,
+            }),
+        });
+        toast.success('Added to playlist!');
+        setShowAddToPlaylistDialog(false);
+    } catch (error) {
+        toast.error('Failed to add to playlist.');
+        console.error('Failed to add to playlist', error);
+    }
+  };
 
   const handleCast = async () => {
     if (!isAuthenticated || !user) {
@@ -130,6 +185,10 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
                       <Copy className="w-4 h-4 mr-2" />
                       Copy Link
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setShowAddToPlaylistDialog(true)}>
+                        <PlusCircle className="w-4 h-4 mr-2" />
+                        Add to Playlist
+                    </DropdownMenuItem>
                     {onRemove && (
                       <DropdownMenuItem onClick={handleRemove} className="text-red-600">
                         <Trash2 className="w-4 h-4 mr-2" />
@@ -197,14 +256,36 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
       </Card>
 
       {/* Embedded Player Modal */}
-      <EmbeddedPlayerModal 
-        isOpen={showPlayer} 
+      <EmbeddedPlayerModal
+        isOpen={showPlayer}
         onClose={() => {
           setShowPlayer(false);
           refreshPlayButtons();
-        }} 
-        playButton={playButton} 
+        }}
+        playButton={playButton}
       />
+
+    <Dialog open={showAddToPlaylistDialog} onOpenChange={setShowAddToPlaylistDialog}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Add to Playlist</DialogTitle>
+                <DialogDescription>
+                    Select a playlist to add "{playButton.title}" to.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="pt-4">
+                <PlaylistCombobox
+                    playlists={playlists}
+                    selectedPlaylistId={selectedPlaylistId}
+                    onSelect={setSelectedPlaylistId}
+                />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setShowAddToPlaylistDialog(false)}>Cancel</Button>
+                <Button onClick={handleAddToPlaylist}>Add</Button>
+            </div>
+        </DialogContent>
+    </Dialog>
     </>
   )
 }
