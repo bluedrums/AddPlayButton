@@ -104,6 +104,14 @@ export const api = async (url: string, options: RequestInit = {}) => {
       if (response.status === 204) {
         return null;
       }
+
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/html')) {
+        const text = await response.text();
+        console.error('API returned HTML instead of JSON:', text.substring(0, 200));
+        throw new Error('API returned HTML');
+      }
   
       return await response.json();
     } catch (error) {

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
-import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music, Code, ListMusic, PlusCircle } from "lucide-react"
+import { Play, MessageSquare, MoreVertical, ExternalLink, Copy, Trash2, Calendar, ImageIcon, Music, Code, ListMusic, PlusCircle, ChevronUp, ChevronDown } from "lucide-react"
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal"
 import { useFarcaster } from "@/components/farcaster-provider"
 import { toast } from "sonner"
@@ -38,25 +38,68 @@ interface PlayButton {
 interface Playlist {
     id: number;
     name: string;
+    play_buttons?: PlayButton[];
+}
+
+interface PlaylistContext {
+  playlist: Playlist | null;
+  currentIndex: number;
+  onTrackChange: (index: number) => void;
+  autoAdvance?: {
+    enabled: boolean;
+    timeoutMinutes: number;
+  };
 }
 
 interface PlayButtonCardProps {
   playButton: PlayButton
   onRemove?: (id: string) => void
+  playlistContext?: PlaylistContext
+  autoPlay?: boolean
+  onAutoPlayStarted?: () => void
+  onReorder?: (playlistId: number, playButtonId: string, direction: 'up' | 'down') => void
+  playlistId?: number
+  currentIndex?: number
+  totalItems?: number
 }
 
-export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
+export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay, onAutoPlayStarted, onReorder, playlistId, currentIndex, totalItems }: PlayButtonCardProps) {
   const [showPlayer, setShowPlayer] = useState(false)
+  const [currentPlayButton, setCurrentPlayButton] = useState(playButton)
   const { isAuthenticated, user, refreshPlayButtons } = useFarcaster()
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [showAddToPlaylistDialog, setShowAddToPlaylistDialog] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+
+  // Auto-play when autoPlay prop is set to true
+  useEffect(() => {
+    if (autoPlay && !showPlayer) {
+      setShowPlayer(true);
+      if (onAutoPlayStarted) {
+        onAutoPlayStarted();
+      }
+    }
+  }, [autoPlay, showPlayer, onAutoPlayStarted]);
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchPlaylists();
     }
   }, [isAuthenticated]);
+
+  // Update current play button when playlist context changes
+  useEffect(() => {
+    if (playlistContext && playlistContext.playlist && playlistContext.playlist.play_buttons) {
+      const newPlayButton = playlistContext.playlist.play_buttons[playlistContext.currentIndex];
+      if (newPlayButton && newPlayButton.id !== currentPlayButton.id) {
+        setCurrentPlayButton(newPlayButton);
+        // Keep the player open when navigating tracks
+        if (showPlayer) {
+          // Player will be updated by the new playButton prop
+        }
+      }
+    }
+  }, [playlistContext, currentPlayButton.id, showPlayer]);
 
   const fetchPlaylists = async () => {
     try {
@@ -143,9 +186,41 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
     }).format(date)
   }
 
+  const handleReorder = (direction: 'up' | 'down') => {
+    if (onReorder && playlistId) {
+      onReorder(playlistId, playButton.id, direction);
+    }
+  };
+
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <Card className="overflow-hidden hover:shadow-md transition-shadow relative">
+        {/* Spinner controls - bottom right corner when in playlist */}
+        {onReorder && playlistId !== undefined && currentIndex !== undefined && totalItems !== undefined && (
+          <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-10">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-gray-200"
+              onClick={() => handleReorder('up')}
+              disabled={currentIndex === 0}
+              title="Move up"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-gray-200"
+              onClick={() => handleReorder('down')}
+              disabled={currentIndex === totalItems - 1}
+              title="Move down"
+            >
+              <ChevronDown className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
         <CardHeader className="pb-3">
           <div className="flex items-start gap-4">
             {/* Cover image - positioned top-left */}
@@ -262,7 +337,17 @@ export function PlayButtonCard({ playButton, onRemove }: PlayButtonCardProps) {
           setShowPlayer(false);
           refreshPlayButtons();
         }}
-        playButton={playButton}
+        playButton={currentPlayButton}
+        playlistContext={playlistContext ? {
+          playlist: playlistContext.playlist ? {
+            id: playlistContext.playlist.id,
+            name: playlistContext.playlist.name,
+            play_buttons: playlistContext.playlist.play_buttons || []
+          } : null,
+          currentIndex: playlistContext.currentIndex,
+          onTrackChange: playlistContext.onTrackChange,
+          autoAdvance: playlistContext.autoAdvance
+        } : undefined}
       />
 
     <Dialog open={showAddToPlaylistDialog} onOpenChange={setShowAddToPlaylistDialog}>

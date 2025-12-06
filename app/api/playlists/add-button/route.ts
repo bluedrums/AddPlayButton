@@ -30,9 +30,17 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Play button not found or access denied' }, { status: 404 });
     }
 
+    // Get the next order_index for this playlist
+    const { rows: maxOrderRows } = await sql`
+      SELECT COALESCE(MAX(order_index), -1) + 1 as next_index
+      FROM playlist_play_buttons
+      WHERE playlist_id = ${playlist_id} AND user_fid = ${session.user.fid};
+    `;
+    const nextOrderIndex = maxOrderRows[0].next_index;
+
     await sql`
-      INSERT INTO playlist_play_buttons (playlist_id, play_button_id, user_fid)
-      VALUES (${playlist_id}, ${play_button_id}, ${session.user.fid})
+      INSERT INTO playlist_play_buttons (playlist_id, play_button_id, user_fid, order_index)
+      VALUES (${playlist_id}, ${play_button_id}, ${session.user.fid}, ${nextOrderIndex})
       ON CONFLICT (playlist_id, play_button_id, user_fid) DO NOTHING;
     `;
 

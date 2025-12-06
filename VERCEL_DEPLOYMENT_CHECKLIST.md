@@ -5,7 +5,7 @@
 The following environment variables must be set in Vercel:
 
 ### Required Variables:
-- `JWT_SECRET_KEY` - Required for authentication (used in middleware.ts and auth routes)
+- `JWT_SECRET_KEY` - Required for authentication (used in proxy.ts and auth routes)
 - `POSTGRES_URL` - Required for database connection (used in auth/session)
 - `NEXT_PUBLIC_APP_URL` - Should be set to `https://addplaybutton.xyz` (has fallback)
 

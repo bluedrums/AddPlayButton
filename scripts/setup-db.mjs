@@ -44,6 +44,7 @@ async function main() {
         play_button_id VARCHAR(255) NOT NULL,
         user_fid BIGINT NOT NULL,
         added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        order_index INTEGER NOT NULL,
         PRIMARY KEY (playlist_id, play_button_id, user_fid),
         FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
         FOREIGN KEY (user_fid, play_button_id) REFERENCES play_buttons(user_fid, id) ON DELETE CASCADE

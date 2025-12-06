@@ -21,7 +21,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from '@/components/ui/alert-dialog';
-import { ListMusic, PlusCircle, Trash2, Loader2, Share2, Plus, User, LogOut, Upload } from 'lucide-react';
+import { ListMusic, PlusCircle, Trash2, Loader2, Share2, Plus, User, LogOut, Upload, Play } from 'lucide-react';
 import { useFarcaster } from '@/components/farcaster-provider';
 import { PlayButtonCard } from '@/components/play-button-card';
 import { PlayButtonCombobox } from '@/components/play-button-combobox';
@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import PlaylistIcon from '@/components/icons/Icon/Filled/Playlist.svg';
 
 interface PlayButton {
@@ -58,6 +60,11 @@ interface Playlist {
   play_buttons: PlayButton[];
 }
 
+interface PlaylistAutoAdvanceSettings {
+  enabled: boolean;
+  timeoutMinutes: number;
+}
+
 export default function PlaylistsPage() {
   const { isAuthenticated, user, signOut } = useFarcaster();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -68,6 +75,13 @@ export default function PlaylistsPage() {
   const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
   const [selectedPlayButtonId, setSelectedPlayButtonId] = useState<string | null>(null);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [playlistContext, setPlaylistContext] = useState<{
+    playlist: Playlist | null;
+    currentIndex: number;
+    autoAdvance?: PlaylistAutoAdvanceSettings;
+  } | null>(null);
+  const [autoAdvanceSettings, setAutoAdvanceSettings] = useState<Map<number, PlaylistAutoAdvanceSettings>>(new Map());
+  const [autoPlayPlaylistId, setAutoPlayPlaylistId] = useState<number | null>(null);
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -152,6 +166,38 @@ export default function PlaylistsPage() {
     }
   };
 
+  const handleReorder = async (playlistId: number, playButtonId: string, direction: 'up' | 'down') => {
+    try {
+      await api('/api/playlists/reorder', {
+        method: 'POST',
+        body: JSON.stringify({ playlist_id: playlistId, play_button_id: playButtonId, direction }),
+      });
+
+      // Refresh playlists to show the change
+      fetchPlaylists();
+
+      toast.success(`Button moved ${direction === 'up' ? 'up' : 'down'}.`);
+    } catch (error) {
+      console.error('Failed to reorder playlist:', error);
+      toast.error('Failed to reorder playlist.');
+    }
+  };
+
+  // Handle playlist track changes
+  const handlePlaylistTrackChange = (newIndex: number) => {
+    if (!playlistContext || !playlistContext.playlist) return;
+
+    const { playlist } = playlistContext;
+
+    if (newIndex >= 0 && playlist.play_buttons && newIndex < playlist.play_buttons.length) {
+      // Update playlist context, preserving auto-advance settings
+      setPlaylistContext({
+        ...playlistContext,
+        currentIndex: newIndex
+      });
+    }
+  };
+
   const handleAddPlayButtonToPlaylist = async () => {
     if (!currentPlaylist || !selectedPlayButtonId) {
       toast.error('Please select a play button.');
@@ -184,6 +230,38 @@ export default function PlaylistsPage() {
   const handleSignOut = async () => {
     await signOut();
   }
+
+  const handlePlayPlaylist = (playlist: Playlist) => {
+    if (!playlist.play_buttons || playlist.play_buttons.length === 0) {
+      toast.error('Cannot play an empty playlist.');
+      return;
+    }
+
+    // Get auto-advance settings for this playlist
+    const settings = autoAdvanceSettings.get(playlist.id) || { enabled: true, timeoutMinutes: 4 };
+
+    // Set playlist context to start playing from the first track
+    setPlaylistContext({
+      playlist: playlist,
+      currentIndex: 0,
+      autoAdvance: settings
+    });
+
+    // Trigger auto-play on the first track
+    setAutoPlayPlaylistId(playlist.id);
+  };
+
+  const handleAutoAdvanceToggle = (playlistId: number, enabled: boolean) => {
+    const currentSettings = autoAdvanceSettings.get(playlistId) || { enabled: true, timeoutMinutes: 4 };
+    const newSettings = { ...currentSettings, enabled };
+    setAutoAdvanceSettings(new Map(autoAdvanceSettings.set(playlistId, newSettings)));
+  };
+
+  const handleTimeoutMinutesChange = (playlistId: number, minutes: number) => {
+    const currentSettings = autoAdvanceSettings.get(playlistId) || { enabled: true, timeoutMinutes: 4 };
+    const newSettings = { ...currentSettings, timeoutMinutes: minutes };
+    setAutoAdvanceSettings(new Map(autoAdvanceSettings.set(playlistId, newSettings)));
+  };
 
   const handleSharePlaylist = async (playlist: Playlist) => {
     if (!playlist.play_buttons || playlist.play_buttons.length === 0) {
@@ -302,34 +380,39 @@ export default function PlaylistsPage() {
                     <div className="flex justify-between items-center w-full pr-4">
                         <span>{playlist.name} ({playlist.play_buttons?.length || 0})</span>
                         <div className="flex gap-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePlayPlaylist(playlist);
+                                }}
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 cursor-pointer text-black hover:text-gray-800"
+                            >
+                                <Play className="w-4 h-4" />
+                            </div>
+                            <div
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     handleSharePlaylist(playlist);
                                 }}
-                                className="text-blue-500 hover:text-blue-700"
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 cursor-pointer text-black hover:text-gray-800"
                             >
                                 <Upload className="w-4 h-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
+                            </div>
+                            <div
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setCurrentPlaylist(playlist);
                                     setShowAddButtonDialog(true);
                                 }}
-                                className="text-green-500 hover:text-green-700"
+                                className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 cursor-pointer text-black hover:text-gray-800"
                             >
                                 <Plus className="w-4 h-4" />
-                            </Button>
+                            </div>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                                    <div className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 w-9 cursor-pointer text-black hover:text-gray-800">
                                         <Trash2 className="w-4 h-4" />
-                                    </Button>
+                                    </div>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
@@ -349,11 +432,70 @@ export default function PlaylistsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
-                    {playlist.play_buttons?.map((pb) => (
+                    {/* Auto-Advance Controls */}
+                    {playlist.play_buttons && playlist.play_buttons.length > 0 && (
+                      <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`auto-advance-${playlist.id}`}
+                            checked={autoAdvanceSettings.get(playlist.id)?.enabled ?? true}
+                            onCheckedChange={(checked) => handleAutoAdvanceToggle(playlist.id, checked === true)}
+                          />
+                          <Label htmlFor={`auto-advance-${playlist.id}`} className="text-sm font-medium cursor-pointer">
+                            Auto Advance
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`timeout-${playlist.id}`} className="text-sm text-gray-600">
+                            Minutes
+                          </Label>
+                          <Input
+                            id={`timeout-${playlist.id}`}
+                            type="number"
+                            min="1"
+                            max="1000"
+                            value={autoAdvanceSettings.get(playlist.id)?.timeoutMinutes ?? 4}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value >= 1 && value <= 1000) {
+                                handleTimeoutMinutesChange(playlist.id, value);
+                              }
+                            }}
+                            disabled={!autoAdvanceSettings.get(playlist.id)?.enabled}
+                            className="w-20 h-8"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {playlist.play_buttons?.map((pb, index) => (
                       <PlayButtonCard
                           key={pb.id}
                           playButton={pb}
                           onRemove={(id) => handleRemoveFromPlaylist(playlist.id, id)}
+                          autoPlay={index === 0 && autoPlayPlaylistId === playlist.id}
+                          onAutoPlayStarted={() => setAutoPlayPlaylistId(null)}
+                          onReorder={handleReorder}
+                          playlistId={playlist.id}
+                          currentIndex={index}
+                          totalItems={playlist.play_buttons?.length || 0}
+                          playlistContext={playlistContext && playlistContext.playlist?.id === playlist.id ? {
+                            playlist: playlist,
+                            currentIndex: playlistContext.currentIndex,
+                            onTrackChange: handlePlaylistTrackChange,
+                            autoAdvance: playlistContext.autoAdvance
+                          } : {
+                            playlist: playlist,
+                            currentIndex: index,
+                            onTrackChange: (newIndex: number) => {
+                              // Initialize playlist context when clicking on a track in a playlist
+                              const settings = autoAdvanceSettings.get(playlist.id) || { enabled: true, timeoutMinutes: 4 };
+                              setPlaylistContext({
+                                playlist: playlist,
+                                currentIndex: newIndex,
+                                autoAdvance: settings
+                              });
+                            }
+                          }}
                       />
                     ))}
                     {playlist.play_buttons?.length === 0 && (

@@ -44,6 +44,10 @@ interface PlaylistContext {
   currentIndex: number
   onTrackChange: (index: number) => void
   isFromCast?: boolean
+  autoAdvance?: {
+    enabled: boolean
+    timeoutMinutes: number
+  }
 }
 
 interface EmbeddedPlayerModalProps {
@@ -195,7 +199,7 @@ export function EmbeddedPlayerModal({
     if (!playlistContext) return
 
     const { playlist, currentIndex, onTrackChange } = playlistContext
-    if (!playlist || currentIndex >= playlist.play_buttons.length - 1) return
+    if (!playlist || !playlist.play_buttons || currentIndex >= playlist.play_buttons.length - 1) return
 
     const nextIndex = currentIndex + 1
     onTrackChange(nextIndex)
@@ -215,18 +219,21 @@ export function EmbeddedPlayerModal({
   useEffect(() => {
     if (!playlistContext) return
 
-    const { playlist, currentIndex } = playlistContext
+    const { playlist, currentIndex, autoAdvance } = playlistContext
     if (!playlist || !playlist.play_buttons || currentIndex >= playlist.play_buttons.length - 1) return
 
-    // For a more sophisticated implementation, you could:
-    // 1. Listen to iframe events (if supported by the platform)
-    // 2. Use platform-specific APIs to detect track end
-    // 3. Use audio context or media queries
-    // For now, we'll use a reasonable timeout based on typical song length
+    // Check if auto-advance is enabled
+    const enabled = autoAdvance?.enabled ?? true
+    if (!enabled) return
+
+    // Use configurable timeout or default to 4 minutes
+    const timeoutMinutes = autoAdvance?.timeoutMinutes ?? 4
+    const timeoutMs = timeoutMinutes * 60 * 1000
+
     const autoAdvanceTimeout = setTimeout(() => {
-      console.log('Auto-advancing to next track after timeout')
+      console.log(`Auto-advancing to next track after ${timeoutMinutes} minutes`)
       goToNextTrack()
-    }, 240000) // Auto-advance after 4 minutes (adjust based on your needs)
+    }, timeoutMs)
 
     return () => clearTimeout(autoAdvanceTimeout)
   }, [playlistContext, playButton.id]) // Re-run when track changes
@@ -305,7 +312,7 @@ export function EmbeddedPlayerModal({
               {playlistContext && (
                 <Button
                   onClick={goToNextTrack}
-                  disabled={!playlistContext.playlist || playlistContext.currentIndex >= playlistContext.playlist.play_buttons.length - 1}
+                  disabled={!playlistContext.playlist || !playlistContext.playlist.play_buttons || playlistContext.currentIndex >= playlistContext.playlist.play_buttons.length - 1}
                   className="h-8 w-8 p-0 text-white bg-black/30 hover:bg-black/50 disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Next track"
                 >

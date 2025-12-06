@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import PlaylistIcon from '@/components/icons/Icon/Filled/Playlist.svg';
-import PlayIcon from '@/components/icons/Icon/Filled/Play.svg';
+import { PlaylistIcon, PlayIcon } from '@/components/icons/main-nav-icons';
 
 export function MainNav() {
   const pathname = usePathname();

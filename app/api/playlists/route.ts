@@ -34,6 +34,7 @@ export async function GET() {
             FROM playlist_play_buttons ppb
             JOIN play_buttons pb ON ppb.play_button_id = pb.id AND ppb.user_fid = pb.user_fid
             WHERE ppb.playlist_id = p.id
+            ORDER BY ppb.order_index ASC
           ),
           '[]'::json
         ) as play_buttons
