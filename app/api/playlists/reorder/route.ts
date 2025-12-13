@@ -55,16 +55,22 @@ export async function POST(request: Request) {
     // Swap the order_index values between the two items
     const currentOrderIndex = items[currentIndex].order_index;
     const targetOrderIndex = items[targetIndex].order_index;
+    const targetPlayButtonId = items[targetIndex].play_button_id;
     
-    // Update both items with swapped order_index values
+    // Update both items with swapped order_index values using two separate queries
     await sql`
       UPDATE playlist_play_buttons
-      SET order_index = CASE 
-        WHEN play_button_id = ${play_button_id} THEN ${targetOrderIndex}
-        WHEN play_button_id = ${items[targetIndex].play_button_id} THEN ${currentOrderIndex}
-      END
+      SET order_index = ${targetOrderIndex}
       WHERE playlist_id = ${playlist_id}
-        AND play_button_id IN (${play_button_id}, ${items[targetIndex].play_button_id})
+        AND play_button_id = ${play_button_id}
+        AND user_fid = ${session.user.fid};
+    `;
+    
+    await sql`
+      UPDATE playlist_play_buttons
+      SET order_index = ${currentOrderIndex}
+      WHERE playlist_id = ${playlist_id}
+        AND play_button_id = ${targetPlayButtonId}
         AND user_fid = ${session.user.fid};
     `;
 

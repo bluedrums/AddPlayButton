@@ -39,6 +39,7 @@ export async function verifySession(cookieValue?: string) {
 }
 
 export async function getSession() {
-  const sessionCookie = cookies().get('session');
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('session');
   return verifySession(sessionCookie?.value);
 }

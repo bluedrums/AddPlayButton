@@ -61,15 +61,25 @@ interface PlayButtonCardProps {
   playlistId?: number
   currentIndex?: number
   totalItems?: number
+  autoAdvanceSettings?: {
+    enabled: boolean;
+    timeoutMinutes: number;
+  }
+  onUpdateAutoAdvanceTimeout?: (minutes: number) => void
 }
 
-export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay, onAutoPlayStarted, onReorder, playlistId, currentIndex, totalItems }: PlayButtonCardProps) {
+export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay, onAutoPlayStarted, onReorder, playlistId, currentIndex, totalItems, autoAdvanceSettings, onUpdateAutoAdvanceTimeout }: PlayButtonCardProps) {
   const [showPlayer, setShowPlayer] = useState(false)
   const [currentPlayButton, setCurrentPlayButton] = useState(playButton)
   const { isAuthenticated, user, refreshPlayButtons } = useFarcaster()
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [showAddToPlaylistDialog, setShowAddToPlaylistDialog] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+
+  // Determine if playlist controls (reorder spinner, auto-advance) will be shown
+  const hasReorderControls = onReorder && playlistId !== undefined && currentIndex !== undefined && totalItems !== undefined;
+  const hasAutoAdvanceControls = (autoAdvanceSettings?.enabled ?? true) && onUpdateAutoAdvanceTimeout;
+  const hasPlaylistControls = hasReorderControls || hasAutoAdvanceControls;
 
   // Auto-play when autoPlay prop is set to true
   useEffect(() => {
@@ -151,7 +161,6 @@ export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay
 
     try {
       const shareText = buildShareText({ title: playButton.title, artist: playButton.artist, platform: playButton.platform });
-      
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
       const frameUrl = `${appUrl}/share/${encodeURIComponent(playButton.id)}`;
 
@@ -194,9 +203,9 @@ export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay
 
   return (
     <>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow relative">
+      <Card className={`overflow-hidden hover:shadow-md transition-all duration-300 ease-in-out relative ${hasPlaylistControls ? 'pb-12' : ''}`}>
         {/* Spinner controls - bottom right corner when in playlist */}
-        {onReorder && playlistId !== undefined && currentIndex !== undefined && totalItems !== undefined && (
+        {hasReorderControls && (
           <div className="absolute bottom-4 right-4 flex flex-col gap-1 z-10">
             <Button
               variant="ghost"
@@ -280,7 +289,7 @@ export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay
           <div className="flex justify-between mt-3">
             <Button
               onClick={() => setShowPlayer(true)}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-[#9234EB] hover:bg-[#9234EB]/90"
               size="sm"
             >
               <Play className="w-4 h-4 mr-2" />
@@ -328,6 +337,29 @@ export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay
             </div>
           </div>
         </CardContent>
+
+        {/* Auto-advance controls - bottom left when enabled (defaults to true if not set) */}
+        {hasAutoAdvanceControls && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1 bg-white/80 px-2 py-1 rounded z-10">
+            <span className="text-xs text-gray-600">Auto Advance:</span>
+            <input
+              type="number"
+              min="1"
+              max="1000"
+              value={autoAdvanceSettings?.timeoutMinutes ?? 4}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (!isNaN(value) && value >= 1 && value <= 1000) {
+                  onUpdateAutoAdvanceTimeout(value);
+                }
+              }}
+              className="w-12 h-6 text-xs text-center border border-gray-300 rounded px-1"
+              title="Timeout in minutes"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <span className="text-xs text-gray-600">min</span>
+          </div>
+        )}
       </Card>
 
       {/* Embedded Player Modal */}

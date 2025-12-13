@@ -92,13 +92,19 @@ export const api = async (url: string, options: RequestInit = {}) => {
         } catch (e) {
           // Not a JSON response
         }
-        const errorMessage = errorData?.error || response.statusText;
-        console.error(`API Error: ${response.status} ${errorMessage}`, {
-          url,
-          options: mergedOptions,
-        });
-        throw new Error(errorMessage);
+      const errorMessage = errorData?.error || response.statusText;
+      // Only log the first 200 characters of mergedOptions to avoid cluttering console with large objects
+      const safeOptions = JSON.parse(JSON.stringify(mergedOptions));
+      if (safeOptions.body && safeOptions.body.length > 200) {
+          safeOptions.body = safeOptions.body.substring(0, 200) + '... (truncated)';
       }
+
+      console.error(`API Error: ${response.status} ${errorMessage}`, {
+        url,
+        options: safeOptions,
+      });
+      throw new Error(errorMessage);
+    }
   
       // Handle cases with no content
       if (response.status === 204) {
@@ -110,10 +116,17 @@ export const api = async (url: string, options: RequestInit = {}) => {
       if (contentType && contentType.includes('text/html')) {
         const text = await response.text();
         console.error('API returned HTML instead of JSON:', text.substring(0, 200));
-        throw new Error('API returned HTML');
+        throw new Error('API returned HTML instead of JSON');
       }
   
-      return await response.json();
+      // Safely parse JSON with error handling
+      try {
+        return await response.json();
+      } catch (parseError) {
+        // If JSON parsing fails, the response might be HTML without proper content-type
+        console.error('Failed to parse JSON response from:', url, parseError);
+        throw new Error('Invalid JSON response from API');
+      }
     } catch (error) {
       console.error('Fetch API failed:', { url, error });
       // Re-throw to allow individual callers to handle it

@@ -1,5 +1,3 @@
-"use client";
-
 import { NextResponse, type NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
 
@@ -25,11 +23,11 @@ const csrfExemptRoutes = [
   { path: '/api/auth/signout', methods: ['POST'] }, // Signout doesn't need CSRF
 ];
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { method, nextUrl } = request;
   const { pathname } = nextUrl;
 
-  console.log(`🔍 Proxy: ${method} ${pathname}`);
+  console.log(`🔍 Middleware: ${method} ${pathname}`);
 
   // Check if the route is public
   const isPublicRoute = publicRoutes.some((route) => {
@@ -44,16 +42,16 @@ export async function proxy(request: NextRequest) {
 
   // Also allow share pages to be accessed without authentication
   if (pathname.startsWith('/share/')) {
-    console.log('✅ Proxy: Share page, allowing access');
+    console.log('✅ Middleware: Share page, allowing access');
     return NextResponse.next();
   }
 
   if (isPublicRoute) {
-    console.log('✅ Proxy: Public route, allowing access');
+    console.log('✅ Middleware: Public route, allowing access');
     return NextResponse.next();
   }
 
-  console.log('🔒 Proxy: Protected route, checking authentication');
+  console.log('🔒 Middleware: Protected route, checking authentication');
   console.log('🍪 All cookies:', request.cookies.getAll());
   const sessionCookie = request.cookies.get('session');
   const farcasterFID = request.headers.get('X-Farcaster-FID');
@@ -74,7 +72,7 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!sessionCookie) {
-    console.log('🚫 Proxy: No session cookie found. Access denied.');
+    console.log('🚫 Middleware: No session cookie found. Access denied.');
     console.log('📍 Request context:', {
       origin: request.headers.get('origin'),
       referer: request.headers.get('referer'),
@@ -86,7 +84,7 @@ export async function proxy(request: NextRequest) {
   }
 
   try {
-    console.log('🔐 Proxy: Verifying JWT token...');
+    console.log('🔐 Middleware: Verifying JWT token...');
     const { payload } = await jwtVerify(sessionCookie.value, JWT_SECRET);
     const fid = payload.fid as number;
 
@@ -94,7 +92,7 @@ export async function proxy(request: NextRequest) {
       throw new Error('Invalid token payload');
     }
 
-    console.log(`✅ Proxy: Token valid for user ${fid}`);
+    console.log(`✅ Middleware: Token valid for user ${fid}`);
     
     // CSRF Protection: Check for CSRF token on state-changing methods
     // But exempt certain routes that have their own protection
@@ -115,7 +113,7 @@ export async function proxy(request: NextRequest) {
       });
 
       if (!csrfTokenFromHeader || !csrfCookie || csrfTokenFromHeader !== csrfCookie.value) {
-        console.error('🚫 Proxy: CSRF token validation failed.', {
+        console.error('🚫 Middleware: CSRF token validation failed.', {
           hasHeader: !!csrfTokenFromHeader,
           hasCookie: !!csrfCookie,
           match: csrfTokenFromHeader === csrfCookie?.value
@@ -137,7 +135,7 @@ export async function proxy(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('🚫 Proxy: Invalid token. Access denied.', error);
+    console.error('🚫 Middleware: Invalid token. Access denied.', error);
     const response = NextResponse.json({ error: 'Authentication failed' }, { status: 401 });
     response.cookies.delete('session');
     response.cookies.delete('csrf-token');
@@ -148,3 +146,4 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: '/api/:path*',
 };
+

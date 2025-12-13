@@ -30,6 +30,7 @@
     "ogTitle": "Add Play Button",
     "ogDescription": "Embed media in a miniapp window without leaving Farcaster.",
     "ogImageUrl": "https://addplaybutton.xyz/HeroImage.png",
-    "canonicalDomain": "addplaybutton.xyz"
+    "canonicalDomain": "addplaybutton.xyz",
+    "webhookUrl": "https://api.neynar.com/f/app/f28fb5dc-a10c-4a92-914d-4e435ec07db1/event"
   }
 }

@@ -42,3 +42,4 @@ export function buildShareText({ title, artist, platform, includeEmoji = false }
 
   return shareText.trim();
 }
+

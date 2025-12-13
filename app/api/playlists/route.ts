@@ -28,13 +28,14 @@ export async function GET() {
                 'artist', pb.data->>'artist',
                 'embedUrl', pb.data->>'embedUrl',
                 'coverImage', pb.data->>'coverImage',
-                'createdAt', pb.data->>'createdAt'
+                'createdAt', pb.data->>'createdAt',
+                'autoAdvanceTimeout', COALESCE(ppb.auto_advance_timeout, 4)
               )
+              ORDER BY ppb.order_index ASC
             )
             FROM playlist_play_buttons ppb
             JOIN play_buttons pb ON ppb.play_button_id = pb.id AND ppb.user_fid = pb.user_fid
             WHERE ppb.playlist_id = p.id
-            ORDER BY ppb.order_index ASC
           ),
           '[]'::json
         ) as play_buttons
@@ -72,6 +73,44 @@ export async function POST(request: Request) {
     return NextResponse.json(rows[0]);
   } catch (error) {
     console.error('Error creating playlist:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: Request) {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get('session')?.value;
+  const session = await verifySession(sessionCookie);
+  if (!session.isAuthenticated || !session.user) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Playlist ID is required' }, { status: 400 });
+    }
+
+    const { name } = await request.json();
+    if (!name || typeof name !== 'string' || name.length > 255) {
+      return NextResponse.json({ error: 'Invalid playlist name' }, { status: 400 });
+    }
+
+    const { rows } = await sql`
+      UPDATE playlists
+      SET name = ${name}
+      WHERE id = ${Number(id)} AND user_fid = ${session.user.fid}
+      RETURNING *;
+    `;
+
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Playlist not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(rows[0]);
+  } catch (error) {
+    console.error('Error renaming playlist:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
