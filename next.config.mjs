@@ -20,7 +20,6 @@ const nextConfig = {
     unoptimized: true,
   },
   transpilePackages: ['@coinbase/onchainkit', '@tanstack/react-query', 'wagmi'],
-  swcMinify: true,
   webpack: (config) => {
     config.module.rules.push({
       test: /\.svg$/,
