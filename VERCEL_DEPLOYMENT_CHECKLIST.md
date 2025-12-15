@@ -32,11 +32,11 @@ The middleware has been properly configured to:
 ## ✅ API Routes Verification
 
 ### Public Routes (No Auth Required):
-- `/api/auth/farcaster` POST - For authentication
-- `/api/auth/session` GET, POST - For session management
+- `/api/auth/farcaster` POST - For authentication (mini-app auth and signature verification)
+- `/api/auth/session` GET, POST - For session management (middleware allows GET but route only implements POST)
 - `/api/auth/status` GET - Check authentication status
 - `/api/auth/csrf` GET - For CSRF token
-- `/api/playbutton` GET - For fetching play button data on share pages (exact match only, `/all` requires auth)
+- `/api/playbutton` GET - For fetching play button data on share pages (exact match only, `/all` requires auth; route handler accepts optional `x-user-fid` header but falls back to public lookup)
 - `/api/metadata` GET - For fetching OG metadata from URLs
 - `/api/oembed` GET - For fetching oEmbed data
 - `/api/user/casts` GET - For fetching user casts
@@ -47,17 +47,19 @@ The middleware has been properly configured to:
 - `/api/playbutton/all` GET - Get all play buttons for authenticated user
 - `/api/me` GET - Get current user info
 - `/api/playlists` GET, POST, PATCH, DELETE - List, create, rename, delete playlists
-- `/api/playlists/[id]` GET - Get playlist by ID (currently protected, but route file indicates should be public for share pages)
+- `/api/playlists/[id]` GET - Get playlist by ID (currently protected, but route file indicates should be public for share pages - see note below)
 - `/api/playlists/add-button` POST - Add play button to playlist
 - `/api/playlists/remove-button` DELETE - Remove play button from playlist
 - `/api/playlists/reorder` POST - Reorder play buttons in playlist
 - `/api/playlists/update-timeout` POST - Update auto-advance timeout for playlist item
-- `/api/notifications/status` GET - Get notification status (requires auth)
-- `/api/notifications/send` POST - Send push notifications (requires auth)
+- `/api/notifications/status` GET - Get notification status (requires auth via `x-user-fid` header)
+- `/api/notifications/send` POST - Send push notifications (requires auth via `x-user-fid` header)
 - `/api/auth/signout` POST - Sign out user
 - `/api/verify-api-key` GET - Verify API key (requires auth)
-- `/api/cache-bust` GET - Cache busting endpoint (requires auth)
+- `/api/cache-bust` GET - Cache busting endpoint (requires auth via `x-user-fid` header)
 - `/api/db-test` GET, POST - Database testing endpoints (requires auth)
+
+**Note on `/api/playlists/[id]` GET**: The route file (`app/api/playlists/[id]/route.ts`) explicitly states it's a "Public endpoint to fetch a playlist by ID for share metadata generation" and "does not require authentication". However, it's not listed in `publicRoutes` in `middleware.ts`, making it currently protected. If playlist share pages fail to load metadata, this route should be added to `publicRoutes` in the middleware.
 
 ## ✅ Production URL Handling
 
@@ -90,13 +92,15 @@ The share pages will work properly because:
 1. Check server logs for any 401 errors on share pages
 2. Verify cover images load properly in miniapp cards
 3. Test sharing a play button and viewing the miniapp card
-4. Test sharing a playlist and viewing the miniapp card
+4. Test sharing a playlist and viewing the miniapp card (note: `/api/playlists/[id]` GET may need to be added to publicRoutes if share pages fail)
 5. Ensure the embedded player launches when clicking the miniapp card
 6. Verify all environment variables are properly set in Vercel dashboard
 7. Test playlist creation, adding buttons, reordering, and removal
-8. Verify notifications work if NEYNAR_API_KEY is configured
-9. Test authentication flow in mini-app context
-10. Verify CSRF protection is working for state-changing operations
+8. Test playlist timeout updates (`/api/playlists/update-timeout`)
+9. Verify notifications work if NEYNAR_API_KEY is configured
+10. Test authentication flow in mini-app context
+11. Verify CSRF protection is working for state-changing operations (POST, PUT, DELETE)
+12. Verify CSRF exempt routes work correctly (`/api/auth/farcaster`, `/api/auth/session`, `/api/auth/signout`)
 
 ## 🚀 Deployment Steps
 

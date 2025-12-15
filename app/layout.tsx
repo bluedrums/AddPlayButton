@@ -56,8 +56,9 @@ export default function RootLayout({
         <div 
           id="initial-splash"
           style={{
-            backgroundColor: '#8A63D2',
+            backgroundColor: '#8A63D3',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             height: '100vh',
@@ -68,6 +69,7 @@ export default function RootLayout({
             zIndex: 99999,
             margin: 0,
             padding: 0,
+            fontFamily: "'Ubuntu', sans-serif",
           }}
         >
           <img 
@@ -76,9 +78,33 @@ export default function RootLayout({
             style={{
               width: '128px',
               height: '128px',
-              borderRadius: '24px'
+              borderRadius: '24px',
+              marginBottom: '24px'
             }}
           />
+          <h1 
+            style={{
+              fontSize: '28px',
+              fontWeight: '700',
+              color: 'white',
+              margin: '0 0 8px 0',
+              textAlign: 'center',
+            }}
+          >
+            Add Play Button
+          </h1>
+          <p 
+            style={{
+              fontSize: '16px',
+              fontWeight: '400',
+              color: 'white',
+              margin: 0,
+              textAlign: 'center',
+              opacity: 0.9,
+            }}
+          >
+            Share and drive traffic anywhere.
+          </p>
         </div>
         <style dangerouslySetInnerHTML={{
           __html: `
