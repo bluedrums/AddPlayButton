@@ -1,0 +1,64 @@
+name: Create Pull Request
+
+on:
+  push:
+    branches:
+      - '**'  # Trigger on push to any branch
+    branches-ignore:
+      - 'main'  # Don't trigger on main branch
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Get branch name
+        id: branch
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Current branch: $BRANCH_NAME"
+      
+      - name: Check if PR already exists
+        id: check-pr
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --base main --json number --jq 'length')
+          if [ "$PR_EXISTS" -gt 0 ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "PR already exists for branch $BRANCH_NAME"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "No existing PR found for branch $BRANCH_NAME"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Pull Request
+        if: steps.check-pr.outputs.exists == 'false'
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          gh pr create \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --title "Pull Request: $BRANCH_NAME → main" \
+            --body "This pull request was automatically created by GitHub Actions.
+
+**Branch:** \`$BRANCH_NAME\`
+**Commit:** ${{ github.sha }}
+**Author:** ${{ github.actor }}
+
+Please review the changes and merge when ready." \
+            --label "automated"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
