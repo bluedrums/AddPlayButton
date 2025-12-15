@@ -11,7 +11,7 @@ const publicRoutes = [
   { path: '/api/auth/csrf', methods: ['GET'] },
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
-  { path: '/api/playbutton', methods: ['GET'] }, // Public for share page SSR
+  { path: '/api/playbutton', methods: ['GET'], exact: true }, // Public for share page SSR, but NOT /all
   { path: '/api/metadata', methods: ['GET'] }, // Public for fetching metadata
   { path: '/api/env-check', methods: ['GET'] }, // Public for environment variable checking
 ];
@@ -30,9 +30,15 @@ export async function middleware(request: NextRequest) {
   console.log(`🔍 Middleware: ${method} ${pathname}`);
 
   // Check if the route is public
-  const isPublicRoute = publicRoutes.some(
-    (route) => pathname.startsWith(route.path) && route.methods.includes(method)
-  );
+  const isPublicRoute = publicRoutes.some((route) => {
+    const methodMatch = route.methods.includes(method);
+    if (!methodMatch) return false;
+    
+    if ((route as any).exact) {
+      return pathname === route.path;
+    }
+    return pathname.startsWith(route.path);
+  });
 
   // Also allow share pages to be accessed without authentication
   if (pathname.startsWith('/share/')) {
@@ -140,3 +146,4 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: '/api/:path*',
 };
+

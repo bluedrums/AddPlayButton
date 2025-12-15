@@ -26,6 +26,31 @@ async function main() {
       );
     `;
     console.log('Table "users" created successfully.');
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS playlists (
+        id SERIAL PRIMARY KEY,
+        user_fid BIGINT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_fid) REFERENCES users(fid) ON DELETE CASCADE
+      );
+    `;
+    console.log('Table "playlists" created successfully.');
+
+    await sql`
+      CREATE TABLE IF NOT EXISTS playlist_play_buttons (
+        playlist_id INTEGER NOT NULL,
+        play_button_id VARCHAR(255) NOT NULL,
+        user_fid BIGINT NOT NULL,
+        added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        order_index INTEGER NOT NULL,
+        PRIMARY KEY (playlist_id, play_button_id, user_fid),
+        FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_fid, play_button_id) REFERENCES play_buttons(user_fid, id) ON DELETE CASCADE
+      );
+    `;
+    console.log('Table "playlist_play_buttons" created successfully.');
   } catch (error) {
     console.error('Error creating tables:', error);
   }

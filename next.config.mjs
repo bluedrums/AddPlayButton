@@ -13,14 +13,34 @@ const nextConfig = {
       },
     ];
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
+  },
+  transpilePackages: ['@coinbase/onchainkit', '@tanstack/react-query', 'wagmi'],
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.svg$/,
+      use: ["@svgr/webpack"]
+    });
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@react-native-async-storage/async-storage': false,
+    }
+    
+    // Ensure proper module resolution for ESM packages
+    config.resolve.extensionAlias = {
+      '.js': ['.js', '.ts', '.tsx'],
+      '.jsx': ['.jsx', '.tsx'],
+    };
+    
+    return config
+  },
+  turbopack: {
+    resolveExtensions: ['.mjs', '.js', '.tsx', '.ts', '.jsx', '.json'],
   },
 }
 

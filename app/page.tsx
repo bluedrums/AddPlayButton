@@ -1,6 +1,7 @@
 import ClientPage from './ClientPage';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
+import { MainLayout } from '@/components/main-layout';
 
 export const dynamic = 'force-dynamic';        // ensure SSR on every request
 export const revalidate = 0;                   // disable static cache
@@ -41,8 +42,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div>Loading…</div>}>
-      <ClientPage />
-    </Suspense>
+    <MainLayout>
+      <Suspense fallback={<div>Loading…</div>}>
+        <ClientPage />
+      </Suspense>
+    </MainLayout>
   );
 }

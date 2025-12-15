@@ -1,50 +1,85 @@
 import { fetchPlayButton } from '@/lib/fetch-playbutton';
+import { fetchPlaylist, Playlist } from '@/lib/fetch-playlist';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export async function generateMetadata({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }): Promise<Metadata> {
+export async function generateMetadata({ 
+  params, 
+  searchParams 
+}: { 
+  params: { id: string }, 
+  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
+}): Promise<Metadata> {
   try {
     const encodedId = params.id;
     const id = decodeURIComponent(encodedId);
     const fidStr = searchParams.fid;
-    const fid = fidStr ? Number(fidStr) : 12345; // Fallback to demo if not provided
-    if (isNaN(fid)) return {};
-    const playButtonData = await fetchPlayButton(fid, id);
+    const playlistIdStr = searchParams.playlistId;
+    const startIndexStr = searchParams.startIndex;
+
+    const fid = fidStr ? Number(fidStr) : undefined;
+    
+    let playButtonData;
+    let playlist: Playlist | null = null;
+    let startIndex = 0;
+
+    // If playlist context is provided, fetch the full playlist
+    if (playlistIdStr) {
+      const playlistId = Number(playlistIdStr);
+      if (!isNaN(playlistId)) {
+        playlist = await fetchPlaylist(playlistId);
+        if (playlist && playlist.play_buttons) {
+          startIndex = Math.min(
+            Math.max(0, Number(startIndexStr) || 0),
+            playlist.play_buttons.length - 1
+          );
+          // The play button ID in the URL is the starting track
+          playButtonData = playlist.play_buttons.find(pb => pb.id === id);
+        }
+      }
+    }
+
+    // If no playlist context, or if track not found in playlist, fetch individually
+    if (!playButtonData) {
+      playButtonData = await fetchPlayButton(fid || 12345, id);
+    }
+    
     if (!playButtonData) return {};
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
     const imageUrl = playButtonData.coverImage || `${baseUrl}/ThePlayButton.png`;
     
-    console.log('PlayButton metadata generation:', { 
-      id, 
-      fid, 
-      hasCoverImage: !!playButtonData.coverImage,
-      coverImage: playButtonData.coverImage,
-      imageUrl,
-      playButtonData 
-    });
-    // Point directly to the mini-app home so Warpcast keeps the user inside the in-app sheet.
-    // const miniAppUrl = `${baseUrl}/?fid=${fid}&playButton=${encodeURIComponent(encodedId)}`;
+    // Create a dynamic title based on playlist context
+    const title = playlist 
+      ? `${playButtonData.title} - ${playlist.name}` 
+      : playButtonData.title;
+      
+    const description = playlist
+      ? `Track ${startIndex + 1} of ${playlist.play_buttons.length} in ${playlist.name}`
+      : `Play on ${playButtonData.platform}`;
+        
+    const buttonTitle = playlist 
+      ? `Play from #${startIndex + 1}`
+      : 'Play';
+
     const miniAppUrl = baseUrl;
 
-    
     return {
-      title: playButtonData.title,
-      description: `Play "${playButtonData.title}" using the Add Play Button mini-app`,
+      title,
+      description,
       openGraph: {
-        title: playButtonData.title,
-        description: `Play on ${playButtonData.platform}`,
+        title,
+        description,
         images: [imageUrl],
       },
       other: {
-        // Consolidated Mini App embed (new spec)
         "fc:miniapp": JSON.stringify({
           version: "1",
           imageUrl,
           button: {
-            title: "Play",
+            title: buttonTitle,
             action: {
               type: "launch_frame",
               name: "Add Play Button",
@@ -52,12 +87,11 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
             },
           },
         }),
-        // Duplicate under fc:frame for backward-compatibility with older clients
         "fc:frame": JSON.stringify({
           version: "1",
           imageUrl,
           button: {
-            title: "Play",
+            title: buttonTitle,
             action: {
               type: "launch_frame",
               name: "Add Play Button",
@@ -65,13 +99,11 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
             },
           },
         }),
-
-        // Optional OpenFrame / XMTP tags to support cross-protocol previews
         "of:accepts:farcaster": "vNext",
         "of:accepts:xmtp": "2024-02-01",
         "of:image": imageUrl,
         "of:image:aspect_ratio": "1.91:1",
-        "of:button:1": "Play",
+        "of:button:1": buttonTitle,
         "of:button:1:action": "link",
         "of:button:1:target": miniAppUrl,
       }
@@ -82,7 +114,13 @@ export async function generateMetadata({ params, searchParams }: { params: { id:
   }
 }
 
-export default async function SharePage({ params, searchParams }: { params: { id: string }, searchParams: { fid?: string } }) {
+export default async function SharePage({ 
+  params, 
+  searchParams 
+}: { 
+  params: { id: string }, 
+  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
+}) {
   const { id } = params;
   const fidStr = searchParams.fid;
   const fid = fidStr ? Number(fidStr) : 12345;
@@ -100,7 +138,7 @@ export default async function SharePage({ params, searchParams }: { params: { id
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>{playButton.title}</h1>
-      <p>To use this play button, open the link in a Farcaster client.</p>
+      <p>To use this play button, open the link in the Base app or a Farcaster client.</p>
       {playButton.coverImage ? (
         <img src={playButton.coverImage} alt={playButton.title} style={{ maxWidth: '100%' }} />
       ) : (

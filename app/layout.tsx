@@ -1,10 +1,9 @@
-import type React from "react"
+import React from "react"
 import type { Metadata, Viewport } from "next"
 import { Ubuntu } from 'next/font/google';
 import "./globals.css"
-import { FarcasterProvider } from "@/components/farcaster-provider"
-import { Toaster } from "@/components/ui/sonner"
-import { Analytics } from '@vercel/analytics/react';
+import { Providers } from "@/components/providers";
+import { MainNav } from '@/components/main-nav';
 
 const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700'] });
 
@@ -29,10 +28,10 @@ const embed = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: "Add Play Button",
-  description: "Create interactive Farcaster casts for music and video links",
+  description: "Create interactive casts for music and video links",
   openGraph: {
     title: "Add Play Button",
-    description: "Create interactive Farcaster casts for music and video links",
+    description: "Create interactive casts for music and video links",
     images: [`/ThePlayButton.png`],
   },
 };
@@ -51,14 +50,15 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={ubuntu.className}>
+    <html lang="en" className="h-full">
+      <body className={`${ubuntu.className} h-full`}>
         {/* Immediate splash screen - shows before React hydrates */}
         <div 
           id="initial-splash"
           style={{
-            backgroundColor: '#8A63D2',
+            backgroundColor: '#8A63D3',
             display: 'flex',
+            flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             height: '100vh',
@@ -69,6 +69,7 @@ export default function RootLayout({
             zIndex: 99999,
             margin: 0,
             padding: 0,
+            fontFamily: "'Ubuntu', sans-serif",
           }}
         >
           <img 
@@ -77,9 +78,33 @@ export default function RootLayout({
             style={{
               width: '128px',
               height: '128px',
-              borderRadius: '24px'
+              borderRadius: '24px',
+              marginBottom: '24px'
             }}
           />
+          <h1 
+            style={{
+              fontSize: '28px',
+              fontWeight: '700',
+              color: 'white',
+              margin: '0 0 8px 0',
+              textAlign: 'center',
+            }}
+          >
+            Add Play Button
+          </h1>
+          <p 
+            style={{
+              fontSize: '16px',
+              fontWeight: '400',
+              color: 'white',
+              margin: 0,
+              textAlign: 'center',
+              opacity: 0.9,
+            }}
+          >
+            Share and drive traffic anywhere.
+          </p>
         </div>
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -87,11 +112,12 @@ export default function RootLayout({
             #initial-splash { display: flex !important; }
           `
         }} />
-        <FarcasterProvider>
-          {children}
-          <Analytics />
-          <Toaster />
-        </FarcasterProvider>
+        <div id="app-container" className="h-full">
+            <Providers>
+              {children}
+              <MainNav />
+            </Providers>
+        </div>
         {/* Base Pay SDK */}
         <script
           src="https://pay.coinbase.com/js/base.js"

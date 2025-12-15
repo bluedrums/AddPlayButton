@@ -4,6 +4,7 @@ import { sql } from "@vercel/postgres"
 
 // Farcaster auth verification endpoint
 export async function POST(request: NextRequest) {
+  console.log('--- /api/auth/farcaster: POST request received ---');
   try {
     const { WARPCAST_API_KEY, JWT_SECRET_KEY } = process.env;
     if (!WARPCAST_API_KEY || !JWT_SECRET_KEY) {
@@ -15,8 +16,16 @@ export async function POST(request: NextRequest) {
     }
     const JWT_SECRET = new TextEncoder().encode(JWT_SECRET_KEY);
 
-    const body = await request.json()
-    const { action, message, signature, nonce, domain, fid, username, displayName, pfpUrl, context } = body
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      console.error('Failed to parse request body:', e);
+      return NextResponse.json({ success: false, error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { action, message, signature, nonce, domain, fid, username, displayName, pfpUrl, context } = body;
+    console.log(`Auth action: ${action}, fid: ${fid}, username: ${username}`);
 
     // Handle mini-app authentication
     if (action === "miniapp-auth") {
@@ -51,17 +60,24 @@ export async function POST(request: NextRequest) {
         .sign(JWT_SECRET)
 
       // Store user in database
-      await sql`
-        INSERT INTO users (fid, username, display_name, pfp_url, custody_address, verifications)
-        VALUES (${user.fid}, ${user.username}, ${user.displayName}, ${user.pfpUrl}, ${user.custodyAddress}, ${JSON.stringify(user.verifications || [])})
-        ON CONFLICT (fid)
-        DO UPDATE SET
-          username = EXCLUDED.username,
-          display_name = EXCLUDED.display_name,
-          pfp_url = EXCLUDED.pfp_url,
-          custody_address = EXCLUDED.custody_address,
-          verifications = EXCLUDED.verifications;
-      `
+      try {
+        console.log(`Attempting to save user ${fid} to database...`);
+        await sql`
+          INSERT INTO users (fid, username, display_name, pfp_url, custody_address, verifications)
+          VALUES (${user.fid}, ${user.username}, ${user.displayName}, ${user.pfpUrl}, ${user.custodyAddress}, ${JSON.stringify(user.verifications || [])})
+          ON CONFLICT (fid)
+          DO UPDATE SET
+            username = EXCLUDED.username,
+            display_name = EXCLUDED.display_name,
+            pfp_url = EXCLUDED.pfp_url,
+            custody_address = EXCLUDED.custody_address,
+            verifications = EXCLUDED.verifications;
+        `;
+        console.log(`User ${fid} saved to database.`);
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+        return NextResponse.json({ success: false, error: "Database error: " + (dbError instanceof Error ? dbError.message : String(dbError)) }, { status: 500 });
+      }
       
       const response = NextResponse.json({ success: true, user })
       response.cookies.set("session", token, {
@@ -160,6 +176,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
   } catch (error) {
     console.error("Auth API error:", error)
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 })
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ success: false, error: `Internal server error: ${errorMsg}` }, { status: 500 })
   }
 }

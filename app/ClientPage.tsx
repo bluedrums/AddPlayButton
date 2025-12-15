@@ -18,6 +18,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
 import { buildShareText } from "@/lib/utils";
+import { useMiniKit } from "@coinbase/onchainkit/minikit";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PlaylistCombobox } from "@/components/playlist-combobox";
+import { useWallet } from "@/hooks/use-wallet";
+import { useClientContext } from "@/hooks/use-client-context";
 
 // Base Pay API types
 declare global {
@@ -45,6 +50,12 @@ interface PlayButton {
   createdAt: Date
 }
 
+interface Playlist {
+    id: number;
+    name: string;
+    play_buttons?: PlayButton[];
+}
+
 interface OembedData {
   title?: string
   author_name?: string
@@ -63,12 +74,23 @@ export default function ClientPage() {
   const [showDebug, setShowDebug] = useState(false)
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
-  const [isDonating, setIsDonating] = useState(false);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [addToPlaylist, setAddToPlaylist] = useState(false);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+  const [playlistContext, setPlaylistContext] = useState<{
+    playlist: Playlist | null;
+    currentIndex: number;
+    isFromCast: boolean;
+  } | null>(null);
+
 
   const [urlValidationTimeout, setUrlValidationTimeout] = useState<NodeJS.Timeout | null>(null)
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
   const [safeArea, setSafeArea] = useState(defaultSafeArea);
+  const { setFrameReady } = useMiniKit();
+  const { sendUSDC, isProcessing: isWalletProcessing, clientType, isBase } = useWallet();
+  const { isLoading: isClientLoading } = useClientContext();
 
   // Deep link handling via SDK context
   useEffect(() => {
@@ -96,14 +118,54 @@ export default function ClientPage() {
           console.log('Found frameUrl for deep linking:', frameUrl);
           const url = new URL(frameUrl);
           const pathSegments = url.pathname.split('/').filter(Boolean); // e.g., ['share', 'some-id']
-          
-          if (pathSegments[0] === 'share' && pathSegments[1]) {
+          const playlistIdStr = url.searchParams.get('playlistId');
+          const startIndexStr = url.searchParams.get('startIndex');
+
+          // Handle playlist share with context
+          if (playlistIdStr) {
+            const playlistId = Number(playlistIdStr);
+            const startIndex = Number(startIndexStr) || 0;
+
+            if (!isNaN(playlistId)) {
+              console.log(`Playlist share deep link: playlistId=${playlistId}, startIndex=${startIndex}`);
+              try {
+                const playlistData = await api(`/api/playlists/${playlistId}`);
+                if (playlistData.error) {
+                  toast.error('This playlist was not found. It may have been deleted.');
+                } else if (playlistData.play_buttons && playlistData.play_buttons.length > 0) {
+                  const validStartIndex = Math.min(
+                    Math.max(0, startIndex),
+                    playlistData.play_buttons.length - 1
+                  );
+                  const trackToPlay = playlistData.play_buttons[validStartIndex];
+                  setPlaylistContext({
+                    playlist: playlistData,
+                    currentIndex: validStartIndex,
+                    isFromCast: true
+                  });
+                  setActivePlayButton({
+                    ...trackToPlay,
+                    createdAt: new Date(trackToPlay.createdAt)
+                  });
+                  setIsPlayerModalOpen(true);
+                  toast.success(`Playing: ${trackToPlay.title}`);
+                } else {
+                  toast.error('This playlist is empty.');
+                }
+              } catch (error) {
+                console.error('Failed to fetch playlist for playback:', error);
+                toast.error('Failed to load playlist');
+              }
+            }
+          }
+          // Handle individual play button share (no playlist context)
+          else if (pathSegments[0] === 'share' && pathSegments[1]) {
             const playButtonId = decodeURIComponent(pathSegments[1]);
             const fid = context.user?.fid;
-            
+
             if (playButtonId && fid) {
               console.log(`Deep link details: playButtonId=${playButtonId}, fid=${fid}`);
-              
+
               // Pass FID in headers, not as query parameter
               const data = await api(`/api/playbutton?id=${playButtonId}`, {
                 headers: { 'x-user-fid': String(fid) }
@@ -121,6 +183,47 @@ export default function ClientPage() {
                 setIsPlayerModalOpen(true);
               }
             }
+          } else if (pathSegments[0] === 'playlists') {
+            // Handle legacy playlist playback initiation from cast embed
+            const fid = context.user?.fid;
+
+            if (fid) {
+              console.log(`Legacy playlist playback initiated from cast: fid=${fid}`);
+
+              try {
+                // Fetch user's playlists
+                const playlistsData = await api('/api/playlists');
+
+                if (playlistsData && playlistsData.length > 0) {
+                  // Use the first playlist (or most recently created)
+                  const playlistToPlay = playlistsData[0];
+
+                  if (playlistToPlay.play_buttons && playlistToPlay.play_buttons.length > 0) {
+                    const firstTrack = playlistToPlay.play_buttons[0];
+
+                    // Set up playlist context
+                    setPlaylistContext({
+                      playlist: playlistToPlay,
+                      currentIndex: 0,
+                      isFromCast: true
+                    });
+
+                    // Set the active play button to the first track
+                    setActivePlayButton(firstTrack);
+                    setIsPlayerModalOpen(true);
+
+                    toast.success(`Playing playlist: ${playlistToPlay.name}`);
+                  } else {
+                    toast.error('This playlist is empty. Add some tracks first!');
+                  }
+                } else {
+                  toast.error('No playlists found. Create a playlist first!');
+                }
+              } catch (error) {
+                console.error('Failed to fetch playlists for playback:', error);
+                toast.error('Failed to load playlist');
+              }
+            }
           }
         }
       } catch (error) {
@@ -134,11 +237,14 @@ export default function ClientPage() {
   useEffect(() => {
     // Only call SDK ready when we're not loading anymore
     if (!isLoading) {
+      // For Farcaster clients
       sdk.actions.ready().catch(err => {
-        console.error('Failed to mark SDK as ready:', err);
+        console.error('Failed to mark Farcaster SDK as ready:', err);
       });
+      // For Base/OnchainKit clients
+      setFrameReady();
     }
-  }, [isLoading]);
+  }, [isLoading, setFrameReady]);
 
   useEffect(() => {
     const fid = params.get('fid');
@@ -279,6 +385,21 @@ export default function ClientPage() {
     triggerAddMiniAppDialog();
   }, [isAuthenticated, user, isLoading]);
 
+  useEffect(() => {
+    if (isAuthenticated) {
+        fetchPlaylists();
+    }
+  }, [isAuthenticated]);
+
+  const fetchPlaylists = async () => {
+    try {
+      const data = await api('/api/playlists');
+      setPlaylists(data);
+    } catch (error) {
+      console.error('Failed to fetch playlists:', error);
+    }
+  };
+
   const detectPlatform = (url: string): { platform: string; embedUrl: string; oembedEndpoint?: string } | null => {
     const cleanUrl = url.trim()
     if (cleanUrl.includes("spotify.com") || cleanUrl.includes("spoti.fi")) {
@@ -417,7 +538,7 @@ export default function ClientPage() {
       }
       
       // Save to database first
-      await api('/api/playbutton', {
+      const savedPlayButton = await api('/api/playbutton', {
         method: 'POST',
         body: JSON.stringify({
           id: newPlayButton.id,
@@ -425,15 +546,25 @@ export default function ClientPage() {
         }),
       });
       
+      // Add to playlist if selected
+      if (addToPlaylist && selectedPlaylistId) {
+        await api('/api/playlists/add-button', {
+            method: 'POST',
+            body: JSON.stringify({
+                playlist_id: selectedPlaylistId,
+                play_button_id: newPlayButton.id,
+            }),
+        });
+      }
+
       // Clear form and refresh the list from database
-      setUrl(""); setTitle(""); setCoverImage(null); setValidationError("");
+      setUrl(""); setTitle(""); setCoverImage(null); setValidationError(""); setAddToPlaylist(false); setSelectedPlaylistId(null);
       await refreshPlayButtons();
       
       // Create the shareable cast with the share page URL as embed
       toast.success(`${validated.platform} play button added! Creating shareable cast...`)
       
       const shareText = buildShareText({ title: newPlayButton.title, artist: newPlayButton.artist, platform: newPlayButton.platform, includeEmoji: true });
-
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
       const frameUrl = `${appUrl}/share/${encodeURIComponent(newPlayButton.id)}`;
       
@@ -525,172 +656,79 @@ export default function ClientPage() {
     await signOut();
   }
 
-  const handleBaseDonate = async () => {
-    setIsDonating(true);
-    try {
-      const recipientAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
-      if (!recipientAddress) {
-        toast.error("Donation address is not configured.");
-        setIsDonating(false);
-        return;
-      }
+  // Handle playlist track changes
+  const handlePlaylistTrackChange = (newIndex: number) => {
+    if (!playlistContext || !playlistContext.playlist) return;
 
-      // Check if Base Pay is available
-      if (typeof window !== "undefined" && window.base && window.base.pay) {
-        const paymentRequest = {
-          recipient: recipientAddress,
-          amount: "1", // 1 USDC
-          currency: "USDC",
-          chainId: 8453, // Base network
-          reference: "AddPlayButton-Donation",
-          projectId: process.env.NEXT_PUBLIC_BASE_PROJECT_ID,
-        };
+    const { playlist } = playlistContext;
 
-        const result = await window.base.pay(paymentRequest);
+    if (newIndex >= 0 && playlist.play_buttons && newIndex < playlist.play_buttons.length) {
+      const newTrack = playlist.play_buttons[newIndex];
 
-        if (result.success) {
-          toast.success('Payment sent via Base Pay! 💙');
-        } else {
-          throw new Error(result.error || 'Payment failed');
-        }
-      } else {
-        // Fallback: Open Base Pay URL
-        const projectId = process.env.NEXT_PUBLIC_BASE_PROJECT_ID || 'your-app-id';
-        const basePayUrl = `https://pay.coinbase.com/buy?appId=${projectId}&recipient=${recipientAddress}&amount=1&currency=USDC&chainId=8453`;
-        await sdk.actions.openUrl(basePayUrl);
-        toast.success('Opening Base Pay... 💙');
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to process payment.';
-      console.error('Base Pay error:', error);
-      toast.error(message);
-    } finally {
-      setIsDonating(false);
+      // Update playlist context
+      setPlaylistContext({
+        ...playlistContext,
+        currentIndex: newIndex
+      });
+
+      // Update active play button
+      setActivePlayButton(newTrack);
     }
-  }
+  };
 
-  const handleDonate = async (walletType: string) => {
+  /**
+   * Unified donate handler that uses the SDK's wallet provider.
+   * Automatically uses the correct wallet based on the client app context
+   * (Base app wallet, Warpcast wallet, etc.)
+   */
+  const handleDonate = async () => {
     if (!isAuthenticated || !user) {
       toast.error("Please sign in to donate");
       return;
     }
 
-    setIsDonating(true);
-    try {
-      const recipientAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
-      if (!recipientAddress) {
-        toast.error("Donation address is not configured.");
-        setIsDonating(false);
-        return;
-      }
-
-      if (walletType === "farcaster") {
-        const provider = await sdk.wallet.getEthereumProvider();
-        if (!provider) {
-          throw new Error("Farcaster Wallet provider not available.");
-        }
-
-        const accounts = await provider.request({ method: 'eth_requestAccounts' });
-        if (!accounts || !accounts[0]) {
-          throw new Error("Could not connect to Farcaster Wallet.");
-        }
-        const fromAddress = accounts[0];
-
-        const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"; // USDC on Base
-        const amount = 1000000; // 1 USDC (6 decimals)
-
-        const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
-        const paddedAmount = amount.toString(16).padStart(64, '0');
-        const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
-
-        const txParams = {
-          from: fromAddress as `0x${string}`,
-          to: usdcContractAddress as `0x${string}`,
-          value: '0x0' as `0x${string}`,
-          data: txData as `0x${string}`,
-        };
-
-        await provider.request({
-          method: 'eth_sendTransaction',
-          params: [txParams],
-        });
-
-        toast.success('Payment sent via Farcaster Wallet! 💜');
-
-      } else if (walletType === "coinbase") {
-        const { ethereum } = window as any;
-        if (typeof window !== "undefined" && ethereum && ethereum.isCoinbaseWallet) {
-          try {
-            await ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: '0x2105' }], // 0x2105 is hex for 8453
-            });
-
-            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-            const fromAddress = accounts[0];
-            const usdcContractAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-            const amount = 1000000;
-            const paddedAddress = recipientAddress.slice(2).padStart(64, '0');
-            const paddedAmount = amount.toString(16).padStart(64, '0');
-            const txData = `0xa9059cbb${paddedAddress}${paddedAmount}`;
-            const txParams = { from: fromAddress as `0x${string}`, to: usdcContractAddress as `0x${string}`, value: '0x0' as `0x${string}`, data: txData as `0x${string}` };
-
-            await ethereum.request({ method: 'eth_sendTransaction', params: [txParams] });
-            toast.success('Payment sent via Coinbase Wallet! 💜');
-          } catch (switchError: any) {
-            if (switchError.code === 4902) {
-              toast.error('Please add the Base network to your Coinbase Wallet and try again.');
-            } else {
-              toast.error('Failed to switch network. Please ensure you are on the Base network.');
-            }
-          }
-        } else {
-          const encodedAddress = encodeURIComponent(recipientAddress);
-          const paymentUrl = `https://go.cb-w.com/send?address=${encodedAddress}&asset=USDC&amount=1&chain_id=8453`;
-          await sdk.actions.openUrl(paymentUrl);
-          toast.success(`Opening Coinbase Wallet... 💜`);
-        }
-      } else if (walletType === "walletconnect") {
-        const encodedRecipient = encodeURIComponent(recipientAddress);
-        const usdcAddress = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-        const paymentUrl = `https://app.uniswap.org/swap?chain=base&outputCurrency=${usdcAddress}&exactAmount=1&recipient=${encodedRecipient}`;
-        await sdk.actions.openUrl(paymentUrl);
-        toast.success(`Opening WalletConnect... 💜`);
-      } else {
-        throw new Error("Invalid wallet type selected.");
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to process payment.';
-      console.error('Payment error:', error);
-      toast.error(message);
-    } finally {
-      setIsDonating(false);
+    const recipientAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS;
+    if (!recipientAddress) {
+      toast.error("Donation address is not configured.");
+      return;
     }
+
+    // Use the unified wallet hook to send USDC
+    await sendUSDC(recipientAddress, 1);
   }
 
-  // Don't render anything while loading - the initial splash is already showing
-  if (isLoading) return null
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
       {activePlayButton && (
         <EmbeddedPlayerModal
           isOpen={isPlayerModalOpen}
           onClose={() => {
             setIsPlayerModalOpen(false);
             refreshPlayButtons();
+            // Reset playlist context when modal closes
+            setPlaylistContext(null);
           }}
           playButton={activePlayButton}
           safeArea={safeArea}
+          playlistContext={playlistContext ? {
+            playlist: playlistContext.playlist ? {
+              id: playlistContext.playlist.id,
+              name: playlistContext.playlist.name,
+              play_buttons: playlistContext.playlist.play_buttons || []
+            } : null,
+            currentIndex: playlistContext.currentIndex,
+            onTrackChange: handlePlaylistTrackChange,
+            isFromCast: playlistContext.isFromCast
+          } : undefined}
         />
       )}
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
+          <div className="flex items-center justify-between mb-4">
             <div className="w-12 h-12 rounded-full overflow-hidden">
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-[-1px]">Add Play Button</h1>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-[-1px] flex-1 text-center">Add Play Button</h1>
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -704,7 +742,7 @@ export default function ClientPage() {
                     <div className="font-medium">{user?.displayName}</div>
                     <div className="text-gray-500">@{user?.username}</div>
                   </div>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => setShowLogoutDialog(true)}
                     className="text-red-600 cursor-pointer"
                   >
@@ -721,7 +759,7 @@ export default function ClientPage() {
             )}
           </div>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Create shareable cards for music and video links that play in the miniapp window without leaving Farcaster. Support for Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud.
+            Create shareable cards for music and video links that play in the miniapp window.
           </p>
         </div>
 
@@ -730,9 +768,9 @@ export default function ClientPage() {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <User className="w-5 h-5" />
-                Connect with Farcaster
+                Connect with Base/Farcaster
               </CardTitle>
-              <CardDescription>Get started with your Farcaster account to create and share play buttons</CardDescription>
+              <CardDescription>Get started with your Base account to create and share play buttons</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
@@ -744,7 +782,7 @@ export default function ClientPage() {
                 {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>) : (<><User className="w-4 h-4 mr-2" />Log In</>)}
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
-              <Alert><Info className="h-4 w-4" /><AlertDescription>This app works best when opened from within Farcaster. If you're trying this outside of Farcaster, find us in the Farcaster/Base app store.</AlertDescription></Alert>
+              <Alert><Info className="h-4 w-4" /><AlertDescription>This app only works when opened from within the Base app or a Farcaster client.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
               {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
                 <div>Loading: {isLoading ? "Yes" : "No"}</div>
@@ -850,14 +888,39 @@ export default function ClientPage() {
               </>
             )}
 
-            <Button onClick={handleAddPlayButton} disabled={isValidating || !url.trim() || !title.trim()} className="w-full bg-purple-600 hover:bg-purple-700">
+            <Button onClick={handleAddPlayButton} disabled={isValidating || !url.trim() || !title.trim()} className="w-full bg-[#9234EB] hover:bg-[#9234EB]/90">
               {isValidating ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Validating...</>) : (<><Play className="w-4 h-4 mr-2" />Add Play Button</>)}
             </Button>
             {validationError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{validationError}</AlertDescription></Alert>}
+            
+            {title && playlists.length > 0 && (
+              <div className="space-y-2 pt-4">
+                <div className="flex items-center space-x-2">
+                    <Checkbox
+                        id="add-to-playlist"
+                        checked={addToPlaylist}
+                        onCheckedChange={(checked) => setAddToPlaylist(Boolean(checked))}
+                    />
+                    <label
+                        htmlFor="add-to-playlist"
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                        Add to Playlist
+                    </label>
+                </div>
+                {addToPlaylist && (
+                    <PlaylistCombobox
+                        playlists={playlists}
+                        selectedPlaylistId={selectedPlaylistId}
+                        onSelect={setSelectedPlaylistId}
+                    />
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Donation Card */}
+        {/* Donation Card - Context-aware, uses the integrated wallet of the current client app */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -866,46 +929,28 @@ export default function ClientPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-center">
-                <Button
-                  onClick={() => handleDonate("farcaster")}
-                  disabled={!isAuthenticated || isDonating}
-                  className="bg-purple-600 hover:bg-purple-700 w-full"
-                >
-                  {isDonating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Gift className="w-4 h-4 mr-2" />
-                      Donate $1 (Farcaster)
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="flex justify-center hidden">
-                <Button
-                  onClick={handleBaseDonate}
-                  disabled={isDonating}
-                  className="bg-blue-600 hover:bg-blue-700 w-full"
-                >
-                  {isDonating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Gift className="w-4 h-4 mr-2" />
-                      Donate $1 (Base)
-                    </>
-                  )}
-                </Button>
-              </div>
+            <div className="flex justify-center">
+              <Button
+                onClick={handleDonate}
+                disabled={!isAuthenticated || isWalletProcessing || isClientLoading}
+                className="w-full bg-[#5634EB] hover:bg-[#5634EB]/90"
+              >
+                {isWalletProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Gift className="w-4 h-4 mr-2" />
+                    Donate $1 USDC
+                  </>
+                )}
+              </Button>
             </div>
+            <p className="text-xs text-gray-500 text-center mt-2">
+              Sends via your {isBase ? "Base" : "Farcaster"} wallet
+            </p>
           </CardContent>
         </Card>
 
@@ -932,6 +977,9 @@ export default function ClientPage() {
             </p>
             <p className="text-xs text-gray-500">              
               <a href="https://github.com/bluedrums/AddPlayButton-Feedback/issues" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Send me product feedback/bugs</a>
+            </p>
+            <p className="text-xs text-gray-500">
+              <a href="https://www.figma.com/community/plugin/1229731653276353355" className="text-gray-500 hover:text-gray-700 underline" target="_blank">Icons and logo by R4IN80W for 480 Design</a>
             </p>
             <p className="text-xs text-gray-500">
               No, we're not training AI. No, we don't sell your info.
