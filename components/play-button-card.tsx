@@ -48,6 +48,7 @@ interface PlaylistContext {
   autoAdvance?: {
     enabled: boolean;
     timeoutMinutes: number;
+    loop?: boolean;
   };
 }
 
@@ -78,7 +79,7 @@ export function PlayButtonCard({ playButton, onRemove, playlistContext, autoPlay
 
   // Determine if playlist controls (reorder spinner, auto-advance) will be shown
   const hasReorderControls = onReorder && playlistId !== undefined && currentIndex !== undefined && totalItems !== undefined;
-  const hasAutoAdvanceControls = (autoAdvanceSettings?.enabled ?? true) && onUpdateAutoAdvanceTimeout;
+  const hasAutoAdvanceControls = (autoAdvanceSettings?.enabled ?? false) && onUpdateAutoAdvanceTimeout;
   const hasPlaylistControls = hasReorderControls || hasAutoAdvanceControls;
 
   // Auto-play when autoPlay prop is set to true

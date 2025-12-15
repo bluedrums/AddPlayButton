@@ -70,6 +70,7 @@ interface Playlist {
 interface PlaylistAutoAdvanceSettings {
   enabled: boolean;
   timeoutMinutes: number;
+  loop?: boolean;
 }
 
 export default function PlaylistsPage() {
@@ -89,6 +90,7 @@ export default function PlaylistsPage() {
     autoAdvance?: PlaylistAutoAdvanceSettings;
   } | null>(null);
   const [autoAdvanceEnabled, setAutoAdvanceEnabled] = useState<Map<number, boolean>>(new Map());
+  const [loopEnabled, setLoopEnabled] = useState<Map<number, boolean>>(new Map());
   const [cardAutoAdvanceMinutes, setCardAutoAdvanceMinutes] = useState<Map<string, number>>(new Map());
   const [autoPlayPlaylistId, setAutoPlayPlaylistId] = useState<number | null>(null);
   const [showDonateDialog, setShowDonateDialog] = useState(false);
@@ -294,8 +296,12 @@ export default function PlaylistsPage() {
       return;
     }
 
+    // Open the accordion item first so PlayButtonCard is rendered
+    setOpenAccordionItem(`item-${playlist.id}`);
+
     // Get auto-advance enabled state for this playlist
-    const enabled = autoAdvanceEnabled.get(playlist.id) ?? true;
+    const enabled = autoAdvanceEnabled.get(playlist.id) ?? false;
+    const loop = loopEnabled.get(playlist.id) ?? false;
     const firstTrackKey = `${playlist.id}-${playlist.play_buttons[0].id}`;
     const timeoutMinutes = cardAutoAdvanceMinutes.get(firstTrackKey) ?? 4;
 
@@ -303,7 +309,7 @@ export default function PlaylistsPage() {
     setPlaylistContext({
       playlist: playlist,
       currentIndex: 0,
-      autoAdvance: { enabled, timeoutMinutes }
+      autoAdvance: { enabled, timeoutMinutes, loop }
     });
 
     // Trigger auto-play on the first track
@@ -312,6 +318,35 @@ export default function PlaylistsPage() {
 
   const handleAutoAdvanceToggle = (playlistId: number, enabled: boolean) => {
     setAutoAdvanceEnabled(prev => new Map(prev).set(playlistId, enabled));
+    
+    // Update playlist context if this playlist is currently playing
+    if (playlistContext && playlistContext.playlist?.id === playlistId) {
+      const loop = loopEnabled.get(playlistId) ?? false;
+      setPlaylistContext({
+        ...playlistContext,
+        autoAdvance: {
+          enabled,
+          timeoutMinutes: playlistContext.autoAdvance?.timeoutMinutes ?? 4,
+          loop
+        }
+      });
+    }
+  };
+
+  const handleLoopToggle = (playlistId: number, enabled: boolean) => {
+    setLoopEnabled(prev => new Map(prev).set(playlistId, enabled));
+    
+    // Update playlist context if this playlist is currently playing
+    if (playlistContext && playlistContext.playlist?.id === playlistId) {
+      setPlaylistContext({
+        ...playlistContext,
+        autoAdvance: {
+          enabled: playlistContext.autoAdvance?.enabled ?? false,
+          timeoutMinutes: playlistContext.autoAdvance?.timeoutMinutes ?? 4,
+          loop: enabled
+        }
+      });
+    }
   };
 
   const handleCardTimeoutMinutesChange = async (playlistId: number, playButtonId: string, minutes: number) => {
@@ -588,7 +623,7 @@ export default function PlaylistsPage() {
               <AccordionItem value={`item-${playlist.id}`} key={playlist.id} className="mb-[10px]">
                 <AccordionTrigger className="bg-[#EAE6F0] rounded-lg pr-[10px]">
                     <div className="flex justify-between items-center w-full pr-4">
-                        <span className="pl-[10px]">{playlist.name} ({playlist.play_buttons?.length || 0})</span>
+                        <span className="pl-[10px]">{playlist.name}</span>
                         <div className="flex gap-2" role="toolbar" aria-label="Playlist actions">
                             <div
                                 role="button"
@@ -703,17 +738,29 @@ export default function PlaylistsPage() {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
-                    {/* Auto-Advance Controls */}
+                    {/* Auto-Advance and Loop Controls */}
                     {playlist.play_buttons && playlist.play_buttons.length > 0 && (
-                      <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                        <Checkbox
-                          id={`auto-advance-${playlist.id}`}
-                          checked={autoAdvanceEnabled.get(playlist.id) ?? true}
-                          onCheckedChange={(checked) => handleAutoAdvanceToggle(playlist.id, checked === true)}
-                        />
-                        <Label htmlFor={`auto-advance-${playlist.id}`} className="text-sm font-medium cursor-pointer">
-                          Auto Advance
-                        </Label>
+                      <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`auto-advance-${playlist.id}`}
+                            checked={autoAdvanceEnabled.get(playlist.id) ?? false}
+                            onCheckedChange={(checked) => handleAutoAdvanceToggle(playlist.id, checked === true)}
+                          />
+                          <Label htmlFor={`auto-advance-${playlist.id}`} className="text-sm font-medium cursor-pointer">
+                            Auto Advance
+                          </Label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`loop-playlist-${playlist.id}`}
+                            checked={loopEnabled.get(playlist.id) ?? false}
+                            onCheckedChange={(checked) => handleLoopToggle(playlist.id, checked === true)}
+                          />
+                          <Label htmlFor={`loop-playlist-${playlist.id}`} className="text-sm font-medium cursor-pointer">
+                            Loop Playlist
+                          </Label>
+                        </div>
                       </div>
                     )}
                     {playlist.play_buttons?.map((pb, index) => (
@@ -728,7 +775,7 @@ export default function PlaylistsPage() {
                             currentIndex={index}
                             totalItems={playlist.play_buttons?.length || 0}
                             autoAdvanceSettings={{
-                              enabled: autoAdvanceEnabled.get(playlist.id) ?? true,
+                              enabled: autoAdvanceEnabled.get(playlist.id) ?? false,
                               timeoutMinutes: cardAutoAdvanceMinutes.get(`${playlist.id}-${pb.id}`) ?? 4
                             }}
                             onUpdateAutoAdvanceTimeout={(minutes) => handleCardTimeoutMinutesChange(playlist.id, pb.id, minutes)}
@@ -743,9 +790,11 @@ export default function PlaylistsPage() {
                               onTrackChange: (newIndex: number) => {
                                 // Initialize playlist context when clicking on a track in a playlist
                                 const cardKey = `${playlist.id}-${playlist.play_buttons![newIndex].id}`;
+                                const loop = loopEnabled.get(playlist.id) ?? false;
                                 const settings = {
-                                  enabled: autoAdvanceEnabled.get(playlist.id) ?? true,
-                                  timeoutMinutes: cardAutoAdvanceMinutes.get(cardKey) ?? 4
+                                  enabled: autoAdvanceEnabled.get(playlist.id) ?? false,
+                                  timeoutMinutes: cardAutoAdvanceMinutes.get(cardKey) ?? 4,
+                                  loop
                                 };
                                 setPlaylistContext({
                                   playlist: playlist,

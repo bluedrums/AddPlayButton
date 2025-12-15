@@ -47,6 +47,7 @@ interface PlaylistContext {
   autoAdvance?: {
     enabled: boolean
     timeoutMinutes: number
+    loop?: boolean
   }
 }
 
@@ -198,9 +199,22 @@ export function EmbeddedPlayerModal({
   const goToNextTrack = () => {
     if (!playlistContext) return
 
-    const { playlist, currentIndex, onTrackChange } = playlistContext
-    if (!playlist || !playlist.play_buttons || currentIndex >= playlist.play_buttons.length - 1) return
+    const { playlist, currentIndex, onTrackChange, autoAdvance } = playlistContext
+    if (!playlist || !playlist.play_buttons) return
 
+    const loop = autoAdvance?.loop ?? false
+    const isLastTrack = currentIndex >= playlist.play_buttons.length - 1
+
+    if (isLastTrack) {
+      // If at last track and loop is enabled, go to first track
+      if (loop) {
+        onTrackChange(0)
+      }
+      // Otherwise, stay on last track (no action)
+      return
+    }
+
+    // Move to next track
     const nextIndex = currentIndex + 1
     onTrackChange(nextIndex)
   }
@@ -220,18 +234,27 @@ export function EmbeddedPlayerModal({
     if (!playlistContext) return
 
     const { playlist, currentIndex, autoAdvance } = playlistContext
-    if (!playlist || !playlist.play_buttons || currentIndex >= playlist.play_buttons.length - 1) return
+    if (!playlist || !playlist.play_buttons) return
 
     // Check if auto-advance is enabled
-    const enabled = autoAdvance?.enabled ?? true
+    const enabled = autoAdvance?.enabled ?? false
     if (!enabled) return
+
+    // If we're at the last track and loop is not enabled, don't auto-advance
+    const loop = autoAdvance?.loop ?? false
+    const isLastTrack = currentIndex >= playlist.play_buttons.length - 1
+    if (isLastTrack && !loop) return
 
     // Use configurable timeout or default to 4 minutes
     const timeoutMinutes = autoAdvance?.timeoutMinutes ?? 4
     const timeoutMs = timeoutMinutes * 60 * 1000
 
     const autoAdvanceTimeout = setTimeout(() => {
-      console.log(`Auto-advancing to next track after ${timeoutMinutes} minutes`)
+      if (isLastTrack && loop) {
+        console.log(`Looping playlist after ${timeoutMinutes} minutes`)
+      } else {
+        console.log(`Auto-advancing to next track after ${timeoutMinutes} minutes`)
+      }
       goToNextTrack()
     }, timeoutMs)
 
