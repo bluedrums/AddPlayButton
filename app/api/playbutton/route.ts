@@ -13,25 +13,25 @@ export async function GET(request: Request) {
 
     console.log(`playbutton GET: fid from header: ${fidStr}, id from query: ${id}`);
 
-    if (!fidStr || !id) {
-      return NextResponse.json({ error: 'Missing authentication token or resource ID' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: 'Missing resource ID' }, { status: 400 });
     }
 
-    const fid = Number(fidStr);
-    if (isNaN(fid)) {
-      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 400 });
-    }
-
-    let rows;
+    let rows: { data: unknown }[] = [];
+    
+    // Try fetching with user_fid first when provided
     if (fidStr) {
-      // Try fetching with user_fid first when provided
-      rows = (await sql`
-        SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
-      `).rows;
+      const fid = Number(fidStr);
+      if (!isNaN(fid)) {
+        rows = (await sql`
+          SELECT data FROM play_buttons WHERE user_fid = ${fid} AND id = ${id};
+        `).rows;
+      }
     }
 
     // Fallback to lookup by id only (public share) when header missing or nothing found
-    if (!fidStr || rows.length === 0) {
+    if (rows.length === 0) {
+      console.log(`Falling back to ID-only lookup for id: ${id}`);
       rows = (await sql`
         SELECT data FROM play_buttons WHERE id = ${id} LIMIT 1;
       `).rows;

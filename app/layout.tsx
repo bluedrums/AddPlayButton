@@ -34,6 +34,17 @@ export const metadata: Metadata = {
     description: "Create interactive casts for music and video links",
     images: [`/ThePlayButton.png`],
   },
+  other: {
+    "fc:miniapp": JSON.stringify(embed),
+    "fc:frame": JSON.stringify(embed),
+    "of:accepts:farcaster": "vNext",
+    "of:accepts:xmtp": "2024-02-01",
+    "of:image": imageUrl,
+    "of:image:aspect_ratio": "1.91:1",
+    "of:button:1": "Add Play Button",
+    "of:button:1:action": "link",
+    "of:button:1:target": baseUrl,
+  },
 };
 
 export const viewport: Viewport = {

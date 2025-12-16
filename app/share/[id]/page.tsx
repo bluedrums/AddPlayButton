@@ -5,19 +5,25 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ fid?: string; playlistId?: string; startIndex?: string }>;
+};
+
 export async function generateMetadata({ 
   params, 
   searchParams 
-}: { 
-  params: { id: string }, 
-  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
-}): Promise<Metadata> {
+}: Props): Promise<Metadata> {
   try {
-    const encodedId = params.id;
+    // In Next.js 15, params and searchParams are Promises
+    const resolvedParams = await params;
+    const resolvedSearchParams = await searchParams;
+    
+    const encodedId = resolvedParams.id;
     const id = decodeURIComponent(encodedId);
-    const fidStr = searchParams.fid;
-    const playlistIdStr = searchParams.playlistId;
-    const startIndexStr = searchParams.startIndex;
+    const fidStr = resolvedSearchParams.fid;
+    const playlistIdStr = resolvedSearchParams.playlistId;
+    const startIndexStr = resolvedSearchParams.startIndex;
 
     const fid = fidStr ? Number(fidStr) : undefined;
     
@@ -117,12 +123,13 @@ export async function generateMetadata({
 export default async function SharePage({ 
   params, 
   searchParams 
-}: { 
-  params: { id: string }, 
-  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
-}) {
-  const { id } = params;
-  const fidStr = searchParams.fid;
+}: Props) {
+  // In Next.js 15, params and searchParams are Promises
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
+  const id = decodeURIComponent(resolvedParams.id);
+  const fidStr = resolvedSearchParams.fid;
   const fid = fidStr ? Number(fidStr) : 12345;
   const playButton = await fetchPlayButton(fid, id);
 
@@ -149,4 +156,4 @@ export default async function SharePage({
       </pre>
     </div>
   );
-} 
+}
