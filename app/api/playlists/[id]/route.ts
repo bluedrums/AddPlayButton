@@ -10,10 +10,12 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const playlistId = Number(params.id);
+    // In Next.js 15, route handler params are Promises
+    const resolvedParams = await params;
+    const playlistId = Number(resolvedParams.id);
     
     if (isNaN(playlistId)) {
       return NextResponse.json({ error: 'Invalid playlist ID' }, { status: 400 });
