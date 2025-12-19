@@ -5,19 +5,26 @@ import type { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type PageParams = Promise<{ id: string }>;
+type SearchParams = Promise<{ fid?: string; playlistId?: string; startIndex?: string }>;
+
 export async function generateMetadata({ 
   params, 
   searchParams 
 }: { 
-  params: { id: string }, 
-  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
+  params: PageParams;
+  searchParams: SearchParams;
 }): Promise<Metadata> {
   try {
-    const encodedId = params.id;
+    // Await params and searchParams (required in Next.js 15+)
+    const resolvedParams = await params;
+    const resolvedSearchParams = await searchParams;
+    
+    const encodedId = resolvedParams.id;
     const id = decodeURIComponent(encodedId);
-    const fidStr = searchParams.fid;
-    const playlistIdStr = searchParams.playlistId;
-    const startIndexStr = searchParams.startIndex;
+    const fidStr = resolvedSearchParams.fid;
+    const playlistIdStr = resolvedSearchParams.playlistId;
+    const startIndexStr = resolvedSearchParams.startIndex;
 
     const fid = fidStr ? Number(fidStr) : undefined;
     
@@ -118,11 +125,15 @@ export default async function SharePage({
   params, 
   searchParams 
 }: { 
-  params: { id: string }, 
-  searchParams: { fid?: string, playlistId?: string, startIndex?: string } 
+  params: PageParams;
+  searchParams: SearchParams;
 }) {
-  const { id } = params;
-  const fidStr = searchParams.fid;
+  // Await params and searchParams (required in Next.js 15+)
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
+  const id = decodeURIComponent(resolvedParams.id);
+  const fidStr = resolvedSearchParams.fid;
   const fid = fidStr ? Number(fidStr) : 12345;
   const playButton = await fetchPlayButton(fid, id);
 
@@ -149,4 +160,4 @@ export default async function SharePage({
       </pre>
     </div>
   );
-} 
+}
