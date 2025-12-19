@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+type RouteParams = Promise<{ id: string }>;
+
 /**
  * Public endpoint to fetch a playlist by ID for share metadata generation.
  * This endpoint does not require authentication - it's used for generating
@@ -10,10 +12,12 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: RouteParams }
 ) {
   try {
-    const playlistId = Number(params.id);
+    // Await params (required in Next.js 15+)
+    const resolvedParams = await params;
+    const playlistId = Number(resolvedParams.id);
     
     if (isNaN(playlistId)) {
       return NextResponse.json({ error: 'Invalid playlist ID' }, { status: 400 });

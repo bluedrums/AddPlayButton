@@ -12,6 +12,7 @@ const publicRoutes = [
   { path: '/api/oembed', methods: ['GET'] },
   { path: '/api/user/casts', methods: ['GET'] },
   { path: '/api/playbutton', methods: ['GET'], exact: true }, // Public for share page SSR, but NOT /all
+  { path: '/api/playlists/', methods: ['GET'] }, // Public for playlist playback from cast embeds (e.g., /api/playlists/123)
   { path: '/api/metadata', methods: ['GET'] }, // Public for fetching metadata
   { path: '/api/env-check', methods: ['GET'] }, // Public for environment variable checking
 ];
