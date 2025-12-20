@@ -48,20 +48,70 @@ export async function GET(request: Request) {
     }
     const html = await response.text();
     
-    // Simple regex patterns that were likely working before
-    const imageUrlMatch = html.match(/<meta\s+(?:name|property)="og:image"\s+content="(.*?)"/);
+    // Enhanced regex patterns to handle different quote styles and formats
+    // Try og:image with double quotes
+    let imageUrlMatch = html.match(/<meta\s+(?:name|property)="og:image"\s+content="([^"]+)"/i);
+    // Try og:image with single quotes
+    if (!imageUrlMatch) {
+      imageUrlMatch = html.match(/<meta\s+(?:name|property)='og:image'\s+content='([^']+)'/i);
+    }
+    // Try og:image without quotes
+    if (!imageUrlMatch) {
+      imageUrlMatch = html.match(/<meta\s+(?:name|property)=["']?og:image["']?\s+content=([^\s>]+)/i);
+    }
+    // Try Twitter card image as fallback
+    if (!imageUrlMatch) {
+      imageUrlMatch = html.match(/<meta\s+(?:name|property)="twitter:image"\s+content="([^"]+)"/i);
+    }
+    // Try link rel="image_src" as another fallback
+    if (!imageUrlMatch) {
+      imageUrlMatch = html.match(/<link\s+rel=["']?image_src["']?\s+href=["']?([^"'\s>]+)/i);
+    }
     const imageUrl = imageUrlMatch ? imageUrlMatch[1] : null;
 
-    let titleMatch = html.match(/<meta\s+(?:name|property)="og:title"\s+content="(.*?)"/);
+    // Extract title - try og:title first
+    let titleMatch = html.match(/<meta\s+(?:name|property)="og:title"\s+content="([^"]+)"/i);
+    if (!titleMatch) {
+      titleMatch = html.match(/<meta\s+(?:name|property)='og:title'\s+content='([^']+)'/i);
+    }
     let title = titleMatch ? titleMatch[1] : null;
 
+    // Fallback to regular title tag
     if (!title) {
-      titleMatch = html.match(/<title>(.*?)<\/title>/);
+      titleMatch = html.match(/<title>(.*?)<\/title>/i);
       title = titleMatch ? titleMatch[1] : null;
     }
+
+    // Extract artist/author information
+    let artist: string | null = null;
+    // Try og:site_name (often used for artist/band name on Bandcamp)
+    let artistMatch = html.match(/<meta\s+(?:name|property)="og:site_name"\s+content="([^"]+)"/i);
+    if (artistMatch) {
+      artist = artistMatch[1];
+    }
+    // Try music:musician or music:artist
+    if (!artist) {
+      artistMatch = html.match(/<meta\s+(?:name|property)="music:musician"\s+content="([^"]+)"/i);
+      if (artistMatch) {
+        artist = artistMatch[1];
+      }
+    }
+    if (!artist) {
+      artistMatch = html.match(/<meta\s+(?:name|property)="music:artist"\s+content="([^"]+)"/i);
+      if (artistMatch) {
+        artist = artistMatch[1];
+      }
+    }
+    // Try author meta tag
+    if (!artist) {
+      artistMatch = html.match(/<meta\s+(?:name|property)="author"\s+content="([^"]+)"/i);
+      if (artistMatch) {
+        artist = artistMatch[1];
+      }
+    }
     
-    console.log('Metadata API result:', { imageUrl, title, url });
-    return NextResponse.json({ imageUrl, title });
+    console.log('Metadata API result:', { imageUrl, title, artist, url });
+    return NextResponse.json({ imageUrl, title, artist: artist || undefined });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Metadata fetching error:', message);

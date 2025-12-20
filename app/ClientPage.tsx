@@ -388,17 +388,23 @@ export default function ClientPage() {
       return { platform: "Mixcloud", embedUrl: `https://www.mixcloud.com/widget/iframe/?feed=${encodeURIComponent(cleanUrl)}&hide_cover=1&autoplay=1` }
     }
     if (cleanUrl.includes("suno.com")) {
-      // Suno URLs: https://suno.com/song/{song-id}
-      // Embed URLs: https://suno.com/embed/{song-id}
-      const songMatch = cleanUrl.match(/suno\.com\/song\/([a-f0-9-]+)/i)
+      // Suno URLs: https://suno.com/s/{short-id}
+      // Embed URLs: https://suno.com/embed/{short-id}
+      const songMatch = cleanUrl.match(/suno\.com\/s\/([a-zA-Z0-9]+)/i)
       if (songMatch && songMatch[1]) {
         const songId = songMatch[1]
         return { platform: "Suno", embedUrl: `https://suno.com/embed/${songId}` }
       }
       // Also check if it's already an embed URL
-      const embedMatch = cleanUrl.match(/suno\.com\/embed\/([a-f0-9-]+)/i)
+      const embedMatch = cleanUrl.match(/suno\.com\/embed\/([a-zA-Z0-9]+)/i)
       if (embedMatch && embedMatch[1]) {
         return { platform: "Suno", embedUrl: cleanUrl }
+      }
+      // Legacy support for /song/ format (UUID)
+      const legacySongMatch = cleanUrl.match(/suno\.com\/song\/([a-f0-9-]+)/i)
+      if (legacySongMatch && legacySongMatch[1]) {
+        const songId = legacySongMatch[1]
+        return { platform: "Suno", embedUrl: `https://suno.com/embed/${songId}` }
       }
     }
     if (cleanUrl.includes("bandcamp.com")) {
@@ -444,6 +450,34 @@ export default function ClientPage() {
         imageUrl = metadata.imageUrl;
         if (metadata.artist) {
           oembedData.author_name = metadata.artist;
+        }
+      } else if (detection.platform === "Bandcamp") {
+        // Bandcamp: Try oEmbed first, then fall back to metadata API if no thumbnail
+        try {
+          oembedData = await fetchOembedData(detection.oembedEndpoint!);
+          imageUrl = oembedData.thumbnail_url;
+          console.log(`Bandcamp oEmbed result:`, { thumbnail_url: imageUrl, title: oembedData.title });
+        } catch (error) {
+          console.warn('Bandcamp oEmbed failed, trying metadata API:', error);
+        }
+        
+        // Fallback to metadata API if oEmbed didn't return a thumbnail
+        if (!imageUrl) {
+          try {
+            const metadata = await api(`/api/metadata?url=${encodeURIComponent(url)}`);
+            console.log(`Bandcamp metadata fallback:`, metadata);
+            if (metadata.imageUrl) {
+              imageUrl = metadata.imageUrl;
+            }
+            if (metadata.title && !oembedData.title) {
+              oembedData.title = metadata.title;
+            }
+            if (metadata.artist) {
+              oembedData.author_name = metadata.artist;
+            }
+          } catch (error) {
+            console.warn('Bandcamp metadata API also failed:', error);
+          }
         }
       } else if (detection.oembedEndpoint) {
         oembedData = await fetchOembedData(detection.oembedEndpoint);
@@ -744,7 +778,7 @@ export default function ClientPage() {
                 {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Connecting...</>) : (<><User className="w-4 h-4 mr-2" />Log In</>)}
               </Button>
               {authError && <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{authError}</AlertDescription></Alert>}
-              <Alert><Info className="h-4 w-4" /><AlertDescription>This app only works when opened from within the Base app or a Farcaster client.</AlertDescription></Alert>
+              <Alert><Info className="h-4 w-4" /><AlertDescription>This app only works when opened from within a supported miniapp client.</AlertDescription></Alert>
               <Button variant="ghost" size="sm" onClick={() => setShowDebug(!showDebug)} className="w-full"><Settings className="w-4 h-4 mr-2" />Debug Info</Button>
               {showDebug && <div className="bg-gray-100 p-3 rounded-lg text-xs space-y-1">
                 <div>Loading: {isLoading ? "Yes" : "No"}</div>
