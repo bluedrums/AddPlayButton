@@ -388,11 +388,14 @@ export default function ClientPage() {
       return { platform: "Mixcloud", embedUrl: `https://www.mixcloud.com/widget/iframe/?feed=${encodeURIComponent(cleanUrl)}&hide_cover=1&autoplay=1` }
     }
     if (cleanUrl.includes("suno.com")) {
-      // Suno URLs: https://suno.com/s/{short-id}
-      // Embed URLs: https://suno.com/embed/{short-id}
+      // Suno URLs: https://suno.com/s/{short-id} (short format - will be converted to UUID during validation)
+      // Suno URLs: https://suno.com/song/{uuid} (full format with UUID)
+      // Embed URLs: https://suno.com/embed/{uuid} (requires UUID, not short ID)
+      // Note: Short URLs are accepted as input but will be converted to UUID format during validation
       const songMatch = cleanUrl.match(/suno\.com\/s\/([a-zA-Z0-9]+)/i)
       if (songMatch && songMatch[1]) {
         const songId = songMatch[1]
+        // Initial embed URL with short ID - will be updated to UUID format during validation
         return { platform: "Suno", embedUrl: `https://suno.com/embed/${songId}` }
       }
       // Also check if it's already an embed URL
@@ -450,6 +453,14 @@ export default function ClientPage() {
         imageUrl = metadata.imageUrl;
         if (metadata.artist) {
           oembedData.author_name = metadata.artist;
+        }
+        
+        // For Suno, if we have a UUID in the metadata, update the embed URL
+        // This converts short ID format (suno.com/s/{short-id}) to UUID format (suno.com/embed/{uuid})
+        // The original short URL is preserved in the 'url' field, while embedUrl uses UUID for embedding
+        if (detection.platform === "Suno" && metadata.uuid) {
+          detection.embedUrl = `https://suno.com/embed/${metadata.uuid}`;
+          console.log(`Updated Suno embed URL with UUID:`, detection.embedUrl);
         }
       } else if (detection.platform === "Bandcamp") {
         // Bandcamp: Try oEmbed first, then fall back to metadata API if no thumbnail

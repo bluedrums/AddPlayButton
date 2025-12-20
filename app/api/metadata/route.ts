@@ -37,8 +37,41 @@ export async function GET(request: Request) {
       return NextResponse.json({ imageUrl, title, artist });
     }
     
+    // Check if it's a Suno URL - need to follow redirects to get UUID for short URLs
+    let finalUrl = url;
+    let uuid: string | null = null;
+    if (url.includes('suno.com')) {
+      // First check if URL already contains a UUID (full song URL format)
+      const existingUuidMatch = url.match(/suno\.com\/song\/([a-f0-9-]+)/i);
+      if (existingUuidMatch && existingUuidMatch[1]) {
+        uuid = existingUuidMatch[1];
+        console.log('Found Suno UUID in URL:', uuid);
+      } else {
+        // For short URLs (suno.com/s/{short-id}), follow redirects to get UUID
+        try {
+          // Follow redirects to get the final URL with UUID
+          const redirectResponse = await fetch(url, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            },
+            redirect: 'follow'
+          });
+          finalUrl = redirectResponse.url;
+          
+          // Extract UUID from the final URL (format: suno.com/song/{uuid})
+          const uuidMatch = finalUrl.match(/suno\.com\/song\/([a-f0-9-]+)/i);
+          if (uuidMatch && uuidMatch[1]) {
+            uuid = uuidMatch[1];
+            console.log('Extracted Suno UUID:', uuid, 'from final URL:', finalUrl);
+          }
+        } catch (error) {
+          console.warn('Failed to follow Suno redirect, using original URL:', error);
+        }
+      }
+    }
+    
     // For non-Mixcloud URLs, use the original HTML scraping method
-    const response = await fetch(url, {
+    const response = await fetch(finalUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
@@ -110,8 +143,15 @@ export async function GET(request: Request) {
       }
     }
     
-    console.log('Metadata API result:', { imageUrl, title, artist, url });
-    return NextResponse.json({ imageUrl, title, artist: artist || undefined });
+    const result: any = { imageUrl, title, artist: artist || undefined };
+    
+    // Include UUID for Suno URLs
+    if (uuid) {
+      result.uuid = uuid;
+    }
+    
+    console.log('Metadata API result:', result);
+    return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Metadata fetching error:', message);
