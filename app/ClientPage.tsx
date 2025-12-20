@@ -387,6 +387,30 @@ export default function ClientPage() {
     if (cleanUrl.includes("mixcloud.com")) {
       return { platform: "Mixcloud", embedUrl: `https://www.mixcloud.com/widget/iframe/?feed=${encodeURIComponent(cleanUrl)}&hide_cover=1&autoplay=1` }
     }
+    if (cleanUrl.includes("suno.com")) {
+      // Suno URLs: https://suno.com/song/{song-id}
+      // Embed URLs: https://suno.com/embed/{song-id}
+      const songMatch = cleanUrl.match(/suno\.com\/song\/([a-f0-9-]+)/i)
+      if (songMatch && songMatch[1]) {
+        const songId = songMatch[1]
+        return { platform: "Suno", embedUrl: `https://suno.com/embed/${songId}` }
+      }
+      // Also check if it's already an embed URL
+      const embedMatch = cleanUrl.match(/suno\.com\/embed\/([a-f0-9-]+)/i)
+      if (embedMatch && embedMatch[1]) {
+        return { platform: "Suno", embedUrl: cleanUrl }
+      }
+    }
+    if (cleanUrl.includes("bandcamp.com")) {
+      // Bandcamp URLs can be album or track URLs
+      // We'll use the original URL in the embed player format
+      // Bandcamp embed format: https://bandcamp.com/EmbeddedPlayer/?url={encoded-url}
+      return { 
+        platform: "Bandcamp", 
+        embedUrl: `https://bandcamp.com/EmbeddedPlayer/?url=${encodeURIComponent(cleanUrl)}&size=large&bgcol=ffffff&linkcol=7137dc&transparent=true`,
+        oembedEndpoint: `https://bandcamp.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`
+      }
+    }
     return null
   }
 
@@ -408,12 +432,12 @@ export default function ClientPage() {
     setTitle("")
     try {
       const detection = detectPlatform(url)
-      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, Vimeo, or Mixcloud links.")
+      if (!detection) throw new Error("Unsupported platform. Please use Spotify, Apple Music, YouTube, SoundCloud, Vimeo, Suno, Bandcamp, or Mixcloud links.")
       
       let oembedData: OembedData = {};
       let imageUrl: string | undefined;
       
-      if (detection.platform === "Apple Music" || detection.platform === "Mixcloud") {
+      if (detection.platform === "Apple Music" || detection.platform === "Mixcloud" || detection.platform === "Suno") {
         const metadata = await api(`/api/metadata?url=${encodeURIComponent(url)}`);
         console.log(`${detection.platform} metadata:`, metadata);
         oembedData.title = metadata.title;
