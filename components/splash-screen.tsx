@@ -16,7 +16,7 @@ const SplashScreen = () => {
         zIndex: 9999,
       }}
     >
-      <Image src="/appicon.jpg" alt="App Icon" width={128} height={128} className="rounded-3xl" />
+      <Image src="/appicon(whiteontransparent).png" alt="App Icon" width={128} height={128} className="rounded-3xl" />
     </div>
   );
 };

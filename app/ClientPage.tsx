@@ -775,9 +775,9 @@ export default function ClientPage() {
             <CardHeader className="text-center">
               <CardTitle className="flex items-center justify-center gap-2">
                 <User className="w-5 h-5" />
-                Connect with Base/Farcaster
+                Connect with a miniapp client.
               </CardTitle>
-              <CardDescription>Get started with your Base account to create and share play buttons</CardDescription>
+              <CardDescription>Get started with a wallet to create and share play buttons. <a href="https://base.app" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">Get the Base app here.</a></CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-center">
