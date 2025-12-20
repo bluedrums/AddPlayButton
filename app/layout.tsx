@@ -73,7 +73,7 @@ export default function RootLayout({
           }}
         >
           <img 
-            src="/appicon.jpg" 
+            src="/appicon(whiteontransparent).png" 
             alt="App Icon" 
             style={{
               width: '128px',
@@ -82,29 +82,6 @@ export default function RootLayout({
               marginBottom: '24px'
             }}
           />
-          <h1 
-            style={{
-              fontSize: '28px',
-              fontWeight: '700',
-              color: 'white',
-              margin: '0 0 8px 0',
-              textAlign: 'center',
-            }}
-          >
-            Add Play Button
-          </h1>
-          <p 
-            style={{
-              fontSize: '16px',
-              fontWeight: '400',
-              color: 'white',
-              margin: 0,
-              textAlign: 'center',
-              opacity: 0.9,
-            }}
-          >
-            Share and drive traffic anywhere.
-          </p>
         </div>
         <style dangerouslySetInnerHTML={{
           __html: `
