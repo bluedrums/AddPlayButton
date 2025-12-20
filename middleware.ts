@@ -15,6 +15,7 @@ const publicRoutes = [
   { path: '/api/playlists/', methods: ['GET'] }, // Public for playlist playback from cast embeds (e.g., /api/playlists/123)
   { path: '/api/metadata', methods: ['GET'] }, // Public for fetching metadata
   { path: '/api/env-check', methods: ['GET'] }, // Public for environment variable checking
+  { path: '/api/notifications/test', methods: ['GET'] }, // Public for testing notifications setup
 ];
 
 // Define which routes are exempt from CSRF protection
