@@ -41,6 +41,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useWallet } from "@/hooks/use-wallet";
+import { useCastDeepLink } from "@/hooks/use-cast-deep-link";
+import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
 // PlaylistIcon as a React component (SVG from components/icons/Icon/Filled/Playlist.svg)
 const PlaylistIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -101,15 +103,64 @@ export default function PlaylistsPage() {
   const [renameValue, setRenameValue] = useState('');
   const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false);
   const [playlistToDelete, setPlaylistToDelete] = useState<Playlist | null>(null);
+  const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
+  const [activePlayButton, setActivePlayButton] = useState<PlayButton | null>(null);
+  const defaultSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+  const [safeArea, setSafeArea] = useState(defaultSafeArea);
 
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchPlaylists();
       fetchAllPlayButtons();
     } else {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [isAuthenticated, user]);
+
+  // Get safe area insets
+  useEffect(() => {
+    const getSafeAreaInsets = async () => {
+      try {
+        const context = await sdk.context;
+        if (context?.client?.safeAreaInsets && typeof context.client.safeAreaInsets.top === 'number') {
+          setSafeArea(context.client.safeAreaInsets);
+        }
+      } catch (error) {
+        console.warn('Failed to get safe area insets:', error);
+      }
+    };
+
+    getSafeAreaInsets();
+  }, []);
+
+  // Deep link handling via SDK context - monitors for changes when app is already open
+  useCastDeepLink({
+    onPlayButtonFound: (playButton) => {
+      setActivePlayButton(playButton);
+      setIsPlayerModalOpen(true);
+    },
+    onPlaylistFound: (playlistData, startIndex) => {
+      const trackToPlay = playlistData.play_buttons![startIndex];
+      const enabled = autoAdvanceEnabled.get(playlistData.id) ?? false;
+      const loop = loopEnabled.get(playlistData.id) ?? false;
+      const cardKey = `${playlistData.id}-${trackToPlay.id}`;
+      const timeoutMinutes = cardAutoAdvanceMinutes.get(cardKey) ?? 4;
+      
+      setPlaylistContext({
+        playlist: playlistData,
+        currentIndex: startIndex,
+        autoAdvance: { enabled, timeoutMinutes, loop }
+      });
+      setActivePlayButton({
+        ...trackToPlay,
+        createdAt: new Date(trackToPlay.createdAt)
+      });
+      setIsPlayerModalOpen(true);
+      // Open the accordion item for this playlist
+      setOpenAccordionItem(`item-${playlistData.id}`);
+      toast.success(`Playing: ${trackToPlay.title}`);
+    },
+  });
 
   const fetchPlaylists = async () => {
     setIsLoading(true);
@@ -555,6 +606,29 @@ export default function PlaylistsPage() {
   return (
     <MainLayout>
     <div className="bg-[#F9F5FF] min-h-screen">
+      {activePlayButton && (
+        <EmbeddedPlayerModal
+          isOpen={isPlayerModalOpen}
+          onClose={() => {
+            setIsPlayerModalOpen(false);
+            setActivePlayButton(null);
+            // Don't reset playlistContext here as it might be used by PlayButtonCard
+          }}
+          playButton={activePlayButton}
+          safeArea={safeArea}
+          playlistContext={playlistContext ? {
+            playlist: playlistContext.playlist ? {
+              id: playlistContext.playlist.id,
+              name: playlistContext.playlist.name,
+              play_buttons: playlistContext.playlist.play_buttons || []
+            } : null,
+            currentIndex: playlistContext.currentIndex,
+            onTrackChange: handlePlaylistTrackChange,
+            isFromCast: true,
+            autoAdvance: playlistContext.autoAdvance
+          } : undefined}
+        />
+      )}
     <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
             <div className="flex items-center justify-between mb-4">

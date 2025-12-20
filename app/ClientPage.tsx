@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { PlaylistCombobox } from "@/components/playlist-combobox";
 import { useWallet } from "@/hooks/use-wallet";
 import { useClientContext } from "@/hooks/use-client-context";
+import { useCastDeepLink } from "@/hooks/use-cast-deep-link";
 
 // Base Pay API types
 declare global {
@@ -92,145 +93,82 @@ export default function ClientPage() {
   const { sendUSDC, isProcessing: isWalletProcessing, clientType, isBase } = useWallet();
   const { isLoading: isClientLoading } = useClientContext();
 
-  // Deep link handling via SDK context
+  // Deep link handling via SDK context - monitors for changes when app is already open
+  useCastDeepLink({
+    onPlayButtonFound: (playButton) => {
+      setActivePlayButton(playButton);
+      setIsPlayerModalOpen(true);
+    },
+    onPlaylistFound: (playlistData, startIndex) => {
+      const trackToPlay = playlistData.play_buttons![startIndex];
+      setPlaylistContext({
+        playlist: playlistData,
+        currentIndex: startIndex,
+        isFromCast: true
+      });
+      setActivePlayButton({
+        ...trackToPlay,
+        createdAt: new Date(trackToPlay.createdAt)
+      });
+      setIsPlayerModalOpen(true);
+      toast.success(`Playing: ${trackToPlay.title}`);
+    },
+  });
+
+  // Handle legacy playlist playback initiation from cast embed (no frameUrl)
   useEffect(() => {
-    const handleDeepLink = async () => {
+    let intervalId: NodeJS.Timeout | null = null;
+    let lastPath: string | null = null;
+
+    const checkLegacyPlaylist = async () => {
       try {
         const context = await sdk.context;
-        let frameUrl: string | undefined;
+        const currentPath = context.location?.type === 'cast_share' 
+          ? context.location.cast?.hash 
+          : null;
 
-        if (context.location?.type === 'cast_embed') {
-          frameUrl = context.location.embed;
-        } else if (context.location?.type === 'cast_share' && context.location.cast.embeds) {
-          for (const embed of context.location.cast.embeds) {
-            if (typeof embed === 'string' && embed.startsWith('http')) {
-              frameUrl = embed;
-              break;
-            }
-            if (typeof embed === 'object' && embed !== null && 'url' in embed && typeof (embed as any).url === 'string') {
-              frameUrl = (embed as any).url;
-              break;
-            }
-          }
-        }
+        // Only process if path changed
+        if (currentPath === lastPath) return;
+        lastPath = currentPath;
 
-        if (frameUrl) {
-          console.log('Found frameUrl for deep linking:', frameUrl);
-          const url = new URL(frameUrl);
-          const pathSegments = url.pathname.split('/').filter(Boolean); // e.g., ['share', 'some-id']
-          const playlistIdStr = url.searchParams.get('playlistId');
-          const startIndexStr = url.searchParams.get('startIndex');
-
-          // Handle playlist share with context
-          if (playlistIdStr) {
-            const playlistId = Number(playlistIdStr);
-            const startIndex = Number(startIndexStr) || 0;
-
-            if (!isNaN(playlistId)) {
-              console.log(`Playlist share deep link: playlistId=${playlistId}, startIndex=${startIndex}`);
-              try {
-                const playlistData = await api(`/api/playlists/${playlistId}`);
-                if (playlistData.error) {
-                  toast.error('This playlist was not found. It may have been deleted.');
-                } else if (playlistData.play_buttons && playlistData.play_buttons.length > 0) {
-                  const validStartIndex = Math.min(
-                    Math.max(0, startIndex),
-                    playlistData.play_buttons.length - 1
-                  );
-                  const trackToPlay = playlistData.play_buttons[validStartIndex];
+        // Check if we're in a cast_share context (legacy playlist case)
+        if (context.location?.type === 'cast_share') {
+          const fid = context.user?.fid;
+          if (fid) {
+            try {
+              const playlistsData = await api('/api/playlists');
+              if (playlistsData && playlistsData.length > 0) {
+                const playlistToPlay = playlistsData[0];
+                if (playlistToPlay.play_buttons && playlistToPlay.play_buttons.length > 0) {
+                  const firstTrack = playlistToPlay.play_buttons[0];
                   setPlaylistContext({
-                    playlist: playlistData,
-                    currentIndex: validStartIndex,
+                    playlist: playlistToPlay,
+                    currentIndex: 0,
                     isFromCast: true
                   });
-                  setActivePlayButton({
-                    ...trackToPlay,
-                    createdAt: new Date(trackToPlay.createdAt)
-                  });
+                  setActivePlayButton(firstTrack);
                   setIsPlayerModalOpen(true);
-                  toast.success(`Playing: ${trackToPlay.title}`);
-                } else {
-                  toast.error('This playlist is empty.');
+                  toast.success(`Playing playlist: ${playlistToPlay.name}`);
                 }
-              } catch (error) {
-                console.error('Failed to fetch playlist for playback:', error);
-                toast.error('Failed to load playlist');
               }
-            }
-          }
-          // Handle individual play button share (no playlist context)
-          else if (pathSegments[0] === 'share' && pathSegments[1]) {
-            const playButtonId = decodeURIComponent(pathSegments[1]);
-            const fid = context.user?.fid;
-
-            if (playButtonId && fid) {
-              console.log(`Deep link details: playButtonId=${playButtonId}, fid=${fid}`);
-
-              // Pass FID in headers, not as query parameter
-              const data = await api(`/api/playbutton?id=${playButtonId}`, {
-                headers: { 'x-user-fid': String(fid) }
-              });
-
-              if (data.error) {
-                if (data.error === 'Play button not found') {
-                  toast.error('This play button was not found. It may have been deleted.');
-                } else {
-                  toast.error(data.error);
-                }
-              } else {
-                const pb = {...data, createdAt: new Date(data.createdAt)};
-                setActivePlayButton(pb);
-                setIsPlayerModalOpen(true);
-              }
-            }
-          } else if (pathSegments[0] === 'playlists') {
-            // Handle legacy playlist playback initiation from cast embed
-            const fid = context.user?.fid;
-
-            if (fid) {
-              console.log(`Legacy playlist playback initiated from cast: fid=${fid}`);
-
-              try {
-                // Fetch user's playlists
-                const playlistsData = await api('/api/playlists');
-
-                if (playlistsData && playlistsData.length > 0) {
-                  // Use the first playlist (or most recently created)
-                  const playlistToPlay = playlistsData[0];
-
-                  if (playlistToPlay.play_buttons && playlistToPlay.play_buttons.length > 0) {
-                    const firstTrack = playlistToPlay.play_buttons[0];
-
-                    // Set up playlist context
-                    setPlaylistContext({
-                      playlist: playlistToPlay,
-                      currentIndex: 0,
-                      isFromCast: true
-                    });
-
-                    // Set the active play button to the first track
-                    setActivePlayButton(firstTrack);
-                    setIsPlayerModalOpen(true);
-
-                    toast.success(`Playing playlist: ${playlistToPlay.name}`);
-                  } else {
-                    toast.error('This playlist is empty. Add some tracks first!');
-                  }
-                } else {
-                  toast.error('No playlists found. Create a playlist first!');
-                }
-              } catch (error) {
-                console.error('Failed to fetch playlists for playback:', error);
-                toast.error('Failed to load playlist');
-              }
+            } catch (error) {
+              console.error('Failed to fetch playlists for playback:', error);
             }
           }
         }
       } catch (error) {
-        console.error('Failed to handle deep link from SDK context:', error);
+        console.error('Failed to check legacy playlist context:', error);
       }
     };
-    handleDeepLink();
+
+    // Check periodically for legacy playlist case
+    intervalId = setInterval(checkLegacyPlaylist, 1000);
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
   }, []);
 
   // Call SDK ready when component mounts and authentication is resolved
@@ -824,7 +762,7 @@ export default function ClientPage() {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Music className="w-5 h-5" />Add New Play Button</CardTitle>
-            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, Vimeo, Mixcloud, and SoundCloud. Share and drive traffic everywhere.</CardDescription>
+            <CardDescription>Paste a link from Spotify, Apple Music, YouTube, Vimeo, Suno, Bandcamp, Mixcloud, and SoundCloud. Share and drive traffic everywhere.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">

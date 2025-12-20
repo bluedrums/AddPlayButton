@@ -91,9 +91,18 @@ export function EmbeddedPlayerModal({
   useEffect(() => {
     if (isOpen) {
       setIsFullOverlay(true);
+      // Add class to body to hide navigation
+      document.body.classList.add('player-modal-open');
     } else {
       setIsFullOverlay(false);
+      // Remove class from body to show navigation
+      document.body.classList.remove('player-modal-open');
     }
+    
+    // Cleanup: remove class when component unmounts
+    return () => {
+      document.body.classList.remove('player-modal-open');
+    };
   }, [isOpen]);
 
   // Handle ESC key to exit fullscreen
@@ -275,8 +284,32 @@ export function EmbeddedPlayerModal({
         return "bg-red-500"
       case "soundcloud":
         return "bg-orange-500"
+      case "suno":
+        return "bg-purple-500"
+      case "bandcamp":
+        return "bg-blue-500"
       default:
         return "bg-purple-500"
+    }
+  }
+
+  // Check if the embed URL is from Suno
+  const isSunoEmbed = (embedUrl: string) => {
+    try {
+      const url = new URL(embedUrl)
+      return url.hostname === "suno.com" && url.pathname.startsWith("/embed/")
+    } catch {
+      return false
+    }
+  }
+
+  // Check if the embed URL is from Bandcamp
+  const isBandcampEmbed = (embedUrl: string) => {
+    try {
+      const url = new URL(embedUrl)
+      return url.hostname === "bandcamp.com" && url.pathname.startsWith("/EmbeddedPlayer/")
+    } catch {
+      return false
     }
   }
 
@@ -352,7 +385,10 @@ export function EmbeddedPlayerModal({
                 height="100%"
                 frameBorder="0"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                allowFullScreen
                 loading="lazy"
+                referrerPolicy={isSunoEmbed(playButton.embedUrl) ? "no-referrer-when-downgrade" : undefined}
+                seamless={isBandcampEmbed(playButton.embedUrl) ? true : undefined}
                 className="w-full h-full"
                 title={`${playButton.title} - ${playButton.platform} Player`}
               />
