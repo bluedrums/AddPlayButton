@@ -14,7 +14,6 @@ import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
-import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -695,9 +694,7 @@ export default function ClientPage() {
   }
 
   return (
-    <>
-      {isLoading && <SplashScreen />}
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
+    <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
       {activePlayButton && (
         <EmbeddedPlayerModal
           isOpen={isPlayerModalOpen}
@@ -1018,6 +1015,5 @@ export default function ClientPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-    </>
   );
 }

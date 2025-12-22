@@ -1,3 +1,12 @@
+/**
+ * SplashScreen Component
+ * 
+ * NOTE: This component is currently not used. The app relies on the Farcaster SDK
+ * splash screen configured in farcaster.json and the embed metadata in page.tsx/layout.tsx.
+ * 
+ * Kept for potential future use as a fallback for non-Farcaster clients.
+ */
+
 import Image from 'next/image';
 
 const SplashScreen = () => {
