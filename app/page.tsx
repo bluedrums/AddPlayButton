@@ -8,6 +8,7 @@ export const revalidate = 0;                   // disable static cache
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/ThePlayButton.png`;   // 3:2   ✅
+const splashImageUrl = `${baseUrl}/appicon(whiteontransparent).png`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const embed = {
@@ -19,8 +20,8 @@ export async function generateMetadata(): Promise<Metadata> {
         type: 'launch_frame',
         name: 'Add Play Button',
         url: `${baseUrl}?home`,               // any URL ≠ current page
-        splashImageUrl: imageUrl,
-        splashBackgroundColor: '#8B5CF6',
+        splashImageUrl: splashImageUrl,
+        splashBackgroundColor: '#8A63D3',
       },
     },
   };

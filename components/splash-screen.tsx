@@ -42,7 +42,7 @@ const SplashScreen = () => {
       >
         Add Play Button
       </h1>
-      <p
+      {/* <p
         style={{
           fontSize: '16px',
           fontWeight: '400',
@@ -53,7 +53,7 @@ const SplashScreen = () => {
         }}
       >
         Share and drive traffic anywhere.
-      </p>
+      </p> */}
     </div>
   );
 };
