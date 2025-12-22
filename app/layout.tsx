@@ -52,43 +52,6 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <body className={`${ubuntu.className} h-full`}>
-        {/* Immediate splash screen - shows before React hydrates */}
-        <div 
-          id="initial-splash"
-          style={{
-            backgroundColor: '#8A63D3',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100vh',
-            width: '100vw',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            zIndex: 99999,
-            margin: 0,
-            padding: 0,
-            fontFamily: "'Ubuntu', sans-serif",
-          }}
-        >
-          <img 
-            src="/appicon(whiteontransparent).png" 
-            alt="App Icon" 
-            style={{
-              width: '128px',
-              height: '128px',
-              borderRadius: '24px',
-              marginBottom: '24px'
-            }}
-          />
-        </div>
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            body { margin: 0; padding: 0; }
-            #initial-splash { display: flex !important; }
-          `
-        }} />
         <div id="app-container" className="h-full">
             <Providers>
               {children}

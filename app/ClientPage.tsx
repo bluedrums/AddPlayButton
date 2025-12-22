@@ -14,6 +14,7 @@ import { PlayButtonCard } from "@/components/play-button-card"
 import { toast } from "sonner"
 import { useSearchParams } from 'next/navigation';
 import { EmbeddedPlayerModal } from "@/components/embedded-player-modal";
+import SplashScreen from "@/components/splash-screen";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { api } from "@/lib/api"
 import { sdk } from '@farcaster/miniapp-sdk';
@@ -217,17 +218,6 @@ export default function ClientPage() {
     }
   }, [params]);
 
-  // Remove splash screen when loading is complete
-  useEffect(() => {
-    if (!isLoading) {
-      console.log('🔄 Loading complete, removing splash screen...');
-      const initialSplash = document.getElementById('initial-splash');
-      if (initialSplash) {
-        (initialSplash as HTMLElement).style.setProperty('display', 'none', 'important');
-        console.log('✅ Splash screen hidden');
-      }
-    }
-  }, [isLoading]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -705,7 +695,9 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
+    <>
+      {isLoading && <SplashScreen />}
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-100">
       {activePlayButton && (
         <EmbeddedPlayerModal
           isOpen={isPlayerModalOpen}
@@ -1026,5 +1018,6 @@ export default function ClientPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
