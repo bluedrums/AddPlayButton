@@ -32,8 +32,8 @@ const SplashScreen = () => {
       <Image
         src="/appicon(whiteontransparent).png"
         alt="App Icon"
-        width={128}
-        height={128}
+        width={64}
+        height={64}
         style={{
           borderRadius: '24px',
           marginBottom: '24px',
