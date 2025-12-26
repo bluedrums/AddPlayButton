@@ -721,7 +721,7 @@ export default function ClientPage() {
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden">
+            <div className="w-6 h-6 rounded-full overflow-hidden">
               <img src="/appicon.jpg" alt="Add Play Button" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 tracking-[-1px] flex-1 text-center">Add Play Button</h1>
