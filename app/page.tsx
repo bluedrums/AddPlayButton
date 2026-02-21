@@ -8,7 +8,7 @@ export const revalidate = 0;                   // disable static cache
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/ThePlayButton.png`;   // 3:2   ✅
-const splashImageUrl = `${baseUrl}/appicon(whiteontransparent).png`;
+const splashImageUrl = `${baseUrl}/appicon(whiteontransparent)-splash-200.png`;
 
 export async function generateMetadata(): Promise<Metadata> {
   const embed = {

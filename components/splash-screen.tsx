@@ -32,7 +32,7 @@ const SplashScreen = () => {
       }}
     >
       <Image
-        src="/appicon(whiteontransparent).png"
+        src="/appicon(whiteontransparent)-splash-200.png"
         alt="App Icon"
         width={FARCASTER_SPLASH_LOGO_SIZE}
         height={FARCASTER_SPLASH_LOGO_SIZE}

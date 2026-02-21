@@ -10,7 +10,7 @@ const ubuntu = Ubuntu({ subsets: ["latin"], weight: ['300', '400', '500', '700']
 // Add default Mini-App embed for global pages
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://addplaybutton.xyz';
 const imageUrl = `${baseUrl}/ThePlayButton.png`;
-const splashImageUrl = `${baseUrl}/appicon(whiteontransparent).png`;
+const splashImageUrl = `${baseUrl}/appicon(whiteontransparent)-splash-200.png`;
 const embed = {
   version: '1',
   imageUrl,
