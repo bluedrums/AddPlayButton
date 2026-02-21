@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useLayoutEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
@@ -88,22 +88,34 @@ export function EmbeddedPlayerModal({
     }
   }, [isOpen, isFullscreen])
 
-  useEffect(() => {
-    if (isOpen) {
-      setIsFullOverlay(true);
-      // Add class to body to hide navigation
-      document.body.classList.add('player-modal-open');
-    } else {
-      setIsFullOverlay(false);
-      // Remove class from body to show navigation
-      document.body.classList.remove('player-modal-open');
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      setIsFullOverlay(false)
+      return
     }
-    
-    // Cleanup: remove class when component unmounts
+
+    setIsFullOverlay(true)
+    const body = document.body
+    const countKey = "playerModalOpenCount"
+    const currentCount = Number(body.dataset[countKey] ?? "0") || 0
+    const nextCount = currentCount + 1
+
+    body.dataset[countKey] = String(nextCount)
+    body.classList.add("player-modal-open")
+
     return () => {
-      document.body.classList.remove('player-modal-open');
-    };
-  }, [isOpen]);
+      const latestCount = Number(body.dataset[countKey] ?? "0") || 0
+      const decremented = Math.max(0, latestCount - 1)
+
+      if (decremented === 0) {
+        delete body.dataset[countKey]
+        body.classList.remove("player-modal-open")
+        return
+      }
+
+      body.dataset[countKey] = String(decremented)
+    }
+  }, [isOpen])
 
   // Handle ESC key to exit fullscreen
   useEffect(() => {
@@ -313,23 +325,44 @@ export function EmbeddedPlayerModal({
     }
   }
 
+  const getEmbedReferrerPolicy = (embedUrl: string) => {
+    if (isBandcampEmbed(embedUrl)) {
+      // Bandcamp can behave inconsistently in webviews when a referrer is forwarded.
+      return "no-referrer"
+    }
+    if (isSunoEmbed(embedUrl)) {
+      return "no-referrer-when-downgrade"
+    }
+    return undefined
+  }
+
+  const isVideoEmbedPlatform = (platform: string) => {
+    const normalized = platform.toLowerCase()
+    return normalized === "youtube" || normalized === "vimeo"
+  }
+
+  // Extra bottom room so touch controls remain easy to hit on mobile.
+  const controlGutterBottom = isVideoEmbedPlatform(playButton.platform) ? 56 : 10
+
   return (
     <>
       {isOpen && (
         <div
           id="player-modal-container"
           className={cn(
-            "fixed inset-0 z-50 bg-black", // Always have a black background
+            // Keep modal above any persistent chrome (main nav uses a very high z-index).
+            "fixed inset-0 z-[1000001] bg-black",
           )}
         >
           {/* Centered content wrapper */}
           <div
             className="relative w-full h-full"
             style={{
-              marginTop: `${safeArea.top}px`,
-              marginBottom: `${safeArea.bottom + 10}px`,
-              marginLeft: `${safeArea.left}px`,
-              marginRight: `${safeArea.right}px`,
+              // Use padding (not margins) so safe-area insets do not increase total height.
+              paddingTop: `${safeArea.top}px`,
+              paddingBottom: `${safeArea.bottom + controlGutterBottom}px`,
+              paddingLeft: `${safeArea.left}px`,
+              paddingRight: `${safeArea.right}px`,
             }}
           >
             {/* Control buttons */}
@@ -377,19 +410,22 @@ export function EmbeddedPlayerModal({
               )}
             </div>
             
-            {/* Embedded Player - takes up the whole space */}
-            <div className="w-full h-full" style={{ height: '98%' }}>
+            {/* Embedded Player - takes up the whole available space without overflow */}
+            <div className="w-full h-full overflow-hidden">
               <iframe
+                key={`${playButton.id}-${playButton.embedUrl}`}
                 src={playButton.embedUrl}
                 width="100%"
                 height="100%"
                 frameBorder="0"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
                 allowFullScreen
-                loading="lazy"
-                referrerPolicy={isSunoEmbed(playButton.embedUrl) ? "no-referrer-when-downgrade" : undefined}
+                // Modal content should load immediately; lazy iframes can stall in some webviews.
+                loading="eager"
+                referrerPolicy={getEmbedReferrerPolicy(playButton.embedUrl)}
                 seamless={isBandcampEmbed(playButton.embedUrl) ? true : undefined}
-                className="w-full h-full"
+                scrolling="no"
+                className="block w-full h-full overflow-hidden"
                 title={`${playButton.title} - ${playButton.platform} Player`}
               />
             </div>

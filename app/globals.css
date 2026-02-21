@@ -94,7 +94,7 @@ body {
   }
 }
 
-/* Hide navigation when player modal is open */
-body.player-modal-open nav[class*="fixed bottom-0"] {
-  display: none;
+/* Hide main nav whenever any embedded player modal is open */
+body.player-modal-open [data-main-nav="true"] {
+  display: none !important;
 }
