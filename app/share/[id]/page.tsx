@@ -67,10 +67,15 @@ export async function generateMetadata({
       ? `Track ${startIndex + 1} of ${playlist.play_buttons.length} in ${playlist.name}`
       : `Play on ${playButtonData.platform}`;
         
-    const buttonTitle =
+    const MAX_BUTTON_TITLE = 32;
+    const rawTitle =
       playButtonData.title?.trim() ||
       playlist?.play_buttons[startIndex]?.title?.trim() ||
       'Play';
+    const buttonTitle =
+      rawTitle.length > MAX_BUTTON_TITLE
+        ? rawTitle.slice(0, MAX_BUTTON_TITLE - 1) + '…'
+        : rawTitle;
 
     const miniAppUrl = baseUrl;
 
