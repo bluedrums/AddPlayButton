@@ -9,6 +9,8 @@
 
 import Image from 'next/image';
 
+const FARCASTER_SPLASH_LOGO_SIZE = 200;
+
 const SplashScreen = () => {
   return (
     <div
@@ -32,12 +34,14 @@ const SplashScreen = () => {
       <Image
         src="/appicon(whiteontransparent).png"
         alt="App Icon"
-        width={128}
-        height={128}
+        width={FARCASTER_SPLASH_LOGO_SIZE}
+        height={FARCASTER_SPLASH_LOGO_SIZE}
         style={{
-          borderRadius: '24px',
+          width: `${FARCASTER_SPLASH_LOGO_SIZE}px`,
+          height: `${FARCASTER_SPLASH_LOGO_SIZE}px`,
+          objectFit: 'contain',
           marginBottom: '24px',
-          background: 'transparent'
+          background: 'transparent',
         }}
       />
       <h1
