@@ -7,7 +7,6 @@ export async function GET(request: NextRequest) {
     console.log("🔍 API Key verification request:", {
       hasApiKey: !!apiKey,
       keyLength: apiKey?.length || 0,
-      keyPrefix: apiKey?.substring(0, 15) || "none",
       timestamp: new Date().toISOString(),
     })
 
@@ -52,9 +51,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: false,
         error: "Invalid API key format",
-        details: `API key should start with 'MK-' or 'wc_secret_', but starts with '${apiKey.substring(0, 15)}...'`,
+        details: "API key should start with 'MK-' or 'wc_secret_'.",
         keyLength: apiKey.length,
-        keyPrefix: apiKey.substring(0, 15),
         recommendations: [
           "Check that you copied the full API key from Warpcast",
           "Merkle keys start with MK- (typically 40-60 characters)",
@@ -63,7 +61,6 @@ export async function GET(request: NextRequest) {
           "Ensure you're using the API key, not a different type of token",
         ],
         debugInfo: {
-          actualPrefix: apiKey.substring(0, 15),
           expectedPrefixes: ["MK-", "wc_secret_"],
           keyLength: apiKey.length,
         },
@@ -85,7 +82,6 @@ export async function GET(request: NextRequest) {
         error: "API key length seems incorrect",
         details: `${prefix} keys should be ${expected.min}-${expected.max} characters, but yours is ${apiKey.length}`,
         keyLength: apiKey.length,
-        keyPrefix: prefix,
         recommendations: [
           "Double-check that you copied the complete API key",
           "Make sure there are no extra characters or truncation",
@@ -159,14 +155,12 @@ export async function GET(request: NextRequest) {
           headers: config.headers,
         })
 
-        const testResult = await testResponse.text()
+        await testResponse.text()
 
         console.log(`🧪 ${config.name} result:`, {
           status: testResponse.status,
           ok: testResponse.ok,
           statusText: testResponse.statusText,
-          responsePreview: testResult.substring(0, 200),
-          headers: Object.fromEntries(testResponse.headers.entries()),
         })
 
         testResults.push({
@@ -176,7 +170,6 @@ export async function GET(request: NextRequest) {
           success: testResponse.ok,
           status: testResponse.status,
           statusText: testResponse.statusText,
-          responsePreview: testResult.substring(0, 100),
           authMethod: config.headers.Authorization ? "Bearer" : "X-API-Key",
         })
 
@@ -230,7 +223,6 @@ export async function GET(request: NextRequest) {
           debugInfo: {
             keyType,
             keyLength: apiKey.length,
-            keyPrefix: apiKey.substring(0, 15),
             testResults,
             authErrors: authErrors.length,
             testedEndpoints: testConfigurations.map((c) => c.name),
@@ -266,7 +258,6 @@ export async function GET(request: NextRequest) {
       details: {
         keyType,
         keyLength: apiKey.length,
-        keyPrefix: apiKey.substring(0, 15),
         isValidLength: true,
         isValidFormat: true,
         apiTestsPassed: successfulTests.length,

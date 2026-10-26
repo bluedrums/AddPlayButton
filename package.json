@@ -1,6 +1,7 @@
 {
   "name": "add-play-button",
   "version": "1.0.0",
+  "license": "MIT",
   "private": false,
   "scripts": {
     "dev": "next dev",

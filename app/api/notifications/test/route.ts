@@ -3,20 +3,18 @@ import { getNotificationTokens, sendNotification, hasNotificationsEnabled } from
 
 /**
  * GET /api/notifications/test
- * 
- * Test endpoint to verify Neynar notification setup.
- * Only accessible in development or with a specific test key.
+ *
+ * Reports whether Neynar notifications are configured.
+ * Never returns API key material or notification token URLs.
  */
 export async function GET(request: NextRequest) {
-  // Allow test access
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action') || 'status';
   const testFid = searchParams.get('fid');
 
   const results: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
-    neynarApiKeySet: !!process.env.NEYNAR_API_KEY,
-    neynarApiKeyPrefix: process.env.NEYNAR_API_KEY?.substring(0, 8) + '...',
+    neynarApiKeySet: Boolean(process.env.NEYNAR_API_KEY),
   };
 
   try {
@@ -31,8 +29,7 @@ export async function GET(request: NextRequest) {
       const tokensResult = await getNotificationTokens({ limit: 10 });
       results.getNotificationTokens = {
         success: tokensResult.success,
-        tokenCount: tokensResult.tokens?.length || 0,
-        tokens: tokensResult.tokens?.slice(0, 5), // Show first 5 only
+        tokenCount: tokensResult.tokens?.length ?? 0,
         error: tokensResult.error,
       };
 

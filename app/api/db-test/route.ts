@@ -19,8 +19,13 @@ export async function POST() {
     return NextResponse.json({ success: true, message: 'Test data added successfully.' });
   } catch (error) {
     console.error('Database POST error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to add test data', details: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Failed to add test data',
+        details: 'Database request failed. Check POSTGRES_URL on the server and the function logs.',
+      },
+      { status: 500 },
+    );
   }
 }
 
@@ -40,7 +45,12 @@ export async function GET() {
     return NextResponse.json(rows);
   } catch (error) {
     console.error('Database GET error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-    return NextResponse.json({ error: 'Failed to retrieve test data', details: errorMessage }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: 'Failed to retrieve test data',
+        details: 'Database request failed. Check POSTGRES_URL on the server and the function logs.',
+      },
+      { status: 500 },
+    );
   }
 }

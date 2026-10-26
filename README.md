@@ -41,8 +41,35 @@ A Farcaster MiniApp that transforms music and video links into interactive play 
 
 - **Website**: [https://addplaybutton.xyz](https://addplaybutton.xyz)
 - **Farcaster**: [@addplaybutton](https://warpcast.com/addplaybutton)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/add-play-button/issues)
-- **Development** [https://rainonmeproductions.com] (https://rainonmeproductions.com)
+- **Issues**: [GitHub Issues](https://github.com/bluedrums/AddPlayButton/issues)
+- **Development**: [Rain On Me Productions](https://rainonmeproductions.com)
+
+## Environment variables
+
+Put these in `.env.local`. That file is gitignored. Do not commit values.
+
+Required:
+
+- `JWT_SECRET_KEY` — signs session cookies
+- `POSTGRES_URL` — Neon/Vercel Postgres connection string
+- `NEXT_PUBLIC_APP_URL` — public origin of this deployment, for example `https://addplaybutton.xyz`
+
+Optional:
+
+- `NEXT_PUBLIC_APP_DOMAIN` — hostname used by the client when it differs from the browser host
+- `NEXT_PUBLIC_USDC_ADDRESS` — Base address that receives USDC tips
+- `NEXT_PUBLIC_BASE_PROJECT_ID` — Coinbase Developer Platform project id for OnchainKit
+- `NEXT_PUBLIC_ONCHAINKIT_API_KEY` — OnchainKit client key
+- `WARPCAST_API_KEY` — server key for Farcaster auth and cast lookup
+- `NEYNAR_API_KEY` — server key for mini app notifications
+
+The manifest at `public/.well-known/farcaster.json` is signed for `addplaybutton.xyz`. A fork needs its own domain, account association, and Neynar webhook URL.
+
+## License
+
+Source code is licensed under the MIT License. See [LICENSE](LICENSE).
+
+The Add Play Button name and logo are not covered by this license. Operators of a fork still have to follow the terms of Spotify, Apple Music, YouTube, Vimeo, SoundCloud, Mixcloud, and any other embed provider they use. This license does not grant those rights.
 
 ## 🙏 Acknowledgments
 
