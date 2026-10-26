@@ -136,9 +136,6 @@ export function DebugPanel() {
                       <span className="font-medium">Length:</span> {apiKeyStatus.details.keyLength}
                     </div>
                     <div>
-                      <span className="font-medium">Prefix:</span> {apiKeyStatus.details.keyPrefix}
-                    </div>
-                    <div>
                       <span className="font-medium">Format:</span> {apiKeyStatus.details.isValidFormat ? "✓" : "✗"}
                     </div>
                   </div>
